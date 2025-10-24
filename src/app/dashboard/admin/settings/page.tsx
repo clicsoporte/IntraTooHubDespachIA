@@ -131,7 +131,7 @@ export default function SettingsPage() {
       }
       if (passwords.new.length < 6) {
         toast({
-          title: "Error de Contraseña",
+          title: "Contraseña Débil",
           description: "La nueva contraseña debe tener al menos 6 caracteres.",
           variant: "destructive",
         });

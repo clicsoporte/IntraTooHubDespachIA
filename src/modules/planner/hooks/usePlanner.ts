@@ -176,7 +176,7 @@ export const usePlanner = () => {
             }
         }
         return () => { isMounted = false; };
-    }, [toast, state.viewingArchived, state.pageSize, updateState]);
+    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
     
     useEffect(() => {
         setTitle("Planificador OP");
@@ -197,7 +197,7 @@ export const usePlanner = () => {
         }
         return () => { isMounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.archivedPage, state.pageSize, state.viewingArchived, isAuthReady]);
+    }, [state.viewingArchived, state.archivedPage, state.pageSize, isAuthReady]);
 
     const getOrderPermissions = useCallback((order: ProductionOrder) => {
         const isPending = order.status === 'pending';
@@ -271,7 +271,7 @@ export const usePlanner = () => {
         setNotePayload: (payload: { orderId: number; notes: string } | null) => updateState({ notePayload: payload }),
         setActionDialogOpen: (isOpen: boolean) => updateState({ isActionDialogOpen: isOpen }),
         
-        loadInitialData: (isRefresh: boolean = false) => loadInitialData(isRefresh),
+        loadInitialData,
 
         handleCreateOrder: async () => {
             if (!state.newOrder.customerId || !state.newOrder.productId || !state.newOrder.quantity || !state.newOrder.deliveryDate || !currentUser) return;

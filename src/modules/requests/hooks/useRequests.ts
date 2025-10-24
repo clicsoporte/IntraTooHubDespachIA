@@ -273,7 +273,7 @@ export const useRequests = () => {
             }
         }
          return () => { isMounted = false; };
-    }, [toast, state.viewingArchived, state.pageSize, updateState]);
+    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
     
     useEffect(() => {
         setTitle("Solicitud de Compra");
@@ -287,7 +287,7 @@ export const useRequests = () => {
         if (!isAuthReady || state.isLoading) return; // Depend on isAuthReady
         loadInitialData(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.archivedPage, state.pageSize, state.viewingArchived, isAuthReady]);
+    }, [state.viewingArchived, state.archivedPage, state.pageSize, isAuthReady]);
 
     useEffect(() => {
         updateState({ companyData: authCompanyData });
