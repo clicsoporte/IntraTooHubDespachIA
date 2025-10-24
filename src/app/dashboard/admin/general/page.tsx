@@ -117,7 +117,16 @@ export default function GeneralSettingsPage() {
     if (!companyData) return;
     const { id, value } = e.target;
     setCompanyData(prev => prev ? ({...prev, [id]: value}) : null);
-  }
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!companyData) return;
+    const { id, value } = e.target;
+    const numValue = value === '' ? null : parseInt(value, 10);
+    if (value === '' || (numValue !== null && !isNaN(numValue))) {
+        setCompanyData(prev => prev ? ({...prev, [id]: numValue }) : null);
+    }
+  };
 
   const handleSyncWarningChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
@@ -249,8 +258,8 @@ export default function GeneralSettingsPage() {
                       <Input 
                           id="searchDebounceTime"
                           type="number"
-                          value={companyData.searchDebounceTime ?? 500}
-                          onChange={handleChange}
+                          value={companyData.searchDebounceTime ?? ''}
+                          onChange={handleNumberChange}
                       />
                        <p className="text-xs text-muted-foreground pt-1">
                           Tiempo en milisegundos que el sistema espera antes de buscar (ej: 500 = 0.5s).

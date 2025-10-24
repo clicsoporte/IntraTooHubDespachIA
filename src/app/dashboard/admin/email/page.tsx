@@ -99,9 +99,17 @@ export default function EmailSettingsPage() {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { id, value, type } = e.target;
-        const finalValue = type === 'number' ? parseInt(value, 10) : value;
-        setSettings(prev => prev ? { ...prev, [id]: finalValue } : null);
+        const { id, value } = e.target;
+        setSettings(prev => prev ? { ...prev, [id]: value } : null);
+    };
+
+    const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        // Allow empty string for user input, but parse to number for state
+        const numValue = value === '' ? '' : parseInt(value, 10);
+        if (value === '' || !isNaN(Number(numValue))) {
+            setSettings(prev => prev ? { ...prev, [id]: numValue } : null);
+        }
     };
 
     if (!isAuthorized) return null;
@@ -139,7 +147,7 @@ export default function EmailSettingsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="smtpPort">Puerto</Label>
-                                    <Input id="smtpPort" type="number" value={settings.smtpPort} onChange={handleChange} placeholder="587" />
+                                    <Input id="smtpPort" type="number" value={settings.smtpPort || ''} onChange={handleNumberChange} placeholder="587" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="smtpSecure">Seguridad</Label>
