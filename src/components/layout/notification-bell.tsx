@@ -5,20 +5,24 @@
 "use client";
 
 import { useAuth } from "@/modules/core/hooks/useAuth";
-import { markNotificationAsRead, markAllNotificationsAsRead } from "@/modules/core/lib/notifications-actions";
+import { markNotificationAsRead, markAllNotificationsAsRead, executeNotificationAction } from "@/modules/core/lib/notifications-actions";
 import { markSuggestionAsRead } from "@/modules/core/lib/suggestions-actions";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, CheckCheck, MessageSquare } from "lucide-react";
+import { Bell, CheckCheck, MessageSquare, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/modules/core/types";
+import { useToast } from "@/modules/core/hooks/use-toast";
+import React, { useState } from "react";
 
 export function NotificationBell() {
     const { user, unreadNotificationsCount, notifications, fetchUnreadNotifications, unreadSuggestions, updateUnreadSuggestionsCount } = useAuth();
+    const { toast } = useToast();
+    const [isActionLoading, setIsActionLoading] = useState<number | null>(null);
     const totalUnread = unreadNotificationsCount + unreadSuggestions.length;
 
     const combinedNotifications = [
@@ -37,7 +41,7 @@ export function NotificationBell() {
 
 
     const handleMarkAsRead = async (notification: Notification) => {
-        if (!user) return;
+        if (!user || notification.isRead) return;
 
         if (notification.isSuggestion && notification.suggestionId) {
             await markSuggestionAsRead(notification.suggestionId);
@@ -45,17 +49,51 @@ export function NotificationBell() {
         } else if (!notification.isSuggestion && typeof notification.id === 'number') {
             await markNotificationAsRead(notification.id, user.id);
         }
-        // Fetch notifications after any read action to ensure consistency
         await fetchUnreadNotifications();
     };
 
     const handleMarkAllAsRead = async () => {
-        if (!user || notifications.length === 0) return;
-        const unreadSystemNotifIds = notifications.filter(n => !n.isRead).map(n => n.id as number);
-        if(unreadSystemNotifIds.length > 0) {
-            await markAllNotificationsAsRead(user.id);
-        }
+        if (!user || unreadNotificationsCount === 0) return;
+        await markAllNotificationsAsRead(user.id);
         await fetchUnreadNotifications();
+    };
+
+    const handleActionClick = async (e: React.MouseEvent, notification: Notification, action: 'approve' | 'reject') => {
+        e.preventDefault(); // Prevent link navigation
+        e.stopPropagation(); // Prevent parent onClick
+        if (!user || typeof notification.id !== 'number') return;
+        
+        setIsActionLoading(notification.id);
+        const result = await executeNotificationAction(notification.id, action, user.name, user.id);
+        if (result.success) {
+            toast({ title: 'Acción Realizada', description: result.message });
+            await fetchUnreadNotifications(); // Refresh notifications
+        } else {
+            toast({ title: 'Error', description: result.message, variant: 'destructive' });
+        }
+        setIsActionLoading(null);
+    };
+
+    const renderActionButtons = (notification: Notification) => {
+        if (notification.isRead || !notification.taskType || isActionLoading === notification.id) {
+            return null;
+        }
+
+        if (notification.taskType.includes('cancellation-request')) {
+            return (
+                 <div className="flex items-center gap-2 mt-2">
+                    <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700" onClick={(e) => handleActionClick(e, notification, 'approve')}>
+                        <ThumbsUp className="mr-1 h-3 w-3" /> Aprobar Cancelación
+                    </Button>
+                    <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={(e) => handleActionClick(e, notification, 'reject')}>
+                        <ThumbsDown className="mr-1 h-3 w-3" /> Rechazar
+                    </Button>
+                </div>
+            );
+        }
+
+        // Add other task types here in the future
+        return null;
     };
 
     return (
@@ -70,25 +108,30 @@ export function NotificationBell() {
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-0">
+            <PopoverContent className="w-96 p-0">
                 <div className="p-4 border-b">
                     <h4 className="font-medium leading-none">Notificaciones</h4>
                     <p className="text-sm text-muted-foreground">
                         Tienes {totalUnread} {totalUnread === 1 ? 'notificación' : 'notificaciones'} sin leer.
                     </p>
                 </div>
-                <ScrollArea className="h-72">
+                <ScrollArea className="h-80">
                     <div className="p-2 space-y-1">
                         {combinedNotifications.length > 0 ? combinedNotifications.map(n => (
                              <Link key={n.id} href={n.href} passHref>
                                 <div className="p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleMarkAsRead(n)}>
                                     <div className="flex items-start gap-2">
                                         {n.isSuggestion && <MessageSquare className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />}
-                                        <p className={cn("text-sm", n.isRead === 0 && "font-bold")}>{n.message}</p>
+                                        <div className="flex-1">
+                                            <p className={cn("text-sm", n.isRead === 0 && "font-bold")}>{n.message}</p>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true, locale: es })}
+                                            </p>
+                                            {isActionLoading === n.id ? (
+                                                <div className="flex justify-center mt-2"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                                            ) : renderActionButtons(n)}
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-muted-foreground ml-6">
-                                        {formatDistanceToNow(new Date(n.timestamp), { addSuffix: true, locale: es })}
-                                    </p>
                                 </div>
                             </Link>
                         )) : (
@@ -96,7 +139,7 @@ export function NotificationBell() {
                         )}
                     </div>
                 </ScrollArea>
-                {notifications.filter(n => !n.isRead).length > 0 && (
+                {unreadNotificationsCount > 0 && (
                     <div className="p-2 border-t text-center">
                         <Button variant="link" size="sm" onClick={handleMarkAllAsRead}>
                             <CheckCheck className="mr-2 h-4 w-4" />

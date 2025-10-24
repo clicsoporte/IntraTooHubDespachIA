@@ -21,7 +21,7 @@ import {
     getRolesWithPermission,
     addNote as addNoteServer
 } from './db';
-import type { PurchaseSuggestion } from '../hooks/useRequestSuggestions';
+import type { PurchaseSuggestion } from '../hooks/useRequestSuggestions.tsx';
 import { getAllProducts, getAllStock, getAllCustomers } from '@/modules/core/lib/db';
 
 /**
@@ -54,14 +54,14 @@ export async function savePurchaseRequest(request: Omit<PurchaseRequest, 'id' | 
     
     const reviewRoles = await getRolesWithPermission('requests:status:review');
     for (const roleId of reviewRoles) {
-        await createNotificationForRole(
-            roleId,
-            `Nueva solicitud ${createdRequest.consecutive} para "${createdRequest.clientName}" requiere revisión.`,
-            `/dashboard/requests?search=${createdRequest.consecutive}`,
-            createdRequest.id,
-            'purchase-request',
-            'review'
-        );
+        await createNotification({
+            userId: 0, // Placeholder, createNotificationForRole handles user lookup
+            message: `Nueva solicitud ${createdRequest.consecutive} para "${createdRequest.clientName}" requiere revisión.`,
+            href: `/dashboard/requests?search=${createdRequest.consecutive}`,
+            entityId: createdRequest.id,
+            entityType: 'purchase-request',
+            taskType: 'review',
+        });
     }
     
     return createdRequest;
@@ -103,11 +103,11 @@ export async function updatePurchaseRequestStatus(payload: UpdateRequestStatusPa
                 'canceled': 'Cancelada'
              };
              const statusLabel = statusConfig[payload.status] || payload.status;
-            await createNotification(
-                targetUser.id,
-                `La solicitud ${updatedRequest.consecutive} ha sido actualizada a: ${statusLabel}.`,
-                `/dashboard/requests?search=${updatedRequest.consecutive}`
-            );
+            await createNotification({
+                userId: targetUser.id,
+                message: `La solicitud ${updatedRequest.consecutive} ha sido actualizada a: ${statusLabel}.`,
+                href: `/dashboard/requests?search=${updatedRequest.consecutive}`,
+            });
         }
     }
     
@@ -149,24 +149,18 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
     const updatedRequest = await updatePendingActionServer(payload);
     await logInfo(`Administrative action '${payload.action}' initiated for request ${updatedRequest.consecutive} by ${payload.updatedBy}.`);
     
-    if (updatedRequest.requestedBy !== payload.updatedBy) {
-        const targetUser = await getUserByName(updatedRequest.requestedBy);
-        if (targetUser) {
-            let message = '';
-            if (payload.action.includes('request')) {
-                message = `El usuario ${payload.updatedBy} ha solicitado ${payload.action === 'unapproval-request' ? 'desaprobar' : 'cancelar'} la solicitud ${updatedRequest.consecutive}.`;
-            }
-            if (message) {
-                 await createNotificationForRole(
-                    'admin',
-                    message,
-                    `/dashboard/requests?search=${updatedRequest.consecutive}`,
-                    updatedRequest.id,
-                    'purchase-request',
-                    'admin-action-needed'
-                );
-            }
-        }
+    if (payload.action.includes('request')) {
+        const adminRoles = await getRolesWithPermission('admin:maintenance:reset'); // A proxy for any admin permission
+         for (const roleId of adminRoles) {
+             await createNotificationForRole(
+                roleId,
+                `El usuario ${payload.updatedBy} solicita cancelar la solicitud ${updatedRequest.consecutive}.`,
+                `/dashboard/requests?search=${updatedRequest.consecutive}`,
+                updatedRequest.id,
+                'purchase-request',
+                'cancellation-request'
+            );
+         }
     }
     
     return updatedRequest;

@@ -159,6 +159,13 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
                     FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
                 );
             `);
+        } else {
+             const notificationsTableInfo = db.prepare(`PRAGMA table_info(notifications)`).all() as { name: string }[];
+            const notificationsColumns = new Set(notificationsTableInfo.map(c => c.name));
+            
+            if (!notificationsColumns.has('entityId')) db.exec('ALTER TABLE notifications ADD COLUMN entityId INTEGER');
+            if (!notificationsColumns.has('entityType')) db.exec('ALTER TABLE notifications ADD COLUMN entityType TEXT');
+            if (!notificationsColumns.has('taskType')) db.exec('ALTER TABLE notifications ADD COLUMN taskType TEXT');
         }
         
         const userPrefsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='user_preferences'`).get();
@@ -277,15 +284,6 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
             console.log("MIGRATION: Creating erp_order_lines table.");
             db.exec(`CREATE TABLE erp_order_lines (PEDIDO TEXT, PEDIDO_LINEA INTEGER, ARTICULO TEXT, CANTIDAD_PEDIDA REAL, PRECIO_UNITARIO REAL, PRIMARY KEY (PEDIDO, PEDIDO_LINEA));`);
         }
-
-        const notificationsTableInfo = db.prepare(`PRAGMA table_info(notifications)`).all() as { name: string }[];
-        const notificationsColumns = new Set(notificationsTableInfo.map(c => c.name));
-        
-        if (!notificationsColumns.has('entityId')) db.exec('ALTER TABLE notifications ADD COLUMN entityId INTEGER');
-        if (!notificationsColumns.has('entityType')) db.exec('ALTER TABLE notifications ADD COLUMN entityType TEXT');
-        if (!notificationsColumns.has('taskType')) db.exec('ALTER TABLE notifications ADD COLUMN taskType TEXT');
-
-
     } catch (error) {
         console.error("Failed to apply migrations:", error);
     }
@@ -1303,6 +1301,16 @@ export async function markNotificationsAsRead(notificationIds: number[], userId:
   if (notificationIds.length === 0) return;
   const ids = notificationIds.map(() => '?').join(',');
   db.prepare(`UPDATE notifications SET isRead = 1 WHERE id IN (${ids}) AND userId = ?`).run(...notificationIds, userId);
+}
+
+export async function getNotificationById(id: number): Promise<Notification | null> {
+    const db = await connectDb();
+    return db.prepare('SELECT * FROM notifications WHERE id = ?').get(id) as Notification | null;
+}
+
+export async function deleteNotificationById(id: number): Promise<void> {
+    const db = await connectDb();
+    db.prepare('DELETE FROM notifications WHERE id = ?').run(id);
 }
 
 
