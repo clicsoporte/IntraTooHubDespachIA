@@ -372,71 +372,45 @@ export default function HelpPage() {
         )
     },
     {
-        title: "Tutorial: Módulo Solicitud de Compra",
+        title: "Guía Técnica: Módulo de Solicitudes de Compra",
         icon: <ShoppingCart className="mr-4 h-6 w-6 text-yellow-500" />,
         content: (
             <div className="space-y-4">
                 <p>Esta herramienta te permite crear, gestionar y dar seguimiento a las solicitudes de compra internas de manera centralizada.</p>
                 
-                <h4 className="font-semibold text-lg pt-2 border-t">Flujo 1: Creación Manual</h4>
-                <ol className="list-decimal space-y-3 pl-6">
-                <li>
-                    <strong>Paso 1: Crear Solicitud (<FilePlusIcon className="inline h-4 w-4" />):</strong> Haz clic en &quot;Nueva Solicitud&quot; para abrir el formulario. Busca al cliente y el artículo de la misma forma que en el cotizador. Completa los campos como la cantidad requerida, la fecha en que lo necesitas y el proveedor (si lo conoces).
-                </li>
-                <li>
-                    <strong>Paso 2: Entender el Flujo de Estados.</strong> Las solicitudes pasan por varios estados para un seguimiento claro:
-                    <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                        <li><strong>Pendiente:</strong> La solicitud ha sido creada y está esperando revisión.</li>
-                        <li><strong>Revisión Compras:</strong> El equipo de compras está revisando la solicitud. Desde aquí, pueden **regresar a Pendiente** si se necesita una corrección.</li>
-                        <li><strong>Pendiente Aprobación:</strong> La solicitud ha sido enviada para su aprobación final. Desde aquí, se puede **regresar a Revisión Compras**.</li>
-                        <li><strong>Aprobada (<CheckCircle className="inline h-4 w-4 text-green-600"/>):</strong> Un usuario con permisos ha aprobado la compra.</li>
-                        <li><strong>Ordenada (<Truck className="inline h-4 w-4 text-blue-600"/>):</strong> Ya se realizó el pedido al proveedor.</li>
-                        <li><strong>Recibida (<PackageCheck className="inline h-4 w-4 text-teal-600"/>):</strong> (Paso opcional) El producto ha llegado.</li>
-                        <li><strong>En Bodega (<Warehouse className="inline h-4 w-4 text-gray-700"/>):</strong> (Paso opcional) El producto ya está en el almacén físico.</li>
-                        <li><strong>Ingresado en ERP (<DatabaseZap className="inline h-4 w-4 text-indigo-600"/>):</strong> (Paso opcional) El ingreso de la mercancía se ha registrado en el ERP.</li>
-                        <li><strong>Cancelada (<XCircle className="inline h-4 w-4 text-red-600"/>):</strong> La solicitud ha sido cancelada.</li>
-                    </ul>
-                </li>
-                </ol>
+                <h4 className="font-semibold text-lg pt-2 border-t">Flujo de Estados</h4>
+                <p>Las solicitudes pasan por varios estados para un seguimiento claro:</p>
+                <ul className="list-disc space-y-3 pl-6">
+                    <li><strong>Pendiente:</strong> La solicitud ha sido creada y está esperando revisión.</li>
+                    <li><strong>Revisión Compras:</strong> El equipo de compras está revisando la solicitud. Desde aquí, pueden **regresar a Pendiente** si se necesita una corrección.</li>
+                    <li><strong>Pendiente Aprobación:</strong> La solicitud ha sido enviada para su aprobación final. Desde aquí, se puede **regresar a Revisión Compras**.</li>
+                    <li><strong>Aprobada (<CheckCircle className="inline h-4 w-4 text-green-600"/>):</strong> Un usuario con permisos ha aprobado la compra.</li>
+                    <li><strong>Ordenada (<Truck className="inline h-4 w-4 text-blue-600"/>):</strong> Ya se realizó el pedido al proveedor.</li>
+                    <li><strong>Recibida (<PackageCheck className="inline h-4 w-4 text-teal-600"/>):</strong> (Paso opcional) El producto ha llegado. Este paso se activa en Administración.</li>
+                    <li><strong>En Bodega (<Warehouse className="inline h-4 w-4 text-gray-700"/>):</strong> (Paso opcional) El producto ya está en el almacén físico.</li>
+                    <li><strong>Ingresado en ERP (<DatabaseZap className="inline h-4 w-4 text-indigo-600"/>):</strong> (Paso opcional) El ingreso de la mercancía se ha registrado en el ERP.</li>
+                    <li><strong>Cancelada (<XCircle className="inline h-4 w-4 text-red-600"/>):</strong> La solicitud ha sido cancelada.</li>
+                </ul>
 
-                <h4 className="font-semibold text-lg pt-2 border-t">Flujo 2: Creación Inteligente desde Pedido ERP</h4>
-                <ol className="list-decimal space-y-3 pl-6">
-                    <li>
-                        <strong>Paso 1: Iniciar el Proceso (<Layers className="inline h-4 w-4"/>):</strong> Haz clic en el nuevo botón &quot;Crear desde Pedido ERP&quot;.
-                    </li>
-                    <li>
-                        <strong>Paso 2: Buscar el Pedido:</strong> En la ventana emergente, introduce el número de pedido de venta de tu ERP (ej: PE0000125972) y haz clic en &quot;Cargar Pedido&quot;. El sistema consultará el ERP en tiempo real.
-                    </li>
-                    <li>
-                        <strong>Paso 3: Selección Inteligente:</strong> Se abrirá una nueva ventana con una tabla de todos los artículos del pedido. Aquí ocurre la magia:
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Las filas en <span className="text-red-600 font-semibold">rojo</span> indican que la cantidad pedida es **mayor** al inventario actual del ERP. Estas filas vendrán **marcadas por defecto** para ser compradas.</li>
-                            <li>Las filas en <span className="text-green-600 font-semibold">verde</span> indican que **hay suficiente stock**. Estarán desmarcadas por defecto.</li>
-                            <li>Puedes **editar la cantidad a solicitar y el precio de venta** directamente en la tabla.</li>
-                            <li>Usa los checkboxes para anular las sugerencias y decidir manually qué comprar.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Paso 4: Crear Solicitudes en Lote:</strong> Al hacer clic en &quot;Crear Solicitudes&quot;, el sistema generará automáticamente una solicitud de compra **independiente para cada artículo que hayas marcado**, usando las cantidades y precios que definiste.
-                    </li>
-                </ol>
-                
-                <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Comunes</h4>
+                <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                 <ul className="list-disc space-y-3 pl-6">
                 <li>
-                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla &quot;Mostrar solo mis solicitudes&quot; para ver las de todos los usuarios.
+                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla 'Mostrar solo mis solicitudes' para ver las de todos los usuarios.
                 </li>
                 <li>
-                    <strong>Aviso de &quot;Modificado&quot; (<AlertTriangle className="inline h-4 w-4 text-red-600" />):</strong> Si una solicitud es editada (cambiando cantidad, fecha, etc.) *después* de haber sido Aprobada u Ordenada, aparecerá una alerta visual &quot;Modificado&quot;. Esto sirve como una advertencia para que todos los involucrados estén al tanto del cambio.
+                    <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
+                </li>
+                <li>
+                    <strong>Aviso de 'Modificado' (<AlertTriangle className="inline h-4 w-4 text-red-600" />):</strong> Si una solicitud es editada después de haber sido Aprobada u Ordenada, aparecerá una alerta visual 'Modificado' para notificar a todos los involucrados.
                 </li>
                  <li>
                     <strong>Alerta de Duplicados (<Info className="inline h-4 w-4 text-amber-500" />):</strong> Al crear una solicitud, si el sistema detecta que ya existen otras solicitudes activas (pendientes, aprobadas u ordenadas) para el mismo artículo, te mostrará una advertencia para evitar compras duplicadas.
                 </li>
                 <li>
-                    <strong>Solicitar Cancelación:</strong> Si una solicitud ya está Aprobada u Ordenada, no se puede cancelar directamente. En su lugar, un usuario con permisos puede &quot;Solicitar Cancelación&quot;. Esto pone la solicitud en un estado de espera y notifica a un administrador, quien debe aprobar o rechazar la cancelación, dejando un registro del motivo.
+                    <strong>Pasos Opcionales:</strong> En **Administración &gt; Config. Compras**, puedes activar el paso de 'Recibido en Bodega' y el paso final 'Ingresado en ERP' para un control más detallado del proceso logístico.
                 </li>
                 <li>
-                    **Exportación:** Puedes generar un archivo **PDF** o **Excel (.xlsx)** del reporte actual.
+                    <strong>Exportación:</strong> Puedes generar un archivo **PDF** o **Excel (.xlsx)** del reporte actual, incluyendo los filtros que hayas aplicado.
                 </li>
                 </ul>
             </div>
@@ -769,6 +743,9 @@ export default function HelpPage() {
                     </li>
                     <li>
                         <strong>Mejora de UX: Eliminación de Parpadeos.</strong> Se corrigió el parpadeo que ocurría en los módulos de Planificador, Solicitudes y Visor de Eventos al presionar el botón de refrescar. Ahora los datos se actualizan en segundo plano sin interrumpir la vista del usuario.
+                    </li>
+                     <li>
+                        <strong>Nueva Funcionalidad: Recuperación de Contraseña.</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo electrónico con una clave temporal. Incluye una pantalla de configuración SMTP para administradores.
                     </li>
                     <li>
                         **Corrección de Bugs:** Se solucionó un error que causaba una advertencia de `NaN` en la consola al usar campos numéricos y se corrigió de manera definitiva el error `no such table: settings` en el módulo de Asistente de Costos.
