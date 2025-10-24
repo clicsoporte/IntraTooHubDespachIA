@@ -395,19 +395,19 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                 <ul className="list-disc space-y-3 pl-6">
                 <li>
-                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla 'Mostrar solo mis solicitudes' para ver las de todos los usuarios.
+                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla &apos;Mostrar solo mis solicitudes&apos; para ver las de todos los usuarios.
                 </li>
                 <li>
                     <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
                 </li>
                 <li>
-                    <strong>Aviso de 'Modificado' (<AlertTriangle className="inline h-4 w-4 text-red-600" />):</strong> Si una solicitud es editada después de haber sido Aprobada u Ordenada, aparecerá una alerta visual 'Modificado' para notificar a todos los involucrados.
+                    <strong>Aviso de &apos;Modificado&apos; (<AlertTriangle className="inline h-4 w-4 text-red-600" />):</strong> Si una solicitud es editada después de haber sido Aprobada u Ordenada, aparecerá una alerta visual &apos;Modificado&apos; para notificar a todos los involucrados.
                 </li>
                  <li>
                     <strong>Alerta de Duplicados (<Info className="inline h-4 w-4 text-amber-500" />):</strong> Al crear una solicitud, si el sistema detecta que ya existen otras solicitudes activas (pendientes, aprobadas u ordenadas) para el mismo artículo, te mostrará una advertencia para evitar compras duplicadas.
                 </li>
                 <li>
-                    <strong>Pasos Opcionales:</strong> En **Administración &gt; Config. Compras**, puedes activar el paso de 'Recibido en Bodega' y el paso final 'Ingresado en ERP' para un control más detallado del proceso logístico.
+                    <strong>Pasos Opcionales:</strong> En <strong>Administración &gt; Config. Compras</strong>, puedes activar el paso de &apos;Recibido en Bodega&apos; y el paso final &apos;Ingresado en ERP&apos; para un control más detallado del proceso logístico.
                 </li>
                 <li>
                     <strong>Exportación:</strong> Puedes generar un archivo **PDF** o **Excel (.xlsx)** del reporte actual, incluyendo los filtros que hayas aplicado.
@@ -654,7 +654,7 @@ export default function HelpPage() {
                     </div>
                     <div className="flex items-start gap-4">
                         <Store className="mt-1 h-6 w-6 text-amber-700 shrink-0" />
-                        <div><h4 className="font-semibold">Config. Compras</h4><p>Define las rutas de entrega, métodos de envío y activa pasos opcionales en el flujo de aprobación como &quot;Recibido en Bodega&quot; o &quot;Ingresado en ERP&quot;.</p></div>
+                        <div><h4 className="font-semibold">Config. Compras</h4><p>Define las rutas de entrega, métodos de envío y activa pasos opcionales en el flujo de aprobación como &apos;Recibido en Bodega&apos; o &apos;Ingresado en ERP&apos;.</p></div>
                     </div>
                     <div className="flex items-start gap-4">
                         <Map className="mt-1 h-6 w-6 text-teal-700 shrink-0" />
@@ -739,7 +739,7 @@ export default function HelpPage() {
                         <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones, login y logout para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas.
                     </li>
                     <li>
-                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de "tabla no encontrada".
+                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de &quot;tabla no encontrada&quot;.
                     </li>
                     <li>
                         <strong>Mejora de UX: Eliminación de Parpadeos.</strong> Se corrigió el parpadeo que ocurría en los módulos de Planificador, Solicitudes y Visor de Eventos al presionar el botón de refrescar. Ahora los datos se actualizan en segundo plano sin interrumpir la vista del usuario.
