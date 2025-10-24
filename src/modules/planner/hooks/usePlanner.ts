@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Custom hook `usePlanner` for managing the state and logic of the Production Planner page.
  * This hook encapsulates all state and actions for the planner, keeping the UI component clean.
@@ -140,7 +141,7 @@ export const usePlanner = () => {
         setState(prevState => ({ ...prevState, ...newState }));
     }, []);
 
-    const loadInitialData = useCallback(async (page = 0, isRefresh = false) => {
+    const loadInitialData = useCallback(async (isRefresh = false) => {
         let isMounted = true;
         
         if (isRefresh) {
@@ -153,7 +154,7 @@ export const usePlanner = () => {
             const [ settingsData, ordersData ] = await Promise.all([
                 getPlannerSettings(),
                 getProductionOrders({
-                    page: state.viewingArchived ? page : undefined,
+                    page: state.viewingArchived ? state.archivedPage : undefined,
                     pageSize: state.viewingArchived ? state.pageSize : undefined,
                 })
             ]);
@@ -198,7 +199,7 @@ export const usePlanner = () => {
     useEffect(() => {
         setTitle("Planificador OP");
         if (isAuthReady) { // Use isAuthReady instead of isAuthorized
-            loadInitialData(0);
+            loadInitialData(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setTitle, isAuthReady]); // Use isAuthReady
@@ -207,7 +208,7 @@ export const usePlanner = () => {
         if (!isAuthReady || state.isLoading) return; // Use isAuthReady
         let isMounted = true;
         const reload = async () => {
-            await loadInitialData(state.archivedPage);
+            await loadInitialData(false);
         };
         if(isMounted) {
             reload();
@@ -484,7 +485,7 @@ export const usePlanner = () => {
                 await updateProductionOrderStatus({ orderId: state.orderToUpdate.id, status: 'pending', notes: 'Orden reabierta.', updatedBy: currentUser.name, reopen: true });
                 toast({ title: "Orden Reabierta" });
                 updateState({ isReopenDialogOpen: false });
-                await loadInitialData();
+                await loadInitialData(0, true);
             } catch (error: any) {
                 logError("Failed to reopen order", { error: error.message });
                 toast({ title: "Error", variant: "destructive" });

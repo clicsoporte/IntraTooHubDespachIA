@@ -60,17 +60,21 @@ export default function LogViewerPage() {
         setIsLoading(true);
     }
     
-    const fetchedLogs = await getLogs({
-        type: logTypeFilter,
-        search: debouncedSearchTerm,
-        dateRange: dateFilter
-    });
-    setLogs(fetchedLogs);
-    
-    if (isRefreshAction) {
-        setIsRefreshing(false);
-    } else {
-        setIsLoading(false);
+    try {
+        const fetchedLogs = await getLogs({
+            type: logTypeFilter,
+            search: debouncedSearchTerm,
+            dateRange: dateFilter
+        });
+        setLogs(fetchedLogs);
+    } catch (error) {
+        console.error("Failed to fetch logs:", error);
+    } finally {
+        if (isRefreshAction) {
+            setIsRefreshing(false);
+        } else {
+            setIsLoading(false);
+        }
     }
   };
 

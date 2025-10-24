@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Main warehouse search page.
  * This component allows users to search for products or customers and see a consolidated
@@ -77,8 +78,11 @@ export default function WarehousePage() {
             logError("Failed to load warehouse data", { error });
             toast({ title: "Error de Carga", description: "No se pudieron cargar los datos del almacén.", variant: "destructive"});
         } finally {
-            setIsLoading(false);
-            setIsRefreshing(false);
+            if (isRefresh) {
+                setIsRefreshing(false);
+            } else {
+                setIsLoading(false);
+            }
         }
     }, [toast]);
     
@@ -216,7 +220,7 @@ export default function WarehousePage() {
 
     }, [debouncedSearchTerm, products, customers, inventory, itemLocations, stock, warehouseSettings, renderLocationPath]);
 
-    if (isLoading && !isRefreshing) {
+    if (isLoading) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                  <Card className="max-w-4xl mx-auto">
@@ -275,11 +279,7 @@ export default function WarehousePage() {
                         }
                         
                         <div className="space-y-4">
-                            {isLoading ? (
-                                <div className="text-center py-10">
-                                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
-                                </div>
-                            ) : filteredItems.length > 0 ? (
+                            {filteredItems.length > 0 ? (
                                 filteredItems.map(item => (
                                     <Card key={item.product?.id} className="w-full">
                                         <CardHeader>

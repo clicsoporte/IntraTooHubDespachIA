@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -22,6 +23,7 @@ import type {
     AdministrativeAction, AdministrativeActionPayload, Product, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload 
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
@@ -93,6 +95,7 @@ const priorityConfig = {
 
 type State = {
     isLoading: boolean;
+    isRefreshing: boolean;
     isSubmitting: boolean;
     isNewRequestDialogOpen: boolean;
     isEditRequestDialogOpen: boolean;
@@ -153,6 +156,7 @@ export const useRequests = () => {
     
     const [state, setState] = useState<State>({
         isLoading: true,
+        isRefreshing: false,
         isSubmitting: false,
         isNewRequestDialogOpen: false,
         isEditRequestDialogOpen: false,
@@ -212,14 +216,20 @@ export const useRequests = () => {
         setState(prevState => ({ ...prevState, ...newState }));
     }, []);
 
-    const loadInitialData = useCallback(async (page = 0) => {
+    const loadInitialData = useCallback(async (isRefresh = false) => {
         let isMounted = true;
-        updateState({ isLoading: true });
+        
+        if (isRefresh) {
+            updateState({ isRefreshing: true });
+        } else {
+            updateState({ isLoading: true });
+        }
+
         try {
              const [settingsData, requestsData] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
-                    page: state.viewingArchived ? page : undefined,
+                    page: state.viewingArchived ? state.archivedPage : undefined,
                     pageSize: state.viewingArchived ? state.pageSize : undefined,
                 })
             ]);
@@ -249,7 +259,7 @@ export const useRequests = () => {
             }
         } finally {
             if (isMounted) {
-                updateState({ isLoading: false });
+                updateState({ isLoading: false, isRefreshing: false });
             }
         }
          return () => { isMounted = false; };
@@ -258,14 +268,14 @@ export const useRequests = () => {
     useEffect(() => {
         setTitle("Solicitud de Compra");
         if (isAuthReady) { // Depend on isAuthReady
-            loadInitialData(state.archivedPage);
+            loadInitialData(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setTitle, isAuthReady]); // Use isAuthReady
 
      useEffect(() => {
         if (!isAuthReady || state.isLoading) return; // Depend on isAuthReady
-        loadInitialData(state.archivedPage);
+        loadInitialData(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.archivedPage, state.pageSize, state.viewingArchived, isAuthReady]);
 
@@ -325,11 +335,11 @@ export const useRequests = () => {
             });
             toast({ title: "Estado Actualizado" });
             updateState({ isStatusDialogOpen: false, isActionDialogOpen: false });
-            await loadInitialData(state.viewingArchived ? state.archivedPage : 0);
+            await loadInitialData(false);
         } catch (error: any) {
             logError("Failed to update status", { error: error.message });
             toast({ title: "Error", variant: "destructive" });
-            await loadInitialData(state.viewingArchived ? state.archivedPage : 0);
+            await loadInitialData(false);
         } finally {
             updateState({ isSubmitting: false });
         }
@@ -779,7 +789,7 @@ export const useRequests = () => {
         setEditRequestDialogOpen: (isOpen: boolean) => updateState({ isEditRequestDialogOpen: isOpen }),
         setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, archivedPage: 0 }),
         setArchivedPage: (updater: (prev: number) => number) => updateState({ archivedPage: updater(state.archivedPage) }),
-        setPageSize: (size: number) => updateState({ pageSize: size, archivedPage: 0 }),
+        setPageSize: (size: number) => updateState({ pageSize: size, currentPage: 0 }),
         setNewRequest: (updater: (prev: State['newRequest']) => State['newRequest']) => updateState({ newRequest: updater(state.newRequest) }),
         setRequestToEdit: (request: PurchaseRequest | null) => updateState({ requestToEdit: request }),
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
@@ -878,4 +888,3 @@ export const useRequests = () => {
         isAuthorized
     };
 };
-
