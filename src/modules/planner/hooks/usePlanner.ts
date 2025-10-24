@@ -31,6 +31,7 @@ import type { RowInput } from 'jspdf-autotable';
 import { addNoteToOrder as addNoteServer } from '@/modules/planner/lib/actions';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertCircle } from 'lucide-react';
+import { getStatusConfig } from '../lib/utils';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -67,18 +68,6 @@ const priorityConfig = {
     medium: { label: "Media", className: "text-blue-500" }, 
     high: { label: "Alta", className: "text-yellow-600" }, 
     urgent: { label: "Urgente", className: "text-red-600" }
-};
-
-const baseStatusConfig: { [key: string]: { label: string, color: string } } = {
-    pending: { label: "Pendiente", color: "bg-yellow-500" },
-    approved: { label: "Aprobada", color: "bg-green-500" },
-    'in-queue': { label: "En Cola", color: "bg-cyan-500"},
-    'in-progress': { label: "En Progreso", color: "bg-blue-500" },
-    'on-hold': { label: "En Espera", color: "bg-gray-500" },
-    'in-maintenance': { label: "En Mantenimiento", color: "bg-slate-600" },
-    completed: { label: "Completada", color: "bg-teal-500" },
-    'received-in-warehouse': { label: "En Bodega", color: "bg-gray-700" },
-    canceled: { label: "Cancelada", color: "bg-red-700" },
 };
 
 export const usePlanner = () => {
@@ -126,7 +115,7 @@ export const usePlanner = () => {
         isReopenDialogOpen: false,
         reopenStep: 0,
         reopenConfirmationText: '',
-        dynamicStatusConfig: baseStatusConfig,
+        dynamicStatusConfig: getStatusConfig(null),
         isAddNoteDialogOpen: false,
         notePayload: null as { orderId: number; notes: string } | null,
         isActionDialogOpen: false,
@@ -161,14 +150,7 @@ export const usePlanner = () => {
             
             if (!isMounted) return;
 
-            let newDynamicConfig = { ...baseStatusConfig };
-            if (settingsData?.customStatuses) {
-                settingsData.customStatuses.forEach(cs => {
-                    if (cs.isActive && cs.label) {
-                        newDynamicConfig[cs.id as ProductionOrderStatus] = { label: cs.label, color: cs.color };
-                    }
-                });
-            }
+            const newDynamicConfig = getStatusConfig(settingsData);
 
             const finalStatus = settingsData?.useWarehouseReception ? 'received-in-warehouse' : 'completed';
             const activeFilter = (o: ProductionOrder) => o.status !== finalStatus && o.status !== 'canceled';
@@ -289,7 +271,7 @@ export const usePlanner = () => {
         setNotePayload: (payload: { orderId: number; notes: string } | null) => updateState({ notePayload: payload }),
         setActionDialogOpen: (isOpen: boolean) => updateState({ isActionDialogOpen: isOpen }),
         
-        loadInitialData: (isRefresh: boolean = false) => loadInitialData(state.archivedPage, isRefresh),
+        loadInitialData: (isRefresh: boolean = false) => loadInitialData(isRefresh),
 
         handleCreateOrder: async () => {
             if (!state.newOrder.customerId || !state.newOrder.productId || !state.newOrder.quantity || !state.newOrder.deliveryDate || !currentUser) return;
@@ -485,7 +467,7 @@ export const usePlanner = () => {
                 await updateProductionOrderStatus({ orderId: state.orderToUpdate.id, status: 'pending', notes: 'Orden reabierta.', updatedBy: currentUser.name, reopen: true });
                 toast({ title: "Orden Reabierta" });
                 updateState({ isReopenDialogOpen: false });
-                await loadInitialData(0, true);
+                await loadInitialData(true);
             } catch (error: any) {
                 logError("Failed to reopen order", { error: error.message });
                 toast({ title: "Error", variant: "destructive" });
