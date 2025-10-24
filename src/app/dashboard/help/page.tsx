@@ -758,7 +758,23 @@ export default function HelpPage() {
         icon: <ListChecks className="mr-4 h-6 w-6 text-fuchsia-600" />,
         content: (
              <div className="space-y-4">
-                <h4 className="font-semibold text-lg">Versión 1.8.0 <Badge variant="secondary">Actual</Badge></h4>
+                <h4 className="font-semibold text-lg">Versión 1.9.0 <Badge variant="secondary">Actual</Badge></h4>
+                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
+                <ul className="list-disc space-y-3 pl-6">
+                    <li>
+                        <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones, login y logout para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas.
+                    </li>
+                    <li>
+                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de "tabla no encontrada".
+                    </li>
+                    <li>
+                        <strong>Mejora de UX: Eliminación de Parpadeos.</strong> Se corrigió el parpadeo que ocurría en los módulos de Planificador, Solicitudes y Visor de Eventos al presionar el botón de refrescar. Ahora los datos se actualizan en segundo plano sin interrumpir la vista del usuario.
+                    </li>
+                    <li>
+                        **Corrección de Bugs:** Se solucionó un error que causaba una advertencia de `NaN` en la consola al usar campos numéricos y se corrigió de manera definitiva el error `no such table: settings` en el módulo de Asistente de Costos.
+                    </li>
+                </ul>
+                <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.8.0</h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
@@ -771,35 +787,6 @@ export default function HelpPage() {
                     </li>
                      <li>
                         <strong>Nuevo Módulo: Centro de Ayuda.</strong> Se ha añadido una guía de usuario interactiva y con capacidad de búsqueda directamente en la aplicación para mejorar la autonomía del usuario.
-                    </li>
-                </ul>
-                 <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.7.0</h4>
-                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
-                <ul className="list-disc space-y-3 pl-6">
-                     <li>
-                        <strong>Nueva Funcionalidad Mayor: Recuperación de Contraseña.</strong> Se implementó un sistema completo para que los usuarios puedan recuperar su contraseña por correo electrónico. Incluye una nueva página de administración para configurar el servidor SMTP y personalizar la plantilla del correo.
-                    </li>
-                    <li>
-                        <strong>Nueva Funcionalidad de Seguridad: Cambio de Contraseña Forzado.</strong> Al crear un nuevo usuario, ahora se puede forzar a que cambie su contraseña en el primer inicio de sesión. Este flujo también se activa automáticamente al usar una contraseña temporal recuperada.
-                    </li>
-                    <li>
-                        <strong>Mejora en Flujo de Compras:</strong> Se añadió la capacidad de configurar el paso final &quot;Ingresado en ERP&quot; y de retroceder solicitudes entre los estados de &quot;Pendiente&quot;, &quot;Revisión&quot; y &quot;Pendiente de Aprobación&quot; para mayor flexibilidad.
-                    </li>
-                     <li>
-                        <strong>Mejora de Robustez: Refactorización del Flujo de Autenticación.</strong> Se reescribió la lógica de inicio de sesión, cierre de sesión y protección de rutas para eliminar condiciones de carrera, evitar parpadeos de pantalla y manejar las sesiones de manera más segura y estable.
-                    </li>
-                    <li>
-                        **Mejora de Estabilidad: Corrección de Migraciones.** Se revisaron y corrigieron todos los scripts de migración de la base de datos para asegurar que las actualizaciones de la aplicación se realicen sin errores ni pérdida de datos.
-                    </li>
-                </ul>
-                 <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.6.0</h4>
-                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
-                <ul className="list-disc space-y-3 pl-6">
-                     <li>
-                        <strong>Nuevo Módulo Mayor: Asistente de Costos.</strong> Permite cargar facturas XML, prorratear costos y calcular precios de venta.
-                    </li>
-                    <li>
-                        <strong>Mejora Mayor en Interfaz: Panel Lateral Plegable.</strong>
                     </li>
                 </ul>
             </div>
@@ -855,4 +842,3 @@ export default function HelpPage() {
     </main>
   );
 }
-

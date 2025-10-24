@@ -1,6 +1,6 @@
 # Clic-Tools: Documentación Técnica y Manual de Usuario
 
-**Clic-Tools v1.8.0** es una aplicación web interna diseñada para centralizar herramientas y procesos empresariales clave en un único panel de control. El objetivo es proporcionar una plataforma sencilla, rápida, segura y altamente configurable, optimizada para su uso en una red local (LAN).
+**Clic-Tools v1.9.0** es una aplicación web interna diseñada para centralizar herramientas y procesos empresariales clave en un único panel de control. El objetivo es proporcionar una plataforma sencilla, rápida, segura y altamente configurable, optimizada para su uso en una red local (LAN).
 
 ---
 
@@ -43,7 +43,7 @@
 
 ## 3. Guía de Módulos (Funcionalidades)
 
-### 3.1. Centro de Notificaciones (¡Nuevo!)
+### 3.1. Centro de Notificaciones
 - **Alertas Proactivas:** Un icono de campana en la cabecera muestra un contador de notificaciones no leídas y se anima sutilmente cuando llega una nueva.
 - **Bandeja de Tareas Interactiva:** Al hacer clic en la campana, se despliega un panel con las últimas notificaciones. Cada notificación es un enlace directo a la entidad correspondiente (una orden, una solicitud, etc.).
 - **Notificaciones Accionables:** Ciertas notificaciones (ej: "Se solicita cancelar una orden") incluyen botones para realizar acciones rápidas directamente desde el panel, como "Aprobar" o "Rechazar", convirtiendo las notificaciones en una herramienta de gestión activa.
@@ -103,7 +103,7 @@ Este módulo agrupa herramientas de inteligencia de negocio para ayudar en la to
 - **Feedback Directo:** Permite a los usuarios enviar sugerencias o reportar problemas directamente desde la interfaz.
 - **Panel de Administración:** Los administradores pueden ver, gestionar y marcar como leídas las sugerencias para un seguimiento efectivo.
 
-### 3.10. Centro de Ayuda (`/dashboard/help`) (¡Nuevo!)
+### 3.10. Centro de Ayuda (`/dashboard/help`)
 - **Documentación Integrada**: Una guía de usuario completa y siempre actualizada, directamente accesible desde la aplicación.
 - **Búsqueda Inteligente**: Incluye una barra de búsqueda que filtra y resalta las secciones relevantes en tiempo real.
 
