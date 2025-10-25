@@ -29,7 +29,7 @@ import { useDebounce } from 'use-debounce';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { getDaysRemaining as getSimpleDaysRemaining } from '@/modules/core/lib/time-utils';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
-import { AlertCircle, Undo2 } from 'lucide-react';
+import { AlertCircle, Undo2, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import type { RowInput } from 'jspdf-autotable';
 import { getAllProducts as getAllProductsFromDB } from '@/modules/core/lib/db';
 import { getAllCustomers as getAllCustomersFromDB } from '@/modules/core/lib/db';
@@ -237,8 +237,8 @@ export const useRequests = () => {
              const [settingsData, requestsData, dbProducts, dbCustomers] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
-                    page: state.viewingArchived ? state.archivedPage : undefined,
-                    pageSize: state.viewingArchived ? state.pageSize : undefined,
+                    page: state.archivedPage,
+                    pageSize: state.pageSize,
                 }),
                 getAllProductsFromDB(),
                 getAllCustomersFromDB(),
@@ -273,7 +273,7 @@ export const useRequests = () => {
             }
         }
          return () => { isMounted = false; };
-    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
+    }, [toast, state.archivedPage, state.pageSize, updateState]);
     
     useEffect(() => {
         setTitle("Solicitud de Compra");
@@ -898,3 +898,4 @@ export const useRequests = () => {
         isAuthorized
     };
 };
+
