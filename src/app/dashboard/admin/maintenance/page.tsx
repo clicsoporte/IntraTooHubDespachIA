@@ -25,14 +25,14 @@ import {
   } from "../../../../components/ui/select"
 import { useToast } from "../../../../modules/core/hooks/use-toast";
 import { logError, logInfo, logWarn } from "../../../../modules/core/lib/logger";
-import { UploadCloud, RotateCcw, Loader2, Save, LifeBuoy, Trash2 as TrashIcon, Download, Skull, AlertTriangle, FileUp } from "lucide-react";
+import { UploadCloud, RotateCcw, Loader2, Save, LifeBuoy, Trash2 as TrashIcon, Download, Skull, AlertTriangle, FileUp, ShieldCheck, CheckCircle } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { usePageTitle } from "../../../../modules/core/hooks/usePageTitle";
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Label } from '../../../../components/ui/label';
 import { Input } from '../../../../components/ui/input';
-import { restoreAllFromUpdateBackup, listAllUpdateBackups, deleteOldUpdateBackups, restoreDatabase, backupAllForUpdate, factoryReset, getDbModules, getCurrentVersion } from '../../../../modules/core/lib/db';
-import type { UpdateBackupInfo, DatabaseModule } from '../../../../modules/core/types';
+import { restoreAllFromUpdateBackup, listAllUpdateBackups, deleteOldUpdateBackups, restoreDatabase, backupAllForUpdate, factoryReset, getDbModules, getCurrentVersion, runDatabaseAudit } from '../../../../modules/core/lib/db';
+import type { UpdateBackupInfo, DatabaseModule, AuditResult } from '../../../../modules/core/types';
 import { useAuthorization } from "../../../../modules/core/hooks/useAuthorization";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleComponent, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -57,7 +57,7 @@ export default function MaintenancePage() {
     // State for update backups
     const [systemVersion, setSystemVersion] = useState<string | null>(null);
     const [updateBackups, setUpdateBackups] = useState<UpdateBackupInfo[]>([]);
-    const [dbModules, setDbModules] = useState<Omit<DatabaseModule, 'initFn' | 'migrationFn'>[]>([]);
+    const [dbModules, setDbModules] = useState<Omit<DatabaseModule, 'initFn' | 'migrationFn' | 'schema'>[]>([]);
     const [isRestoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
     const [isClearBackupsConfirmOpen, setClearBackupsConfirmOpen] = useState(false);
     
@@ -81,6 +81,10 @@ export default function MaintenancePage() {
     const [fileToRestore, setFileToRestore] = useState<File | null>(null);
     const [singleRestoreStep, setSingleRestoreStep] = useState(0);
     const [singleRestoreConfirmationText, setSingleRestoreConfirmationText] = useState('');
+    
+    // State for audit
+    const [isAuditing, setIsAuditing] = useState(false);
+    const [auditResults, setAuditResults] = useState<AuditResult[] | null>(null);
 
 
     const fetchMaintenanceData = useCallback(async () => {
@@ -293,6 +297,21 @@ export default function MaintenancePage() {
             setProcessingAction(null);
         }
     };
+
+    const handleRunAudit = async () => {
+        if (!user) return;
+        setIsAuditing(true);
+        setAuditResults(null);
+        try {
+            const results = await runDatabaseAudit(user.name);
+            setAuditResults(results);
+        } catch (error: any) {
+            logError("Error running database audit", { error: error.message });
+            toast({ title: "Error en la Auditoría", description: "No se pudo completar el proceso de auditoría.", variant: "destructive" });
+        } finally {
+            setIsAuditing(false);
+        }
+    }
     
     const uniqueTimestamps = [...new Set(updateBackups.map(b => b.date))].sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
 
@@ -435,6 +454,51 @@ export default function MaintenancePage() {
                                         </AlertDialog>
                                     </CardFooter>
                                 </Card>
+                            </AccordionContent>
+                        </AccordionItem>
+                    </Card>
+                    
+                    <Card>
+                        <AccordionItem value="audit">
+                            <AccordionTrigger className="p-6 hover:no-underline">
+                                <div className="flex items-center gap-4">
+                                    <ShieldCheck className="h-8 w-8 text-green-600" />
+                                    <div>
+                                        <CardTitle>Auditoría y Verificación del Sistema</CardTitle>
+                                        <CardDescription>
+                                        Verifica la integridad de todas las bases de datos para asegurar que estén actualizadas.
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0 space-y-6">
+                                <div>
+                                    <Button onClick={handleRunAudit} disabled={isAuditing}>
+                                        {isAuditing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                                        Ejecutar Auditoría de Bases de Datos
+                                    </Button>
+                                </div>
+                                {auditResults && (
+                                     <div className="space-y-4">
+                                        {auditResults.map(result => (
+                                            <Card key={result.moduleId} className={result.status === 'ERROR' ? 'border-destructive' : 'border-green-600'}>
+                                                <CardHeader>
+                                                    <CardTitle className="flex items-center gap-2">
+                                                        {result.status === 'OK' ? <CheckCircle className="h-5 w-5 text-green-600" /> : <AlertTriangle className="h-5 w-5 text-destructive" />}
+                                                        {result.moduleName} ({result.dbFile})
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                {result.issues.length > 0 && (
+                                                    <CardContent>
+                                                        <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
+                                                            {result.issues.map((issue, i) => <li key={i}>{issue}</li>)}
+                                                        </ul>
+                                                    </CardContent>
+                                                )}
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
                             </AccordionContent>
                         </AccordionItem>
                     </Card>

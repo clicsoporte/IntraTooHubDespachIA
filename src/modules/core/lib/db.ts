@@ -1362,8 +1362,10 @@ export async function saveUserPreferences(userId: number, key: string, value: an
 }
 
 // --- Database Audit ---
-export async function runDatabaseAudit(): Promise<AuditResult[]> {
+export async function runDatabaseAudit(userName: string): Promise<AuditResult[]> {
     const results: AuditResult[] = [];
+    let overallStatus: 'OK' | 'ERROR' = 'OK';
+    const allIssues: string[] = [];
     
     for (const dbModule of DB_MODULES) {
         const audit: AuditResult = {
@@ -1382,7 +1384,10 @@ export async function runDatabaseAudit(): Promise<AuditResult[]> {
                 
                 if (tableInfo.length === 0) {
                     audit.status = 'ERROR';
-                    audit.issues.push(`FALTA TABLA: La tabla '${expectedTable}' no existe.`);
+                    overallStatus = 'ERROR';
+                    const issue = `FALTA TABLA: La tabla '${expectedTable}' no existe en ${dbModule.dbFile}.`;
+                    audit.issues.push(issue);
+                    allIssues.push(issue);
                     continue; // Skip column check for this table
                 }
 
@@ -1392,15 +1397,27 @@ export async function runDatabaseAudit(): Promise<AuditResult[]> {
                 for (const expectedColumn of expectedColumns) {
                     if (!existingColumns.has(expectedColumn)) {
                         audit.status = 'ERROR';
-                        audit.issues.push(`FALTA COLUMNA: '${expectedColumn}' en la tabla '${expectedTable}'.`);
+                        overallStatus = 'ERROR';
+                        const issue = `FALTA COLUMNA: '${expectedColumn}' en la tabla '${expectedTable}' de ${dbModule.dbFile}.`;
+                        audit.issues.push(issue);
+                        allIssues.push(issue);
                     }
                 }
             }
         } catch (error: any) {
             audit.status = 'ERROR';
-            audit.issues.push(`Error al auditar '${dbModule.name}': ${error.message}`);
+            overallStatus = 'ERROR';
+            const issue = `Error al auditar '${dbModule.name}': ${error.message}`;
+            audit.issues.push(issue);
+            allIssues.push(issue);
         }
         results.push(audit);
+    }
+    
+    if (overallStatus === 'ERROR') {
+        await logError('Auditoría de base de datos fallida.', { user: userName, issues: allIssues });
+    } else {
+        await logInfo(`Auditoría de base de datos completada con éxito por ${userName}.`, { user: userName });
     }
     
     return results;
