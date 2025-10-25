@@ -385,7 +385,7 @@ export async function updateStatus(payload: UpdateRequestStatusPayload): Promise
         receivedDate = new Date().toISOString();
     }
     
-    const previousStatus = (status === 'canceled' || status === 'pending') ? currentRequest.status : null;
+    const previousStatus = (status === 'canceled' || status === 'pending' || status === 'purchasing-review' || status === 'approved') ? currentRequest.status : null;
 
 
     const transaction = db.transaction(() => {

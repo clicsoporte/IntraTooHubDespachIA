@@ -14,11 +14,14 @@ import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
 import { logInfo, logWarn, logError } from './logger';
-import { initializePlannerDb, runPlannerMigrations, plannerSchema } from '../../planner/lib/db';
-import { initializeRequestsDb, runRequestMigrations, requestSchema } from '../../requests/lib/db';
-import { initializeWarehouseDb, runWarehouseMigrations, warehouseSchema } from '../../warehouse/lib/db';
+import { initializePlannerDb, runPlannerMigrations } from '../../planner/lib/db';
+import { initializeRequestsDb, runRequestMigrations } from '../../requests/lib/db';
+import { initializeWarehouseDb, runWarehouseMigrations } from '../../warehouse/lib/db';
 import { initializeCostAssistantDb, runCostAssistantMigrations } from '../../cost-assistant/lib/db';
 import { costAssistantSchema } from '../../cost-assistant/lib/schema';
+import { plannerSchema } from '../../planner/lib/schema';
+import { requestSchema } from '../../requests/lib/schema';
+import { warehouseSchema } from '../../warehouse/lib/schema';
 
 
 const DB_FILE = 'intratool.db';

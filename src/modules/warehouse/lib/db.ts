@@ -268,5 +268,3 @@ export async function unassignItemFromLocation(itemLocationId: number): Promise<
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('DELETE FROM item_locations WHERE id = ?').run(itemLocationId);
 }
-
-    
