@@ -9,15 +9,16 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { initialCompany, initialRoles } from './data';
-import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, SqlConfig, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences } from '@/modules/core/types';
+import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, SqlConfig, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
 import { logInfo, logWarn, logError } from './logger';
-import { initializePlannerDb, runPlannerMigrations } from '../../planner/lib/db';
-import { initializeRequestsDb, runRequestMigrations } from '../../requests/lib/db';
-import { initializeWarehouseDb, runWarehouseMigrations } from '../../warehouse/lib/db';
+import { initializePlannerDb, runPlannerMigrations, plannerSchema } from '../../planner/lib/db';
+import { initializeRequestsDb, runRequestMigrations, requestSchema } from '../../requests/lib/db';
+import { initializeWarehouseDb, runWarehouseMigrations, warehouseSchema } from '../../warehouse/lib/db';
 import { initializeCostAssistantDb, runCostAssistantMigrations } from '../../cost-assistant/lib/db';
+import { costAssistantSchema } from '../../cost-assistant/lib/schema';
 
 
 const DB_FILE = 'intratool.db';
@@ -105,11 +106,40 @@ async function initializeMainDatabase(db: import('better-sqlite3').Database) {
  * of any specific module, promoting true modularity and decoupling.
  */
 const DB_MODULES: DatabaseModule[] = [
-    { id: 'clic-tools-main', name: 'Clic-Tools (Sistema Principal)', dbFile: DB_FILE, initFn: initializeMainDatabase, migrationFn: checkAndApplyMigrations },
-    { id: 'purchase-requests', name: 'Solicitud de Compra', dbFile: 'requests.db', initFn: initializeRequestsDb, migrationFn: runRequestMigrations },
-    { id: 'production-planner', name: 'Planificador de Producción', dbFile: 'planner.db', initFn: initializePlannerDb, migrationFn: runPlannerMigrations },
-    { id: 'warehouse-management', name: 'Gestión de Almacenes', dbFile: 'warehouse.db', initFn: initializeWarehouseDb, migrationFn: runWarehouseMigrations },
-    { id: 'cost-assistant', name: 'Asistente de Costos', dbFile: 'cost_assistant.db', initFn: initializeCostAssistantDb, migrationFn: runCostAssistantMigrations },
+    { 
+        id: 'clic-tools-main', 
+        name: 'Clic-Tools (Sistema Principal)', 
+        dbFile: DB_FILE, 
+        initFn: initializeMainDatabase, 
+        migrationFn: checkAndApplyMigrations,
+        schema: {
+            'users': ['id', 'name', 'email', 'password', 'phone', 'whatsapp', 'erpAlias', 'avatar', 'role', 'recentActivity', 'securityQuestion', 'securityAnswer', 'forcePasswordChange'],
+            'roles': ['id', 'name', 'permissions'],
+            'company_settings': ['id', 'name', 'taxId', 'address', 'phone', 'email', 'logoUrl', 'systemName', 'quotePrefix', 'nextQuoteNumber', 'decimalPlaces', 'quoterShowTaxId', 'searchDebounceTime', 'syncWarningHours', 'lastSyncTimestamp', 'importMode', 'customerFilePath', 'productFilePath', 'exemptionFilePath', 'stockFilePath', 'locationFilePath', 'cabysFilePath', 'supplierFilePath'],
+            'logs': ['id', 'timestamp', 'type', 'message', 'details'],
+            'api_settings': ['id', 'exchangeRateApi', 'haciendaExemptionApi', 'haciendaTributariaApi'],
+            'customers': ['id', 'name', 'address', 'phone', 'taxId', 'currency', 'creditLimit', 'paymentCondition', 'salesperson', 'active', 'email', 'electronicDocEmail'],
+            'products': ['id', 'description', 'classification', 'lastEntry', 'active', 'notes', 'unit', 'isBasicGood', 'cabys'],
+            'exemptions': ['code', 'description', 'customer', 'authNumber', 'startDate', 'endDate', 'percentage', 'docType', 'institutionName', 'institutionCode'],
+            'quote_drafts': ['id', 'createdAt', 'userId', 'customerId', 'customerDetails', 'lines', 'totals', 'notes', 'currency', 'exchangeRate', 'purchaseOrderNumber', 'deliveryAddress', 'deliveryDate', 'sellerName', 'sellerType', 'quoteDate', 'validUntilDate', 'paymentTerms', 'creditDays'],
+            'exemption_laws': ['docType', 'institutionName', 'authNumber'],
+            'cabys_catalog': ['code', 'description', 'taxRate'],
+            'stock': ['itemId', 'stockByWarehouse', 'totalStock'],
+            'sql_config': ['key', 'value'],
+            'import_queries': ['type', 'query'],
+            'suggestions': ['id', 'content', 'userId', 'userName', 'isRead', 'timestamp'],
+            'user_preferences': ['userId', 'key', 'value'],
+            'notifications': ['id', 'userId', 'message', 'href', 'isRead', 'timestamp', 'entityId', 'entityType', 'taskType'],
+            'email_settings': ['key', 'value'],
+            'suppliers': ['id', 'name', 'alias', 'email', 'phone'],
+            'erp_order_headers': ['PEDIDO', 'ESTADO', 'CLIENTE', 'FECHA_PEDIDO', 'FECHA_PROMETIDA', 'ORDEN_COMPRA', 'TOTAL_UNIDADES', 'MONEDA_PEDIDO', 'USUARIO'],
+            'erp_order_lines': ['PEDIDO', 'PEDIDO_LINEA', 'ARTICULO', 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO'],
+        }
+    },
+    { id: 'purchase-requests', name: 'Solicitud de Compra', dbFile: 'requests.db', initFn: initializeRequestsDb, migrationFn: runRequestMigrations, schema: requestSchema },
+    { id: 'production-planner', name: 'Planificador de Producción', dbFile: 'planner.db', initFn: initializePlannerDb, migrationFn: runPlannerMigrations, schema: plannerSchema },
+    { id: 'warehouse-management', name: 'Gestión de Almacenes', dbFile: 'warehouse.db', initFn: initializeWarehouseDb, migrationFn: runWarehouseMigrations, schema: warehouseSchema },
+    { id: 'cost-assistant', name: 'Asistente de Costos', dbFile: 'cost_assistant.db', initFn: initializeCostAssistantDb, migrationFn: runCostAssistantMigrations, schema: costAssistantSchema },
 ];
 
 
@@ -1329,4 +1359,49 @@ export async function getUserPreferences(userId: number, key: string): Promise<a
 export async function saveUserPreferences(userId: number, key: string, value: any): Promise<void> {
     const db = await connectDb();
     db.prepare('INSERT OR REPLACE INTO user_preferences (userId, key, value) VALUES (?, ?, ?)').run(userId, key, JSON.stringify(value));
+}
+
+// --- Database Audit ---
+export async function runDatabaseAudit(): Promise<AuditResult[]> {
+    const results: AuditResult[] = [];
+    
+    for (const dbModule of DB_MODULES) {
+        const audit: AuditResult = {
+            moduleId: dbModule.id,
+            moduleName: dbModule.name,
+            dbFile: dbModule.dbFile,
+            status: 'OK',
+            issues: []
+        };
+        
+        try {
+            const db = await connectDb(dbModule.dbFile);
+            
+            for (const expectedTable in dbModule.schema) {
+                const tableInfo = db.prepare(`PRAGMA table_info(${expectedTable})`).all() as { name: string }[];
+                
+                if (tableInfo.length === 0) {
+                    audit.status = 'ERROR';
+                    audit.issues.push(`FALTA TABLA: La tabla '${expectedTable}' no existe.`);
+                    continue; // Skip column check for this table
+                }
+
+                const existingColumns = new Set(tableInfo.map(col => col.name));
+                const expectedColumns = dbModule.schema[expectedTable];
+
+                for (const expectedColumn of expectedColumns) {
+                    if (!existingColumns.has(expectedColumn)) {
+                        audit.status = 'ERROR';
+                        audit.issues.push(`FALTA COLUMNA: '${expectedColumn}' en la tabla '${expectedTable}'.`);
+                    }
+                }
+            }
+        } catch (error: any) {
+            audit.status = 'ERROR';
+            audit.issues.push(`Error al auditar '${dbModule.name}': ${error.message}`);
+        }
+        results.push(audit);
+    }
+    
+    return results;
 }

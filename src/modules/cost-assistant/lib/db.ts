@@ -6,7 +6,8 @@
 "use server";
 
 import { connectDb } from '../../core/lib/db';
-import type { CostAnalysisDraft, CostAssistantSettings } from '@/modules/core/types';
+import type { CostAnalysisDraft, CostAssistantSettings, ExpectedSchema } from '@/modules/core/types';
+import { costAssistantSchema } from './schema';
 
 const COST_ASSISTANT_DB_FILE = 'cost_assistant.db';
 
@@ -113,6 +114,7 @@ export async function getCostAssistantDbSettings(): Promise<Partial<CostAssistan
     const settings: Partial<CostAssistantSettings> = {};
     try {
         // Run migration logic directly here to ensure table exists before querying.
+        // This is a defensive check in case the main connection flow didn't run.
         await runCostAssistantMigrations(db);
 
         const rows = db.prepare(`SELECT key, value FROM settings`).all() as {key: string, value: string}[];

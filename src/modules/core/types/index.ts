@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file defines the core TypeScript types used throughout the application.
  * Using centralized types helps ensure data consistency and provides autocompletion benefits.
@@ -186,15 +185,24 @@ export type ApiSettings = {
 };
 
 /**
- * Represents a database module for modular maintenance operations.
+ * Represents the expected schema of a table for database auditing.
+ */
+export type ExpectedSchema = {
+    [tableName: string]: string[]; // e.g., { 'users': ['id', 'name', 'email'], ... }
+};
+
+/**
+ * Represents a database module for modular maintenance, initialization, and auditing.
  */
 export type DatabaseModule = {
-    id: string; // e.g., 'clic-tools-main'
-    name: string; // e.g., 'Clic-Tools (Sistema Principal)'
-    dbFile: string; // e.g., 'intratool.db'
+    id: string;
+    name: string;
+    dbFile: string;
     initFn?: (db: any) => void | Promise<void>;
-    migrationFn?: ((db: any) => void | Promise<void>) | undefined;
+    migrationFn?: (db: any) => void | Promise<void>;
+    schema: ExpectedSchema;
 };
+
 
 /**
  * Represents a customer's tax exemption record from the ERP.
@@ -617,6 +625,14 @@ export type UpdateBackupInfo = {
     fileName: string;
     date: string;
     version: string | null;
+};
+
+export type AuditResult = {
+    moduleId: string;
+    moduleName: string;
+    dbFile: string;
+    status: 'OK' | 'ERROR';
+    issues: string[];
 };
 
 // --- Suggestion Box Types ---
