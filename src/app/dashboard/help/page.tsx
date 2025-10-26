@@ -309,7 +309,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -426,16 +426,16 @@ export default function HelpPage() {
                 </p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        **Visibilidad por Defecto:** Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
+                        <strong>Visibilidad por Defecto:</strong> Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
                     </li>
                     <li>
-                        **Paso 1: Crear Órdenes.** Similar a los otros módulos, crea una nueva orden de producción buscando al cliente y el producto. Establece la cantidad, la fecha de entrega y la prioridad.
+                        <strong>Paso 1: Crear Órdenes.</strong> Similar a los otros módulos, crea una nueva orden de producción buscando al cliente y el producto. Establece la cantidad, la fecha de entrega y la prioridad.
                          <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Alerta de Duplicados (<Info className="inline h-4 w-4 text-amber-500" />):** Al seleccionar un producto, el sistema te avisará si ya existen otras órdenes de producción activas para ese mismo artículo, ayudándote a evitar duplicar trabajo.</li>
                         </ul>
                     </li>
                     <li>
-                        **Paso 2: Flujo de Estados y Trazabilidad.**
+                        <strong>Paso 2: Flujo de Estados y Trazabilidad.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Pendiente:** La orden ha sido creada y espera aprobación.</li>
                             <li>**Aprobada (<CheckCircle className="inline h-4 w-4 text-green-600"/>):** La orden está autorizada para producción.</li>
@@ -447,7 +447,7 @@ export default function HelpPage() {
                         </ul>
                     </li>
                     <li>
-                        **Paso 3: Alertas y Solicitudes de Cambio.**
+                        <strong>Paso 3: Alertas y Solicitudes de Cambio.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Aviso de &quot;Modificado&quot; (<AlertTriangle className="inline h-4 w-4 text-red-600" />):** Si una orden se edita después de ser aprobada, aparecerá esta alerta para notificar a todos sobre el cambio.</li>
                             <li>**Solicitar Desaprobación (<Undo2 className="inline h-4 w-4 text-orange-600"/>):** Si una orden ya aprobada necesita un cambio mayor (ej: cambiar de producto), un usuario puede &quot;Solicitar Desaprobación&quot;. Esto bloquea la orden y requiere que un administrador la apruebe o rechace para devolverla al estado &quot;Pendiente&quot;.</li>
@@ -455,7 +455,7 @@ export default function HelpPage() {
                         </ul>
                     </li>
                     <li>
-                        **Paso 4: Programación y Prioridades.**
+                        <strong>Paso 4: Programación y Prioridades.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Programación por Rango:** Haz clic en el área de &quot;Fecha Programada&quot; para abrir un calendario y seleccionar un rango de fechas de inicio y fin.</li>
                             <li>**Asignación:** Asigna cada orden a una máquina, proceso u operario específico desde el menú desplegable. Estas opciones se configuran en Administración.</li>

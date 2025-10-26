@@ -79,5 +79,6 @@ Solución de Problemas
 -   **Permisos de Carpeta**: Asegúrate de que la cuenta de usuario del grupo de aplicaciones de IIS (generalmente `IIS_IUSRS`) tenga permisos de lectura y ejecución sobre la carpeta del proyecto.
 -   **Error 500.19 o similar**: Generalmente indica que `iisnode` o `URL Rewrite` no están instalados o no se cargaron correctamente. Reinstálalos y reinicia el servidor.
 -   **Logs de `iisnode`**: Si encuentras errores (ej. `HTTP 500`), el `web.config` ya está configurado para crear una carpeta `iisnode` en el directorio de tu aplicación con archivos de log. Revisa `iisnode-stdout.log` y `iisnode-stderr.log` para obtener pistas sobre el problema.
+-   **Error `EBUSY: resource busy or locked`**: Este error suele ocurrir durante la configuración inicial si múltiples procesos intentan modificar la base de datos al mismo tiempo. Para evitarlo, asegúrate de que solo un usuario esté completando el asistente de configuración a la vez.
 
 Una vez completados estos pasos, la aplicación Clic-Tools debería estar funcionando en la dirección y puerto que configuraste en IIS.

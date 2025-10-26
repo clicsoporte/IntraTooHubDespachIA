@@ -23,14 +23,14 @@ export async function createFirstUser(
   userData: Omit<User, 'id' | 'role' | 'avatar' | 'recentActivity' | 'securityQuestion' | 'securityAnswer' | 'forcePasswordChange'> & { password: string },
   clientInfo: { ip: string, host: string }
 ): Promise<void> {
-  // Connect to the database, creating it if it doesn't exist, but DO NOT force recreation.
-  const db = await connectDb(DB_FILE);
-  
   const userCount = await getUserCount();
   if (userCount > 0) {
     await logError("Attempted to create first user when users already exist.", clientInfo);
     throw new Error("La configuración inicial ya fue completada. No se puede crear otro usuario administrador de esta forma.");
   }
+
+  // Connect to the database. It will be created if it doesn't exist.
+  const db = await connectDb(DB_FILE);
   
   const hashedPassword = bcrypt.hashSync(userData.password, SALT_ROUNDS);
 
