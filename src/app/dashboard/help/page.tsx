@@ -309,7 +309,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -714,39 +714,14 @@ export default function HelpPage() {
         )
     },
     {
-        title: "Solución de Problemas: Iconos Invisibles",
-        icon: <Palette className="mr-4 h-6 w-6 text-red-500" />,
-        content: (
-            <div className="space-y-4">
-                <h4 className="font-semibold text-lg pt-2 border-t">El Problema</h4>
-                <p>
-                    <strong>Síntoma:</strong> Al crear una nueva tarjeta de herramienta (ToolCard), el ícono no aparece o se muestra como un cuadrado blanco, a pesar de que el resto de la tarjeta se renderiza correctamente.
-                </p>
-                 <h4 className="font-semibold text-lg pt-2 border-t">Diagnóstico: ¿Por qué Sucede?</h4>
-                <p>
-                    La causa es una optimización de **Tailwind CSS**. Para mantener el archivo CSS final pequeño, Tailwind escanea todos tus archivos en busca de los nombres de clase que usas. Si defines un color como `'bg-purple-600'` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que "nadie la está usando" y la **elimina** del CSS final. Cuando el componente intenta usar esa clase, ya no existe.
-                </p>
-                 <h4 className="font-semibold text-lg pt-2 border-t">La Solución Definitiva: La `safelist`</h4>
-                <p>La forma correcta de solucionar esto es decirle a Tailwind que **nunca elimine** ciertas clases, incluso si no las encuentra en su escaneo. Esto se hace a través de la `safelist` en el archivo de configuración `tailwind.config.ts`.</p>
-
-                <p><strong>Pasos para Solucionarlo Siempre:</strong></p>
-                 <ol className="list-decimal space-y-2 pl-6">
-                    <li>Elige un color de Tailwind para el fondo del ícono (ej: `bg-fuchsia-600`).</li>
-                    <li>Ve al archivo `tailwind.config.ts` en la raíz del proyecto.</li>
-                    <li>**Añade esa clase exacta** (ej: `'bg-fuchsia-600'`) al array `safelist`.</li>
-                    <li>Ahora ya puedes usar esa clase en el archivo `data.ts` para tu nueva herramienta, con la certeza de que no será eliminada.</li>
-                </ol>
-            </div>
-        )
-    },
-    {
-        title: "Guía Técnica: ¿Cómo se actualiza la aplicación?",
+        title: "Guía Técnica (para Desarrolladores)",
         icon: <Wrench className="mr-4 h-6 w-6 text-slate-600" />,
         content: (
             <div className="space-y-4">
+                <p>Esta sección contiene notas técnicas importantes para quienes mantienen o actualizan la aplicación.</p>
+
+                <h4 className="font-semibold text-lg pt-2 border-t">Proceso de Actualización</h4>
                 <p>Actualizar la aplicación a una nueva versión sin perder tus datos es un proceso crítico. El sistema está diseñado para manejar esto de forma segura gracias a las **migraciones automáticas**.</p>
-                
-                <h4 className="font-semibold">Proceso de Actualización Seguro:</h4>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
                         <strong>Paso 1: Realizar una Copia de Seguridad (<Copy className="inline h-4 w-4"/>).</strong> Este es el paso más importante. Antes de tocar nada, ve a <strong>Administración &gt; Mantenimiento</strong> y haz clic en <strong>&quot;Crear Punto de Restauración&quot;</strong>. Esto generará una copia segura de todas las bases de datos del sistema.
@@ -768,6 +743,17 @@ export default function HelpPage() {
                         Nunca reemplaces la carpeta &quot;dbs/&quot; del servidor con la de la nueva versión, ya que esto borraría todos tus datos de producción.
                     </AlertDescription>
                 </Alert>
+
+                <h4 className="font-semibold text-lg pt-4 border-t">Solución de Problemas: Iconos Invisibles</h4>
+                <p>
+                    <strong>Síntoma:</strong> Al crear una nueva tarjeta de herramienta (ToolCard), el ícono no aparece o se muestra como un cuadrado blanco, a pesar de que el resto de la tarjeta se renderiza correctamente.
+                </p>
+                 <p>
+                    <strong>Diagnóstico:</strong> La causa es una optimización de **Tailwind CSS**. Para mantener el archivo CSS final pequeño, Tailwind escanea todos tus archivos en busca de los nombres de clase que usas. Si defines un color como `'bg-purple-600'` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que "nadie la está usando" y la **elimina** del CSS final. Cuando el componente intenta usar esa clase, ya no existe.
+                </p>
+                 <p>
+                    <strong>La Solución Definitiva:</strong> La forma correcta de solucionar esto es decirle a Tailwind que **nunca elimine** ciertas clases, incluso si no las encuentra en su escaneo. Esto se hace a través de la `safelist` en el archivo de configuración `tailwind.config.ts`.
+                 </p>
             </div>
         )
     },
@@ -780,22 +766,22 @@ export default function HelpPage() {
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones, login y logout para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas.
+                        <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones y la lógica de carga para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas, asegurando un inicio de sesión y navegación más fluidos.
                     </li>
                     <li>
-                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de &quot;tabla no encontrada&quot;.
+                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de "tabla no encontrada".
                     </li>
                     <li>
-                        <strong>Nueva Funcionalidad Mayor: Auditoría de Bases de Datos.</strong> En Mantenimiento, se añadió una herramienta para verificar la integridad estructural de todas las bases de datos, asegurando que las tablas y columnas sean correctas después de una actualización.
+                        <strong>Nueva Funcionalidad Mayor: Auditoría de Bases de Datos.</strong> En <strong>Administración &gt; Mantenimiento</strong>, se añadió una herramienta para verificar la integridad estructural de todas las bases de datos, asegurando que las tablas y columnas sean correctas después de una actualización.
                     </li>
                     <li>
-                        <strong>Nueva Funcionalidad: Recuperación de Contraseña.</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo electrónico con una clave temporal. Incluye una pantalla de configuración SMTP para administradores.
+                        <strong>Nueva Funcionalidad: Recuperación de Contraseña.</strong> Se implementó un flujo completo de autoservicio para que los usuarios puedan recuperar su contraseña a través de un correo electrónico con una clave temporal. Incluye una pantalla de configuración SMTP y plantillas de correo personalizables para administradores.
                     </li>
                      <li>
-                        <strong>Nuevo Módulo: Reporte de Permisos de Usuario.</strong> En la sección de Analíticas, se ha añadido un reporte para auditar y exportar qué permisos tiene cada usuario.
+                        <strong>Nuevo Módulo: Reporte de Permisos de Usuario.</strong> En la sección de **Analíticas**, se ha añadido un reporte completo para auditar y exportar qué permisos tiene cada usuario según su rol, mejorando la visibilidad de la seguridad del sistema.
                     </li>
                      <li>
-                        <strong>Completitud de Funcionalidades:</strong> Se implementó la lógica faltante en los módulos de Compras (retroceso de estados) y Mantenimiento (reseteo de fábrica y restauración individual).
+                        <strong>Completitud de Funcionalidades:</strong> Se implementó la lógica faltante en los módulos de Compras (retroceso de estados) y Mantenimiento (reseteo de fábrica y restauración individual desde un archivo), haciendo todas las opciones de la interfaz completamente funcionales.
                     </li>
                 </ul>
                 <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.8.0</h4>
