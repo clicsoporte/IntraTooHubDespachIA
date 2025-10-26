@@ -315,7 +315,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Flujo de Recuperación para Usuarios</h4>
                  <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>{"¿Olvidé mi contraseña?"}:</strong> En la pantalla de login, el usuario hace clic en el enlace, ingresa su correo y el sistema le envía una **contraseña temporal**.
+                        <strong>“¿Olvidé mi contraseña?”:</strong> En la pantalla de login, el usuario hace clic en el enlace, ingresa su correo y el sistema le envía una **contraseña temporal**.
                     </li>
                     <li>
                         <strong>Inicio de Sesión Forzado:</strong> Al ingresar con la contraseña temporal, la misma tarjeta de login se transforma y le pide al usuario que establezca una **nueva contraseña personal**.

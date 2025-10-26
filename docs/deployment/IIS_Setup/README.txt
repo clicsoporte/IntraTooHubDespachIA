@@ -33,11 +33,19 @@ Si vas a utilizar la conexión directa a SQL Server, este paso es obligatorio.
 1.  En la raíz de la carpeta del proyecto (ej: `C:\inetpub\wwwroot\clic-tools`), crea un nuevo archivo de texto y nómbralo `.env.local`.
 2.  Abre el archivo y añade las credenciales de tu base de datos. **Utiliza un usuario de SQL Server que tenga permisos de SOLO LECTURA**.
     ```
-    SQL_SERVER_USER=tu_usuario_sql
-    SQL_SERVER_PASSWORD=tu_contraseña_segura
-    SQL_SERVER_HOST=ip_o_nombre_del_servidor_erp
-    SQL_SERVER_DATABASE=nombre_de_la_base_de_datos
+    # Para conexión a SQL Server
+    SQL_SERVER_USER=tu_usuario
+    SQL_SERVER_PASSWORD=tu_contraseña
+    SQL_SERVER_HOST=ip_del_servidor
+    SQL_SERVER_DATABASE=nombre_bd
     SQL_SERVER_PORT=1433
+
+    # Para envío de correos (SMTP)
+    SMTP_HOST=smtp.tuproveedor.com
+    SMTP_PORT=587
+    SMTP_USER=tu_correo@ejemplo.com
+    SMTP_PASS=tu_contraseña_de_correo
+    SMTP_SECURE=true
     ```
 3.  Guarda el archivo. El sistema leerá estas variables automáticamente.
 
@@ -79,6 +87,6 @@ Solución de Problemas
 -   **Permisos de Carpeta**: Asegúrate de que la cuenta de usuario del grupo de aplicaciones de IIS (generalmente `IIS_IUSRS`) tenga permisos de lectura y ejecución sobre la carpeta del proyecto.
 -   **Error 500.19 o similar**: Generalmente indica que `iisnode` o `URL Rewrite` no están instalados o no se cargaron correctamente. Reinstálalos y reinicia el servidor.
 -   **Logs de `iisnode`**: Si encuentras errores (ej. `HTTP 500`), el `web.config` ya está configurado para crear una carpeta `iisnode` en el directorio de tu aplicación con archivos de log. Revisa `iisnode-stdout.log` y `iisnode-stderr.log` para obtener pistas sobre el problema.
--   **Error `EBUSY: resource busy or locked`**: Este error suele ocurrir durante la configuración inicial si múltiples procesos intentan modificar la base de datos al mismo tiempo. Para evitarlo, asegúrate de que solo un usuario esté completando el asistente de configuración a la vez.
+-   **Error `EBUSY: resource busy or locked`**: Este error suele ocurrir durante la configuración inicial si múltiples procesos intentan modificar la base de datos al mismo tiempo. Para evitarlo, asegúrate de que solo un usuario esté completando el asistente de configuración a la vez. El código de la v1.9.0 ha sido mejorado para minimizar este riesgo.
 
 Una vez completados estos pasos, la aplicación Clic-Tools debería estar funcionando en la dirección y puerto que configuraste en IIS.
