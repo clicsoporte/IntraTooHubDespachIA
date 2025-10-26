@@ -273,7 +273,7 @@ export default function HelpPage() {
                         </ol>
                     </li>
                     <li>
-                        <strong>Ventajas:</strong> Es más rápido, directo y elimina la necesidad de generar archivos manually.
+                        <strong>Ventajas:</strong> Es más rápido, directo y elimina la necesidad de generar archivos manualmente.
                     </li>
                 </ul>
 
@@ -315,7 +315,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Flujo de Recuperación para Usuarios</h4>
                  <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Olvidé mi contraseña:</strong> En la pantalla de login, el usuario hace clic en el enlace, ingresa su correo y el sistema le envía una **contraseña temporal**.
+                        <strong>{"¿Olvidé mi contraseña?"}:</strong> En la pantalla de login, el usuario hace clic en el enlace, ingresa su correo y el sistema le envía una **contraseña temporal**.
                     </li>
                     <li>
                         <strong>Inicio de Sesión Forzado:</strong> Al ingresar con la contraseña temporal, la misma tarjeta de login se transforma y le pide al usuario que establezca una **nueva contraseña personal**.
@@ -472,7 +472,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                 <ul className="list-disc space-y-3 pl-6">
                 <li>
-                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso <code>requests:read:all</code>, podrás desmarcar la casilla &apos;Mostrar solo mis solicitudes&apos; para ver las de todos los usuarios.
+                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso <code>requests:read:all</code>, podrás desmarcar la casilla &quot;Mostrar solo mis solicitudes&quot; para ver las de todos los usuarios.
                 </li>
                 <li>
                     <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
@@ -821,7 +821,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-4 border-t">Solución de Problemas: Iconos Invisibles</h4>
                 <div className="space-y-2">
                     <p><strong>Síntoma:</strong> Al crear una nueva tarjeta de herramienta (ToolCard), el ícono no aparece o se muestra como un cuadrado blanco, a pesar de que el resto de la tarjeta se renderiza correctamente.</p>
-                    <p><strong>Diagnóstico:</strong> La causa es una optimización de **Tailwind CSS**. Si defines un color como `'bg-purple-600'` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que “nadie la está usando” y la **elimina** del CSS final.</p>
+                    <p><strong>Diagnóstico:</strong> La causa es una optimización de **Tailwind CSS**. Si defines un color como `bg-purple-600` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que “nadie la está usando” y la **elimina** del CSS final.</p>
                     <p><strong>La Solución Definitiva (La `safelist`):</strong> La forma correcta de solucionar esto es decirle a Tailwind que **nunca elimine** ciertas clases. Esto se hace en el archivo de configuración `tailwind.config.ts`.</p>
                     <ol className="list-decimal space-y-2 pl-6 text-sm">
                         <li>Elige un color de Tailwind para el fondo del ícono (ej: `bg-fuchsia-600`).</li>
