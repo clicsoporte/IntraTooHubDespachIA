@@ -104,21 +104,22 @@ function HeaderActions() {
             )}
             {companyData?.lastSyncTimestamp && (
                 <>
-                    <div className={cn("hidden items-center gap-2 text-sm text-muted-foreground p-2 border rounded-lg lg:flex", isSyncOld && "text-red-500 font-medium border-red-500/50 bg-red-50")}>
+                    <div className={cn("hidden items-center gap-2 text-sm text-muted-foreground p-2 border rounded-lg sm:flex", isSyncOld && "text-red-500 font-medium border-red-500/50 bg-red-50")}>
                         <Clock className="h-4 w-4" />
-                        <span>Última Sinc: <strong>{format(parseISO(companyData.lastSyncTimestamp), 'dd/MM/yy HH:mm')}</strong></span>
+                        <span className="hidden lg:inline">Última Sinc:</span>
+                        <strong>{format(parseISO(companyData.lastSyncTimestamp), 'dd/MM/yy HH:mm')}</strong>
                     </div>
-                    <Button onClick={handleFullSync} disabled={isSyncing || !hasPermission('admin:import:run')} size="sm" variant="outline" className={cn(isSyncOld && "border-red-500/50 bg-red-50 text-red-500 animate-pulse")}>
-                        {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                        <span className="hidden md:inline">Sincronizar ERP</span>
+                    <Button onClick={handleFullSync} disabled={isSyncing || !hasPermission('admin:import:run')} size="sm" variant="outline" className={cn("h-9 w-9 p-0 sm:w-auto sm:px-3", isSyncOld && "border-red-500/50 bg-red-50 text-red-500 animate-pulse")}>
+                        {isSyncing ? <Loader2 className="animate-spin" /> : <RefreshCw/>}
+                        <span className="hidden sm:inline ml-2">Sincronizar ERP</span>
                     </Button>
                 </>
             )}
             <Dialog open={isSuggestionDialogOpen} onOpenChange={setSuggestionDialogOpen}>
                 <DialogTrigger asChild>
-                    <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700">
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        <span className="hidden md:inline">Sugerencias</span>
+                    <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 h-9 w-9 p-0 sm:w-auto sm:px-3">
+                        <MessageSquare />
+                        <span className="hidden sm:inline ml-2">Sugerencias</span>
                     </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -161,7 +162,7 @@ function HeaderActions() {
  */
 export function Header({ title }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm shrink-0">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="h-8 w-8 bg-primary/10 text-primary animate-pulse" >
           <PanelLeft />
