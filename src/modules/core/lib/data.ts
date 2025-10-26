@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file contains the initial or default data for the application.
  * This data is used to populate the database on its first run.
@@ -34,6 +33,7 @@ import {
   FileText,
   Calculator,
   Mail,
+  UserCheck,
 } from "lucide-react";
 
 /**
@@ -201,6 +201,7 @@ export const initialRoles: Role[] = [
         "analytics:read",
         "analytics:purchase-suggestions:read",
         "analytics:production-report:read",
+        "analytics:user-permissions:read",
         "cost-assistant:access",
         "cost-assistant:drafts:read-write",
         "users:create",
@@ -290,6 +291,7 @@ export const analyticsPermissions = [
     "analytics:read",
     "analytics:purchase-suggestions:read",
     "analytics:production-report:read",
+    "analytics:user-permissions:read",
 ];
 
 
@@ -453,7 +455,16 @@ export const analyticsTools: Tool[] = [
         icon: BarChartBig,
         bgColor: "bg-indigo-500",
         textColor: "text-white",
-    }
+    },
+    {
+        id: "user-permissions",
+        name: "Reporte de Permisos",
+        description: "Auditar los permisos asignados a cada usuario según su rol.",
+        href: "/dashboard/analytics/user-permissions",
+        icon: UserCheck,
+        bgColor: "bg-fuchsia-600",
+        textColor: "text-white",
+    },
 ];
 
 

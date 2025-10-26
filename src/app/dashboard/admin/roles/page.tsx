@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -68,7 +67,7 @@ const permissionGroups = {
     "Asistente de Costos": ["cost-assistant:access", "cost-assistant:drafts:read-write"],
     "Gestión de Almacenes": ["warehouse:access", "warehouse:inventory:assign", "warehouse:locations:manage"],
     "Consultas Hacienda": ["hacienda:query"],
-    "Analíticas y Reportes": ["analytics:read", "analytics:purchase-suggestions:read", "analytics:production-report:read"],
+    "Analíticas y Reportes": ["analytics:read", "analytics:purchase-suggestions:read", "analytics:production-report:read", "analytics:user-permissions:read"],
     "Gestión de Usuarios": ["users:create", "users:read", "users:update", "users:delete"],
     "Gestión de Roles": ["roles:create", "roles:read", "roles:update", "roles:delete"],
     "Administración del Sistema": [
@@ -129,6 +128,7 @@ const permissionTranslations: { [key: string]: string } = {
     "analytics:read": "Analíticas: Acceso",
     "analytics:purchase-suggestions:read": "Analíticas: Ver Sugerencias Compra",
     "analytics:production-report:read": "Analíticas: Ver Reporte Producción",
+    "analytics:user-permissions:read": "Analíticas: Reporte Permisos",
     "users:create": "Usuarios: Crear",
     "users:read": "Usuarios: Leer",
     "users:update": "Usuarios: Actualizar",

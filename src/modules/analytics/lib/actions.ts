@@ -4,10 +4,11 @@
 'use server';
 
 import { getCompletedOrdersByDateRange, getPlannerSettings } from '@/modules/planner/lib/db';
-import { getAllProducts } from '@/modules/core/lib/db';
+import { getAllProducts, getAllRoles, getAllUsers } from '@/modules/core/lib/db';
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
+import { logError } from '@/modules/core/lib/logger';
 
 interface ReportFilters {
     productId?: string | null;
@@ -85,4 +86,17 @@ export async function getProductionReportData({ dateRange, filters = {} }: { dat
         },
         plannerSettings: JSON.parse(JSON.stringify(plannerSettings)),
     };
+}
+
+export async function getUserPermissionsReportData() {
+    try {
+        const [users, roles] = await Promise.all([
+            getAllUsers(),
+            getAllRoles()
+        ]);
+        return { users, roles };
+    } catch (error: any) {
+        logError("Failed to fetch user permissions report data", { error: error.message });
+        throw new Error("No se pudieron obtener los datos para el reporte de permisos.");
+    }
 }

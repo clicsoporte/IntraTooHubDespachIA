@@ -10,10 +10,12 @@ import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
 import { analyticsTools, analyticsPermissions } from "@/modules/core/lib/data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo } from "react";
+import { useAuth } from "@/modules/core/hooks/useAuth";
 
 export default function AnalyticsDashboardPage() {
     const { setTitle } = usePageTitle();
     const { isAuthorized, hasPermission } = useAuthorization(analyticsPermissions);
+    const { isReady } = useAuth();
 
     useEffect(() => {
         setTitle("Analíticas y Reportes");
@@ -29,18 +31,23 @@ export default function AnalyticsDashboardPage() {
             if (tool.id === 'production-report') {
                 return hasPermission('analytics:production-report:read');
             }
+            if (tool.id === 'user-permissions') {
+                return hasPermission('analytics:user-permissions:read');
+            }
             // Add other tool checks here as they are created
             return true;
         });
     }, [isAuthorized, hasPermission]);
 
-    if (isAuthorized === null) {
+    if (!isReady) {
         return (
              <main className="flex-1 p-4 md:p-6 lg:p-8">
                 <div className="grid gap-8">
                 <div>
                     <Skeleton className="h-8 w-80 mb-4" />
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
                     <Skeleton className="h-24 w-full" />
                     </div>
                 </div>
