@@ -23,9 +23,7 @@ export async function createFirstUser(
   userData: Omit<User, 'id' | 'role' | 'avatar' | 'recentActivity' | 'securityQuestion' | 'securityAnswer' | 'forcePasswordChange'> & { password: string },
   clientInfo: { ip: string, host: string }
 ): Promise<void> {
-  // Force a recreation of the main DB to ensure it's not corrupt from a bad reset.
-  // This adds resilience to the setup process.
-  await connectDb(DB_FILE, true); 
+  // Connect to the database, creating it if it doesn't exist, but DO NOT force recreation.
   const db = await connectDb(DB_FILE);
   
   const userCount = await getUserCount();
