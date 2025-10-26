@@ -395,7 +395,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                 <ul className="list-disc space-y-3 pl-6">
                 <li>
-                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla &apos;Mostrar solo mis solicitudes&apos; para ver las de todos los usuarios.
+                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso &apos;requests:read:all&apos;, podrás desmarcar la casilla &apos;Mostrar solo mis solicitudes&apos; para ver las de todos los usuarios.
                 </li>
                 <li>
                     <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
