@@ -17,6 +17,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    // Adding cache: false can help invalidate stale build caches.
+    cache: false,
   },
   typescript: {
     // This setting is explicitly set to false to ensure type checking is enforced

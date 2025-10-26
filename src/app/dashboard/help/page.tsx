@@ -426,7 +426,7 @@ export default function HelpPage() {
                 </p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Visibilidad por Defecto:</strong> Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
+                        <strong>Visibilidad por Defecto:</strong> Por defecto, el planificador te mostrará solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
                     </li>
                     <li>
                         <strong>Paso 1: Crear Órdenes.</strong> Similar a los otros módulos, crea una nueva orden de producción buscando al cliente y el producto. Establece la cantidad, la fecha de entrega y la prioridad.
