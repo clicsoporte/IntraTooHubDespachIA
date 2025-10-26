@@ -101,10 +101,10 @@ export default function QuoterPage() {
     selectors,
   } = useQuoter();
 
-  const { isLoading: isAuthLoading } = useAuth();
+  const { isReady } = useAuth();
 
 
-  if (isAuthLoading) {
+  if (!isReady) {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <Card>

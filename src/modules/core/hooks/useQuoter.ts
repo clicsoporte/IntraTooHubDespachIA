@@ -90,7 +90,7 @@ export const useQuoter = () => {
   const { 
     user: currentUser, customers, products, companyData: authCompanyData, 
     stockLevels, exchangeRateData, allExemptions, exemptionLaws,
-    refreshAuth, isLoading: isAuthLoading 
+    refreshAuth, isReady 
   } = useAuth();
   
   const [quoteNumber, setQuoteNumber] = useState("");
@@ -242,7 +242,7 @@ export const useQuoter = () => {
         const lastLineRefs = lineInputRefs.current.get(lastLine.id);
         lastLineRefs?.qty?.focus();
     }
-  }, [lines.length, lines]);
+  }, [lines]);
 
   const customerOptions = useMemo(() => {
     if (debouncedCustomerSearch.length < 2) return [];
@@ -442,7 +442,7 @@ export const useQuoter = () => {
   };
   
   const generatePDF = async () => {
-    if (isAuthLoading || !companyData) {
+    if (!isReady || !companyData) {
         toast({ title: "Por favor espere", description: "Los datos de configuración de la empresa aún se están cargando.", variant: "destructive" });
         return;
     }
@@ -600,14 +600,14 @@ export const useQuoter = () => {
   };
 
   const loadDrafts = useCallback(async () => {
-    if (isAuthLoading || !currentUser) return;
+    if (!isReady || !currentUser) return;
     const draftsFromDb = await getAllQuoteDrafts(currentUser.id);
     const enrichedDrafts = draftsFromDb.map(draft => ({
         ...draft,
         customer: customers.find(c => c.id === draft.customerId) || null
     }));
     setSavedDrafts(enrichedDrafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-  }, [isAuthLoading, currentUser, customers]);
+  }, [isReady, currentUser, customers]);
 
   const handleLoadDraft = (draft: QuoteDraft) => {
     setQuoteNumber(draft.id);

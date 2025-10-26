@@ -221,7 +221,7 @@ export default function HaciendaQueryPage() {
     useAuthorization(['hacienda:query']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { customers, isLoading: isAuthLoading } = useAuth();
+    const { customers, isReady } = useAuth();
     
     const [exemptions, setExemptions] = useState<Exemption[]>([]);
     
@@ -349,7 +349,7 @@ export default function HaciendaQueryPage() {
         }
     };
 
-    if (isAuthLoading) {
+    if (!isReady) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                  <Card className="max-w-4xl mx-auto">

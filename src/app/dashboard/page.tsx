@@ -18,7 +18,7 @@ import { BarChartBig, Wrench } from "lucide-react";
  * based on user permissions.
  */
 export default function DashboardPage() {
-  const { userRole, isLoading: isAuthLoading } = useAuth();
+  const { userRole, isReady } = useAuth();
   const { setTitle } = usePageTitle();
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function DashboardPage() {
   }, [userRole]);
 
 
-  if (isAuthLoading) {
+  if (!isReady) {
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
             <Skeleton className="h-8 w-64 mb-4" />

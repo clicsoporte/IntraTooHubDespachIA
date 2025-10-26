@@ -36,7 +36,7 @@ import { useAuth } from "@/modules/core/hooks/useAuth";
  */
 export default function SettingsPage() {
   const { toast } = useToast();
-  const { user, isLoading, refreshAuth } = useAuth();
+  const { user, isReady, refreshAuth } = useAuth();
   const { setTitle } = usePageTitle();
   
   const [formData, setFormData] = useState({
@@ -131,7 +131,7 @@ export default function SettingsPage() {
       }
       if (passwords.new.length < 6) {
         toast({
-          title: "Error de Contraseña",
+          title: "Contraseña Débil",
           description: "La nueva contraseña debe tener al menos 6 caracteres.",
           variant: "destructive",
         });
@@ -180,7 +180,7 @@ export default function SettingsPage() {
     return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
   };
   
-  if (isLoading || !user) {
+  if (!isReady || !user) {
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
             <div className="mx-auto max-w-2xl">

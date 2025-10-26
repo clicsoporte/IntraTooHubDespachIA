@@ -46,7 +46,7 @@ import { useAuth } from "@/modules/core/hooks/useAuth";
  */
 export function AppSidebar() {
   const pathname = usePathname();
-  const { user: currentUser, companyData, userRole, isLoading } = useAuth();
+  const { user: currentUser, companyData, userRole, isReady } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
 
   const handleLinkClick = () => {
@@ -72,7 +72,7 @@ export function AppSidebar() {
   const hasAnalyticsAccess = hasAdminAccess || userRole?.permissions.includes('analytics:read');
 
 
-  if (isLoading) {
+  if (!isReady) {
     return (
         <div className="hidden md:flex flex-col w-64 border-r p-4 gap-4 bg-sidebar text-sidebar-foreground">
             <div className="flex items-center gap-2 mb-4">
@@ -264,7 +264,7 @@ export function AppSidebar() {
             </div>
           </div>
            <div className="text-center text-xs text-sidebar-foreground/50 p-2 group-data-[collapsible=icon]:hidden">
-                Clic-Tools v1.6.0 - ClicSoporte
+                Clic-Tools v1.9.0 - ClicSoporte
            </div>
         </SidebarFooter>
       </Sidebar>
