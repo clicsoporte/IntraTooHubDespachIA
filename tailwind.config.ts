@@ -33,7 +33,8 @@ const config: Config = {
     'bg-orange-400',
     'bg-indigo-500',
     'bg-purple-600',
-    'bg-indigo-600'
+    'bg-indigo-600',
+    'bg-fuchsia-600'
   ],
   theme: {
     extend: {

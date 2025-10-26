@@ -1,0 +1,53 @@
+# Guía de Solución de Problemas: Iconos de Tarjetas no Visibles o en Blanco
+
+## 1. El Problema
+
+**Síntoma:** Al crear una nueva tarjeta de herramienta (ToolCard) en un panel de control, el ícono no aparece, o se muestra como un cuadrado blanco o del color de fondo del tema, sin el ícono visible. Sin embargo, el resto de la tarjeta (título, descripción) se renderiza correctamente.
+
+Esto ha ocurrido repetidamente con herramientas como "Config. Asist. Costos" y "Config. Compras".
+
+## 2. Diagnóstico: ¿Por qué Sucede?
+
+La causa raíz no es un error de código en el componente, sino un efecto secundario de la optimización de **Tailwind CSS**.
+
+-   **El Mecanismo:** Las tarjetas de herramientas se definen en `src/modules/core/lib/data.ts`. Cada herramienta tiene propiedades `bgColor` (ej: `bg-orange-500`) y `textColor` (ej: `text-white`).
+-   **El Proceso de "Purga" de Tailwind:** Para mantener el archivo CSS final lo más pequeño posible, Tailwind escanea todos tus archivos en busca de los nombres de clase que usas. Si una clase no se encuentra, se **elimina** (purga) del CSS final.
+-   **El Conflicto:** Cuando definimos un color como `bg-orange-600` en `data.ts`, es solo un string de texto. Si esa clase exacta no está escrita explícitamente en ningún otro archivo `.tsx` que Tailwind escanee, el compilador piensa que "nadie la está usando" y la elimina. Cuando el componente `ToolCard` intenta aplicar la clase `bg-orange-600`, esta ya no existe en el CSS, por lo que no se aplica ningún color de fondo.
+
+## 3. La Solución Definitiva: La `safelist`
+
+La forma correcta y permanente de solucionar esto es decirle a Tailwind que **nunca elimine** ciertas clases, incluso si no las encuentra en su escaneo. Esto se hace a través de la `safelist` en el archivo de configuración de Tailwind.
+
+**Archivo a Modificar:** `tailwind.config.ts`
+
+Dentro de este archivo, busca el array `safelist`.
+
+```typescript
+// tailwind.config.ts
+
+const config: Config = {
+  // ... otras configuraciones
+  safelist: [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-orange-500', // ✅ Este color funciona porque está en la lista.
+    'bg-red-600',
+    // ... otros colores seguros
+  ],
+  // ...
+};
+```
+
+**Pasos para Solucionarlo Siempre:**
+
+1.  Elige un color de Tailwind para el fondo del ícono (ej: `bg-amber-600`).
+2.  Ve al archivo `tailwind.config.ts`.
+3.  **Añade esa clase exacta** (`'bg-amber-600'`) al array `safelist`.
+4.  Ahora ya puedes usar esa clase en el archivo `data.ts` para tu nueva herramienta, con la certeza de que no será eliminada.
+
+## 4. ¿Qué NO Funcionó (Para Recordar)?
+
+-   **Usar colores arbitrarios:** Intentar usar `bg-orange-600` cuando no estaba en la `safelist` falló.
+-   **Cambiar el ícono:** El problema nunca fue el componente del ícono (`Calculator`, `Store`, etc.), sino el color de fondo que lo contenía.
+
+**Conclusión:** Para cualquier nuevo ícono de tarjeta, el primer paso debe ser verificar que el color de fondo (`bgColor`) que se va a usar esté en la `safelist` de `tailwind.config.ts`. Si no lo está, hay que añadirlo.
