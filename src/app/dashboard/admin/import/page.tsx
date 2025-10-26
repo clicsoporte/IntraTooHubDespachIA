@@ -37,6 +37,18 @@ const importTypeTranslations: { [key in ImportType]: string } = {
     suppliers: 'Proveedores',
 };
 
+const defaultQueries: { [key in ImportType]?: string } = {
+    customers: "SELECT [CLIENTE], [NOMBRE], [DIRECCION], [TELEFONO1], [CONTRIBUYENTE], [MONEDA], [LIMITE_CREDITO], [CONDICION_PAGO], [VENDEDOR], [ACTIVO], [E_MAIL], [EMAIL_DOC_ELECTRONICO] FROM [GAREND].[CLIENTE]",
+    products: "SELECT [ARTICULO], [DESCRIPCION], [CLASIFICACION_2], [ULTIMO_INGRESO], [ACTIVO], [NOTAS], [UNIDAD_VENTA], [CANASTA_BASICA], [CODIGO_HACIENDA] FROM [GAREND].[ARTICULO]",
+    exemptions: "SELECT [CODIGO], [DESCRIPCION], [CLIENTE], [NUM_AUTOR], [FECHA_RIGE], [FECHA_VENCE], [PORCENTAJE], [TIPO_DOC], [NOMBRE_INSTITUCION], [CODIGO_INSTITUCION] FROM [GAREND].[EXENCION]",
+    stock: "SELECT [ARTICULO], [BODEGA], [CANT_DISPONIBLE] FROM [GAREND].[EXISTENCIA_BODEGA]",
+    locations: "SELECT [CODIGO], [P. HORIZONTAL], [P. VERTICAL], [RACK], [CLIENTE], [DESCRIPCION] FROM [GAREND].[UBICACION]",
+    suppliers: "SELECT [PROVEEDOR], [NOMBRE], [ALIAS], [E_MAIL], [TELEFONO1] FROM [GAREND].[PROVEEDOR]",
+    erp_order_headers: "SELECT T0.[PEDIDO], T0.[ESTADO], T0.[CLIENTE], T0.[FECHA_PEDIDO], T0.[FECHA_PROMETIDA], T0.[ORDEN_COMPRA], T0.[TOTAL_UNIDADES], T0.[MONEDA_PEDIDO], T0.[USUARIO] FROM [GAREND].[PEDIDO] AS T0 WHERE T0.[FECHA_PEDIDO] >= DATEADD(day, -60, GETDATE()) AND T0.[ESTADO] NOT IN ('F', 'C') ORDER BY T0.[FECHA_PEDIDO] DESC",
+    erp_order_lines: "SELECT T1.[PEDIDO], T1.[PEDIDO_LINEA], T1.[ARTICULO], T1.[CANTIDAD_PEDIDA], T1.[PRECIO_UNITARIO] FROM [GAREND].[PEDIDO_LINEA] AS T1 INNER JOIN [GAREND].[PEDIDO] AS T0 ON T1.PEDIDO = T0.PEDIDO WHERE T0.FECHA_PEDIDO >= DATEADD(day, -60, GETDATE()) AND T1.[ESTADO] NOT IN ('F', 'C')",
+};
+
+
 const importTypeFieldMapping: { [key in ImportType]?: keyof Company } = {
     customers: 'customerFilePath',
     products: 'productFilePath',
@@ -75,15 +87,11 @@ export default function ImportDataPage() {
             setSqlConfig(sql || {});
             
             const updatedQueries = [...queries];
-            if (!queries.some((q: ImportQuery) => q.type === 'erp_order_headers')) {
-                updatedQueries.push({ type: 'erp_order_headers', query: "SELECT T0.[PEDIDO], T0.[ESTADO], T0.[CLIENTE], T0.[FECHA_PEDIDO], T0.[FECHA_PROMETIDA], T0.[ORDEN_COMPRA], T0.[TOTAL_UNIDADES], T0.[MONEDA_PEDIDO], T0.[USUARIO] FROM [GAREND].[PEDIDO] AS T0 WHERE T0.[FECHA_PEDIDO] >= DATEADD(day, -60, GETDATE()) AND T0.[ESTADO] NOT IN ('F', 'C') ORDER BY T0.[FECHA_PEDIDO] DESC" });
-            }
-            if (!queries.some((q: ImportQuery) => q.type === 'erp_order_lines')) {
-                updatedQueries.push({ type: 'erp_order_lines', query: "SELECT T1.[PEDIDO], T1.[PEDIDO_LINEA], T1.[ARTICULO], T1.[CANTIDAD_PEDIDA], T1.[PRECIO_UNITARIO] FROM [GAREND].[PEDIDO_LINEA] AS T1 INNER JOIN [GAREND].[PEDIDO] AS T0 ON T1.PEDIDO = T0.PEDIDO WHERE T0.FECHA_PEDIDO >= DATEADD(day, -60, GETDATE()) AND T1.[ESTADO] NOT IN ('F', 'C')" });
-            }
-            if (!queries.some((q: ImportQuery) => q.type === 'suppliers')) {
-                updatedQueries.push({ type: 'suppliers', query: "SELECT [PROVEEDOR], [NOMBRE], [ALIAS], [E_MAIL], [TELEFONO1] FROM [GAREND].[PROVEEDOR]" });
-            }
+            importTypes.forEach(type => {
+                if (!queries.some(q => q.type === type) && defaultQueries[type]) {
+                    updatedQueries.push({ type, query: defaultQueries[type]! });
+                }
+            });
             setImportQueries(updatedQueries);
         };
         loadConfig();
