@@ -10,6 +10,7 @@ import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistor
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
+import { getAllProducts } from '@/modules/core/lib/db';
 
 interface ReportFilters {
     productId?: string | null;
@@ -33,9 +34,6 @@ export async function getProductionReportData({ dateRange, filters = {} }: { dat
         throw new Error("Date 'from' is required for the production report.");
     }
     
-    // We need to fetch products from the main DB, not the auth context which is client-side.
-    const { default: { getAllProducts } } = await import('@/modules/core/lib/db');
-
     const [allOrders, plannerSettings, allProducts] = await Promise.all([
         getCompletedOrdersByDateRange(dateRange),
         getPlannerSettings(),

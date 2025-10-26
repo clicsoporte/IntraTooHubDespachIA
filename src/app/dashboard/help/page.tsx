@@ -309,7 +309,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -426,10 +426,10 @@ export default function HelpPage() {
                 </p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        **Visibilidad por Defecto:** Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
+                        <strong>Visibilidad por Defecto:</strong> Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
                     </li>
                     <li>
-                        **Paso 1: Crear Órdenes.** Similar a los otros módulos, crea una nueva orden de producción buscando al cliente y el producto. Establece la cantidad, la fecha de entrega y la prioridad.
+                        <strong>Paso 1: Crear Órdenes.</strong> Similar a los otros módulos, crea una nueva orden de producción buscando al cliente y el producto. Establece la cantidad, la fecha de entrega y la prioridad.
                          <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Alerta de Duplicados (<Info className="inline h-4 w-4 text-amber-500" />):** Al seleccionar un producto, el sistema te avisará si ya existen otras órdenes de producción activas para ese mismo artículo, ayudándote a evitar duplicar trabajo.</li>
                         </ul>
@@ -459,7 +459,7 @@ export default function HelpPage() {
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>**Programación por Rango:** Haz clic en el área de &quot;Fecha Programada&quot; para abrir un calendario y seleccionar un rango de fechas de inicio y fin.</li>
                             <li>**Asignación:** Asigna cada orden a una máquina, proceso u operario específico desde el menú desplegable. Estas opciones se configuran en Administración.</li>
-                            <li>**Gestión de Turnos:** Asigna la orden a un turno de trabajo específico. Los turnos disponibles se pueden personalizar completamente en **Administración &gt; Config. Planificador**.</li>
+                            <li>**Gestión de Turnos:** Asigna la orden a un turno de trabajo específico. Los turnos disponibles se pueden personalizar completamente en <strong>Administración &gt; Config. Planificador</strong>.</li>
                             <li>**Prioridades y Cuenta Regresiva:** Usa el selector de prioridad y fíjate en el indicador de días restantes (basado en la fecha de entrega) para organizar el trabajo.</li>
                         </ul>
                     </li>
@@ -509,7 +509,7 @@ export default function HelpPage() {
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>Accede al reporte para ver la tabla completa.</li>
                             <li>Usa la barra de búsqueda para filtrar rápidamente por nombre de usuario, correo o nombre del rol.</li>
-                            <li>Haz clic en los encabezados de columna "Usuario" o "Rol" para ordenar la lista.</li>
+                            <li>Haz clic en los encabezados de columna &quot;Usuario&quot; o &quot;Rol&quot; para ordenar la lista.</li>
                             <li>Exporta la vista actual a **PDF** o **Excel** para compartirla o archivarla como un registro de auditoría de seguridad.</li>
                         </ul>
                     </li>
@@ -720,7 +720,7 @@ export default function HelpPage() {
             <div className="space-y-4">
                 <p>Esta sección contiene notas técnicas importantes para quienes mantienen o actualizan la aplicación.</p>
 
-                <h4 className="font-semibold text-lg pt-2 border-t">Proceso de Actualización</h4>
+                <h4 className="font-semibold text-lg pt-4 border-t">Proceso de Actualización</h4>
                 <p>Actualizar la aplicación a una nueva versión sin perder tus datos es un proceso crítico. El sistema está diseñado para manejar esto de forma segura gracias a las **migraciones automáticas**.</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
@@ -733,7 +733,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Actualizar y Reconstruir.</strong> Abre una terminal en la carpeta del proyecto, ejecuta `npm install --omit=dev` para instalar cualquier nueva dependencia y luego `npm run build` para compilar la nueva versión.
                     </li>
                     <li>
-                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a **Administración &gt; Mantenimiento &gt; Auditoría y Verificación** y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
+                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a <strong>Administración &gt; Mantenimiento &gt; Auditoría y Verificación</strong> y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
                     </li>
                 </ol>
                 <Alert variant="destructive">
@@ -749,7 +749,7 @@ export default function HelpPage() {
                     <strong>Síntoma:</strong> Al crear una nueva tarjeta de herramienta (ToolCard), el ícono no aparece o se muestra como un cuadrado blanco, a pesar de que el resto de la tarjeta se renderiza correctamente.
                 </p>
                  <p>
-                    <strong>Diagnóstico:</strong> La causa es una optimización de **Tailwind CSS**. Para mantener el archivo CSS final pequeño, Tailwind escanea todos tus archivos en busca de los nombres de clase que usas. Si defines un color como `'bg-purple-600'` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que "nadie la está usando" y la **elimina** del CSS final. Cuando el componente intenta usar esa clase, ya no existe.
+                    <strong>Diagnóstico:</strong> La causa es una optimización de **Tailwind CSS**. Para mantener el archivo CSS final pequeño, Tailwind escanea todos tus archivos en busca de los nombres de clase que usas. Si defines un color como `'bg-purple-600'` en un archivo de datos (como `data.ts`) pero esa clase no está escrita explícitamente en ningún archivo `.tsx`, el compilador de Tailwind piensa que &quot;nadie la está usando&quot; y la **elimina** del CSS final. Cuando el componente intenta usar esa clase, ya no existe.
                 </p>
                  <p>
                     <strong>La Solución Definitiva:</strong> La forma correcta de solucionar esto es decirle a Tailwind que **nunca elimine** ciertas clases, incluso si no las encuentra en su escaneo. Esto se hace a través de la `safelist` en el archivo de configuración `tailwind.config.ts`.
@@ -769,7 +769,7 @@ export default function HelpPage() {
                         <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones y la lógica de carga para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas, asegurando un inicio de sesión y navegación más fluidos.
                     </li>
                     <li>
-                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de "tabla no encontrada".
+                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación, garantizando que las actualizaciones futuras no causen errores de &quot;tabla no encontrada&quot;.
                     </li>
                     <li>
                         <strong>Nueva Funcionalidad Mayor: Auditoría de Bases de Datos.</strong> En <strong>Administración &gt; Mantenimiento</strong>, se añadió una herramienta para verificar la integridad estructural de todas las bases de datos, asegurando que las tablas y columnas sean correctas después de una actualización.
