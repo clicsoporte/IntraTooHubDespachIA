@@ -264,6 +264,15 @@ export const useQuoter = () => {
   }, [authCompanyData, exchangeRateData]);
 
 
+  const actions = useMemo(() => ({
+    setLineRef: (lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
+      const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
+      refs[field] = el;
+      lineInputRefs.current.set(lineId, refs);
+    }
+    // All other actions can be defined here and will be stable if their dependencies are stable
+  }), []);
+
   useEffect(() => {
     if (lines.length > 0) {
         const lastLine = lines[lines.length - 1];
@@ -271,9 +280,11 @@ export const useQuoter = () => {
         // Delay focus slightly to ensure the new input is fully rendered
         setTimeout(() => {
             lastLineRefs?.qty?.focus();
+            lastLineRefs?.qty?.select();
         }, 0);
     }
-  }, [lines.length]);
+  }, [lines, actions]);
+
 
   const customerOptions = useMemo(() => {
     if (debouncedCustomerSearch.length < 2) return [];
@@ -576,7 +587,7 @@ export const useQuoter = () => {
         totals: [
             { label: 'Subtotal:', value: formatCurrency(totals.subtotal) },
             { label: 'Impuestos:', value: formatCurrency(totals.totalTaxes) },
-            { label: `Total:`, value: formatCurrency(totals.total) },
+            { label: 'Total:', value: formatCurrency(totals.total) },
         ]
     });
     
