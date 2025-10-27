@@ -9,18 +9,21 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
-import type { Customer, Product, Company, User, QuoteDraft, QuoteLine, Exemption, HaciendaExemptionApiResponse, ExemptionLaw, StockInfo } from "@/modules/core/types";
+import type { Customer, Product, Company, User, QuoteDraft, QuoteLine, Exemption, HaciendaExemptionApiResponse, ExemptionLaw, StockInfo, UserPreferences } from "@/modules/core/types";
 import { logError, logInfo, logWarn } from "@/modules/core/lib/logger";
 import {
   saveQuoteDraft,
   getAllQuoteDrafts,
   deleteQuoteDraft,
   saveCompanySettings,
+  saveUserPreferences,
+  getUserPreferences,
 } from "@/modules/core/lib/db";
 import { format, parseISO, isValid } from 'date-fns';
 import { useDebounce } from "use-debounce";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import { generateDocument } from "@/modules/core/lib/pdf-generator";
+import { getExemptionStatus } from "@/modules/hacienda/lib/actions";
 import type { RowInput } from "jspdf-autotable";
 
 /**
@@ -78,6 +81,29 @@ const normalizeNumber = (value: string): number => {
     return isNaN(parsed) ? 0 : parsed;
 };
 
+const availableColumns = [
+    { id: 'code', label: 'Código', className: 'min-w-[100px]' },
+    { id: 'description', label: 'Descripción', className: 'min-w-[300px]' },
+    { id: 'quantity', label: 'Cant.', className: 'min-w-[100px]' },
+    { id: 'unit', label: 'Unidad', className: 'min-w-[100px]' },
+    { id: 'cabys', label: 'Cabys', className: 'min-w-[120px]' },
+    { id: 'price', label: 'Precio', className: 'min-w-[120px]' },
+    { id: 'tax', label: 'Impuesto', className: 'min-w-[150px]' },
+    { id: 'total', label: 'Total', className: 'text-right min-w-[120px]' }
+];
+
+const defaultColumnVisibility = {
+    code: true,
+    description: true,
+    quantity: true,
+    unit: true,
+    cabys: false,
+    price: true,
+    tax: true,
+    total: true
+};
+
+type ColumnVisibility = typeof defaultColumnVisibility;
 
 /**
  * Main hook for the Quoter component.
@@ -120,14 +146,7 @@ export const useQuoter = () => {
   const [exemptionInfo, setExemptionInfo] = useState<ExemptionInfo | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
-  // New state for mobile column visibility
-  const [mobileColumnVisibility, setMobileColumnVisibility] = useState({
-    code: false,
-    unit: false,
-    cabys: false,
-    tax: false,
-    total: true,
-  });
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>(defaultColumnVisibility);
   
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [customerSearchTerm, setCustomerSearchTerm] = useState("");
@@ -204,6 +223,15 @@ export const useQuoter = () => {
 
   useEffect(() => {
     setTitle("Cotizador");
+    const loadPreferences = async () => {
+        if (currentUser) {
+            const prefs = await getUserPreferences(currentUser.id, 'quoterPrefs');
+            if (prefs && prefs.columnVisibility) {
+                setColumnVisibility(prev => ({...prev, ...prefs.columnVisibility}));
+            }
+        }
+    };
+
     if (!isMounted) {
         const today = new Date();
         setQuoteDate(today.toISOString().substring(0, 10));
@@ -211,9 +239,10 @@ export const useQuoter = () => {
         const validDate = new Date();
         validDate.setDate(today.getDate() + 8);
         setValidUntilDate(validDate.toISOString().substring(0, 10));
+        loadPreferences();
         setIsMounted(true);
     }
-  }, [setTitle, isMounted]);
+  }, [setTitle, isMounted, currentUser]);
 
   useEffect(() => {
     if (sellerType === "user" && currentUser) {
@@ -697,9 +726,21 @@ export const useQuoter = () => {
     }
   };
 
-  const handleColumnVisibilityChange = (column: keyof typeof mobileColumnVisibility, checked: boolean) => {
-    setMobileColumnVisibility(prev => ({ ...prev, [column]: checked }));
+  const handleColumnVisibilityChange = (columnId: string, checked: boolean) => {
+    setColumnVisibility(prev => ({ ...prev, [columnId]: checked }));
   };
+
+  const handleSaveColumnVisibility = async () => {
+    if (!currentUser) return;
+    try {
+        await saveUserPreferences(currentUser.id, 'quoterPrefs', { columnVisibility });
+        toast({ title: "Preferencias Guardadas", description: "La visibilidad de las columnas ha sido guardada." });
+    } catch (error: any) {
+        logError("Failed to save quoter column visibility", { error: error.message });
+        toast({ title: "Error", description: "No se pudo guardar la configuración de columnas.", variant: "destructive" });
+    }
+  };
+
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((acc, line) => acc + (line.quantity * line.price), 0);
@@ -709,7 +750,15 @@ export const useQuoter = () => {
   }, [lines]);
 
   
-  const selectors = { totals, customerOptions, productOptions };
+  const selectors = { 
+    totals, 
+    customerOptions, 
+    productOptions,
+    availableColumns,
+    visibleColumnsData: useMemo(() => 
+      availableColumns.map(col => columnVisibility[col.id as keyof ColumnVisibility] ? col : null).filter(Boolean) as typeof availableColumns
+    , [columnVisibility])
+  };
 
   return {
     state: {
@@ -718,7 +767,7 @@ export const useQuoter = () => {
       paymentTerms, creditDays, validUntilDate, notes, products, customers, showInactiveCustomers,
       showInactiveProducts, selectedLineForInfo, savedDrafts, decimalPlaces, productSearchTerm, purchaseOrderNumber,
       exemptionInfo, isRefreshing, customerSearchTerm, isProductSearchOpen, isCustomerSearchOpen, isProcessing,
-      mobileColumnVisibility
+      columnVisibility,
     },
     actions: {
       setCurrency, setLines, setSelectedCustomer, setCustomerDetails, setDeliveryAddress, setExchangeRate,
@@ -730,7 +779,9 @@ export const useQuoter = () => {
       handleSelectCustomer, handleSelectProduct, incrementAndSaveQuoteNumber, handleSaveDecimalPlaces,
       generatePDF, resetQuote, saveDraft, loadDrafts, handleLoadDraft, handleDeleteDraft, handleNumericInputBlur,
       handleCustomerDetailsChange, loadInitialData, handleLineInputKeyDown, checkExemptionStatus, handleProductInputKeyDown, handleCustomerInputKeyDown,
-      handleColumnVisibilityChange, addManualLine,
+      addManualLine,
+      handleColumnVisibilityChange,
+      handleSaveColumnVisibility,
       setLineRef: (lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
         const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
         refs[field] = el;

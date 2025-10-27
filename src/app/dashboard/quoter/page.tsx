@@ -49,6 +49,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -73,6 +81,7 @@ import {
   ShieldX,
   AlertTriangle,
   Info,
+  Columns3,
 } from "lucide-react";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -472,29 +481,41 @@ export default function QuoterPage() {
               </CardContent>
             </Card>
 
-            <div className="md:hidden space-y-2 text-sm">
-                <Label>Mostrar/Ocultar Columnas:</Label>
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                    <div className="flex items-center gap-2"><Checkbox id="show-code" checked={state.mobileColumnVisibility.code} onCheckedChange={(checked) => actions.handleColumnVisibilityChange('code', checked as boolean)} /><Label htmlFor="show-code" className="font-normal">Código</Label></div>
-                    <div className="flex items-center gap-2"><Checkbox id="show-unit" checked={state.mobileColumnVisibility.unit} onCheckedChange={(checked) => actions.handleColumnVisibilityChange('unit', checked as boolean)} /><Label htmlFor="show-unit" className="font-normal">Unidad</Label></div>
-                    <div className="flex items-center gap-2"><Checkbox id="show-cabys" checked={state.mobileColumnVisibility.cabys} onCheckedChange={(checked) => actions.handleColumnVisibilityChange('cabys', checked as boolean)} /><Label htmlFor="show-cabys" className="font-normal">Cabys</Label></div>
-                    <div className="flex items-center gap-2"><Checkbox id="show-tax" checked={state.mobileColumnVisibility.tax} onCheckedChange={(checked) => actions.handleColumnVisibilityChange('tax', checked as boolean)} /><Label htmlFor="show-tax" className="font-normal">Impuesto</Label></div>
-                    <div className="flex items-center gap-2"><Checkbox id="show-total" checked={state.mobileColumnVisibility.total} onCheckedChange={(checked) => actions.handleColumnVisibilityChange('total', checked as boolean)} /><Label htmlFor="show-total" className="font-normal">Total</Label></div>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline"><Columns3 className="mr-2 h-4 w-4"/> Columnas</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Seleccionar Columnas Visibles</DialogTitle>
+                        </DialogHeader>
+                        <ScrollArea className="max-h-80">
+                            <div className="space-y-2 p-1">
+                            {selectors.availableColumns.map(column => (
+                                <div key={column.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
+                                    <Checkbox
+                                        id={`col-${column.id}`}
+                                        checked={state.columnVisibility[column.id as keyof typeof state.columnVisibility]}
+                                        onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id, !!checked)}
+                                    />
+                                    <Label htmlFor={`col-${column.id}`} className="font-normal flex-1 cursor-pointer">{column.label}</Label>
+                                </div>
+                            ))}
+                            </div>
+                        </ScrollArea>
+                        <Button onClick={actions.handleSaveColumnVisibility}><Save className="mr-2 h-4 w-4"/> Guardar Preferencias</Button>
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className={cn("min-w-[100px]", !state.mobileColumnVisibility.code && 'hidden md:table-cell')}>Código</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="min-w-[100px]">Cant.</TableHead>
-                    <TableHead className={cn("min-w-[100px]", !state.mobileColumnVisibility.unit && 'hidden md:table-cell')}>Unidad</TableHead>
-                    <TableHead className={cn("min-w-[120px]", !state.mobileColumnVisibility.cabys && 'hidden md:table-cell')}>Cabys</TableHead>
-                    <TableHead className="min-w-[120px]">Precio</TableHead>
-                    <TableHead className={cn("min-w-[150px]", !state.mobileColumnVisibility.tax && 'hidden md:table-cell')}>Impuesto</TableHead>
-                    <TableHead className={cn("text-right min-w-[120px]", !state.mobileColumnVisibility.total && 'hidden md:table-cell')}>Total</TableHead>
+                    {selectors.visibleColumnsData.map(col => (
+                        <TableHead key={col.id} className={cn(col.className)}>{col.label}</TableHead>
+                    ))}
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -505,116 +526,137 @@ export default function QuoterPage() {
                       onClick={() => actions.setSelectedLineForInfo(line)}
                       className="cursor-pointer"
                     >
-                      <TableCell className={cn(!state.mobileColumnVisibility.code && 'hidden md:table-cell')}>
-                        <Input
-                          placeholder="Código"
-                          value={line.product.id}
-                          onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, 'id', e.target.value)
-                          }
-                          className={
-                            line.product.active === "N" ? "text-red-500" : ""
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          placeholder="Descripción del artículo"
-                          value={line.product.description}
-                          onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, 'description', e.target.value)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          ref={(el) => actions.setLineRef(line.id, 'qty', el)}
-                          type="text"
-                          value={line.displayQuantity}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) =>
-                            actions.updateLine(line.id, {
-                              displayQuantity: e.target.value,
-                            })
-                          }
-                          onBlur={(e) =>
-                            actions.handleNumericInputBlur(
-                              line.id,
-                              "quantity",
-                              e.target.value
-                            )
-                          }
-                          onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'qty')}
-                          className="text-right"
-                        />
-                      </TableCell>
-                      <TableCell className={cn(!state.mobileColumnVisibility.unit && 'hidden md:table-cell')}>
-                        <Input
-                          placeholder="Unidad"
-                          value={line.product.unit}
-                          onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, 'unit', e.target.value)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className={cn(!state.mobileColumnVisibility.cabys && 'hidden md:table-cell')}>
-                        <Input
-                          placeholder="Cabys"
-                          value={line.product.cabys}
-                          onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, 'cabys', e.target.value)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          ref={(el) => actions.setLineRef(line.id, 'price', el)}
-                          type="text"
-                          value={line.displayPrice}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) =>
-                            actions.updateLine(line.id, {
-                              displayPrice: e.target.value,
-                            })
-                          }
-                          onBlur={(e) =>
-                            actions.handleNumericInputBlur(
-                              line.id,
-                              "price",
-                              e.target.value
-                            )
-                          }
-                          onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'price')}
-                          className="text-right"
-                        />
-                      </TableCell>
-                      <TableCell className={cn(!state.mobileColumnVisibility.tax && 'hidden md:table-cell')}>
-                        <Select
-                          value={String(line.tax)}
-                          onValueChange={(value) =>
-                            actions.updateLine(line.id, { tax: Number(value) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taxes.map((tax) => (
-                              <SelectItem
-                                key={tax.name}
-                                value={String(tax.value)}
-                              >
-                                {tax.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className={cn("text-right font-medium", !state.mobileColumnVisibility.total && 'hidden md:table-cell')}>
-                        {actions.formatCurrency(
-                          line.quantity * line.price * (1 + line.tax)
-                        )}
-                      </TableCell>
+                      {state.columnVisibility.code && (
+                        <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'code')?.className)}>
+                            <Input
+                            placeholder="Código"
+                            value={line.product.id}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLineProductDetail(line.id, 'id', e.target.value)
+                            }
+                            className={cn("h-auto p-1 border-0", line.product.active === "N" ? "text-red-500" : "")}
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.description && (
+                         <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'description')?.className)}>
+                            <Input
+                            placeholder="Descripción del artículo"
+                            value={line.product.description}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLineProductDetail(line.id, 'description', e.target.value)
+                            }
+                             className="h-auto p-1 border-0"
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.quantity && (
+                         <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'quantity')?.className)}>
+                            <Input
+                            ref={(el) => actions.setLineRef(line.id, 'qty', el)}
+                            type="text"
+                            value={line.displayQuantity}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLine(line.id, {
+                                displayQuantity: e.target.value,
+                                })
+                            }
+                            onBlur={(e) =>
+                                actions.handleNumericInputBlur(
+                                line.id,
+                                "quantity",
+                                e.target.value
+                                )
+                            }
+                            onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'qty')}
+                            className="text-right h-auto p-1 border-0"
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.unit && (
+                         <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'unit')?.className)}>
+                            <Input
+                            placeholder="Unidad"
+                            value={line.product.unit}
+                             onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLineProductDetail(line.id, 'unit', e.target.value)
+                            }
+                             className="h-auto p-1 border-0"
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.cabys && (
+                        <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'cabys')?.className)}>
+                            <Input
+                            placeholder="Cabys"
+                            value={line.product.cabys}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLineProductDetail(line.id, 'cabys', e.target.value)
+                            }
+                             className="h-auto p-1 border-0"
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.price && (
+                        <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'price')?.className)}>
+                            <Input
+                            ref={(el) => actions.setLineRef(line.id, 'price', el)}
+                            type="text"
+                            value={line.displayPrice}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) =>
+                                actions.updateLine(line.id, {
+                                displayPrice: e.target.value,
+                                })
+                            }
+                            onBlur={(e) =>
+                                actions.handleNumericInputBlur(
+                                line.id,
+                                "price",
+                                e.target.value
+                                )
+                            }
+                            onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'price')}
+                            className="text-right h-auto p-1 border-0"
+                            />
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.tax && (
+                        <TableCell className={cn(selectors.availableColumns.find(c => c.id === 'tax')?.className)}>
+                            <Select
+                            value={String(line.tax)}
+                            onValueChange={(value) =>
+                                actions.updateLine(line.id, { tax: Number(value) })
+                            }
+                            >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {taxes.map((tax) => (
+                                <SelectItem
+                                    key={tax.name}
+                                    value={String(tax.value)}
+                                >
+                                    {tax.name}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                        </TableCell>
+                      )}
+                      {state.columnVisibility.total && (
+                        <TableCell className={cn("text-right font-medium", selectors.availableColumns.find(c => c.id === 'total')?.className)}>
+                            {actions.formatCurrency(
+                            line.quantity * line.price * (1 + line.tax)
+                            )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Button
                           variant="ghost"
