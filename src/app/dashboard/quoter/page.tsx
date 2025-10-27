@@ -510,9 +510,7 @@ export default function QuoterPage() {
                           placeholder="Código"
                           value={line.product.id}
                           onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, {
-                              id: e.target.value,
-                            })
+                            actions.updateLineProductDetail(line.id, 'id', e.target.value)
                           }
                           className={
                             line.product.active === "N" ? "text-red-500" : ""
@@ -524,19 +522,13 @@ export default function QuoterPage() {
                           placeholder="Descripción del artículo"
                           value={line.product.description}
                           onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, {
-                              description: e.target.value,
-                            })
+                            actions.updateLineProductDetail(line.id, 'description', e.target.value)
                           }
                         />
                       </TableCell>
                       <TableCell>
                         <Input
-                          ref={(el) => {
-                              const currentLineRefs = refs.lineInputRefs.current.get(line.id) || { qty: null, price: null };
-                              currentLineRefs.qty = el;
-                              refs.lineInputRefs.current.set(line.id, currentLineRefs);
-                          }}
+                          ref={(el) => actions.setLineRef(line.id, 'qty', el)}
                           type="text"
                           value={line.displayQuantity}
                           onChange={(e) =>
@@ -560,9 +552,7 @@ export default function QuoterPage() {
                           placeholder="Unidad"
                           value={line.product.unit}
                           onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, {
-                              unit: e.target.value,
-                            })
+                            actions.updateLineProductDetail(line.id, 'unit', e.target.value)
                           }
                         />
                       </TableCell>
@@ -571,19 +561,13 @@ export default function QuoterPage() {
                           placeholder="Cabys"
                           value={line.product.cabys}
                           onChange={(e) =>
-                            actions.updateLineProductDetail(line.id, {
-                              cabys: e.target.value,
-                            })
+                            actions.updateLineProductDetail(line.id, 'cabys', e.target.value)
                           }
                         />
                       </TableCell>
                       <TableCell>
                         <Input
-                          ref={(el) => {
-                              const currentLineRefs = refs.lineInputRefs.current.get(line.id) || { qty: null, price: null };
-                              currentLineRefs.price = el;
-                              refs.lineInputRefs.current.set(line.id, currentLineRefs);
-                          }}
+                          ref={(el) => actions.setLineRef(line.id, 'price', el)}
                           type="text"
                           value={line.displayPrice}
                           onChange={(e) =>
@@ -648,19 +632,7 @@ export default function QuoterPage() {
             </div>
             <Button
               variant="outline"
-              onClick={() =>
-                actions.addLine({
-                  id: "",
-                  description: "",
-                  active: "S",
-                  cabys: "",
-                  classification: "",
-                  isBasicGood: "N",
-                  lastEntry: "",
-                  notes: "",
-                  unit: "UN",
-                })
-              }
+              onClick={actions.addManualLine}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               Añadir Línea

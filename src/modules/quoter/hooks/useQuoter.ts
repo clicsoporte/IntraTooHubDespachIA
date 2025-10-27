@@ -240,9 +240,12 @@ export const useQuoter = () => {
     if (lines.length > 0) {
         const lastLine = lines[lines.length - 1];
         const lastLineRefs = lineInputRefs.current.get(lastLine.id);
-        lastLineRefs?.qty?.focus();
+        // Delay focus slightly to ensure the new input is fully rendered
+        setTimeout(() => {
+            lastLineRefs?.qty?.focus();
+        }, 0);
     }
-  }, [lines]);
+  }, [lines.length]);
 
   const customerOptions = useMemo(() => {
     if (debouncedCustomerSearch.length < 2) return [];
@@ -279,7 +282,7 @@ export const useQuoter = () => {
 
   // --- ACTIONS ---
   const addLine = useCallback((product: Product) => {
-    const newLineId = new Date().toISOString();
+    const newLineId = new Date().getTime().toString();
 
     let taxRate = 0.13;
     if (product.isBasicGood === 'S') {
@@ -294,14 +297,40 @@ export const useQuoter = () => {
     const newLine: QuoteLine = {
       id: newLineId,
       product,
-      quantity: 0,
+      quantity: 1, // Default to 1
       price: 0,
       tax: taxRate,
-      displayQuantity: "",
-      displayPrice: "",
+      displayQuantity: "1",
+      displayPrice: "0",
     };
     setLines((prev) => [...prev, newLine]);
   }, [exemptionInfo]);
+
+  const addManualLine = useCallback(() => {
+    const newLineId = new Date().getTime().toString();
+    const newProduct: Product = {
+      id: "",
+      description: "",
+      active: "S",
+      cabys: "",
+      classification: "",
+      isBasicGood: "N",
+      lastEntry: "",
+      notes: "",
+      unit: "UN"
+    };
+
+    const newLine: QuoteLine = {
+      id: newLineId,
+      product: newProduct,
+      quantity: 1,
+      price: 0,
+      tax: 0.13,
+      displayQuantity: "1",
+      displayPrice: "0",
+    };
+    setLines((prev) => [...prev, newLine]);
+  }, []);
 
   const handleSelectProduct = useCallback((productId: string) => {
     setProductSearchOpen(false);
@@ -385,9 +414,9 @@ export const useQuoter = () => {
     setLines((prev) => prev.map((line) => (line.id === id ? { ...line, ...updatedField } : line)));
   };
 
-  const updateLineProductDetail = (id: string, updatedField: Partial<Product>) => {
+  const updateLineProductDetail = (id: string, field: keyof Product, value: string) => {
     setLines((prev) => prev.map((line) =>
-      line.id === id ? { ...line, product: { ...line.product, ...updatedField } } : line
+      line.id === id ? { ...line, product: { ...line.product, [field]: value } } : line
     ));
   };
 
@@ -702,7 +731,12 @@ export const useQuoter = () => {
       handleSelectCustomer, handleSelectProduct, incrementAndSaveQuoteNumber, handleSaveDecimalPlaces,
       generatePDF, resetQuote, saveDraft, loadDrafts, handleLoadDraft, handleDeleteDraft, handleNumericInputBlur,
       handleCustomerDetailsChange, loadInitialData, handleLineInputKeyDown, checkExemptionStatus, handleProductInputKeyDown, handleCustomerInputKeyDown,
-      handleColumnVisibilityChange
+      handleColumnVisibilityChange, addManualLine,
+      setLineRef: (lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
+        const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
+        refs[field] = el;
+        lineInputRefs.current.set(lineId, refs);
+      }
     },
     refs: { productInputRef, customerInputRef, lineInputRefs },
     selectors,
