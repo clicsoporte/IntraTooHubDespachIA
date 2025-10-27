@@ -9,7 +9,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
-import type { Customer, Product, Company, User, QuoteDraft, QuoteLine, Exemption, HaciendaExemptionApiResponse, ExemptionLaw, StockInfo, UserPreferences } from "@/modules/core/types";
+import type { Customer, Product, Company, User, QuoteDraft, QuoteLine, Exemption, HaciendaExemptionApiResponse, ExemptionLaw, StockInfo } from "@/modules/core/types";
 import { logError, logInfo, logWarn } from "@/modules/core/lib/logger";
 import {
   saveQuoteDraft,
@@ -269,34 +269,15 @@ export const useQuoter = () => {
     lineInputRefs.current.set(lineId, refs);
   }, []);
 
-  const actions = useMemo(() => {
-    const addLine = (product: Product) => {
-        const newLineId = new Date().getTime().toString();
-        let taxRate = 0.13;
-        if (product.isBasicGood === 'S') taxRate = 0.01;
-        if (exemptionInfo && exemptionInfo.erpExemption.percentage > 0 && (exemptionInfo.isSpecialLaw || exemptionInfo.isHaciendaValid)) {
-            taxRate = 0;
-        }
-        const newLine: QuoteLine = {
-            id: newLineId, product, quantity: 1, price: 0, tax: taxRate,
-            displayQuantity: "1", displayPrice: "0",
-        };
-        setLines(prev => [...prev, newLine]);
-    };
-    return { addLine };
-  }, [exemptionInfo]);
-
-
   useEffect(() => {
     if (lines.length > 0) {
         const lastLine = lines[lines.length - 1];
         const lastLineRefs = lineInputRefs.current.get(lastLine.id);
         setTimeout(() => {
             lastLineRefs?.qty?.focus();
-            lastLineRefs?.qty?.select();
         }, 0);
     }
-  }, [lines, actions]);
+  }, [lines.length]);
 
 
   const customerOptions = useMemo(() => {
@@ -333,8 +314,23 @@ export const useQuoter = () => {
 
 
   // --- ACTIONS ---
+  const addLine = useCallback((product: Product) => {
+    const newLineId = new Date().getTime().toString();
+    let taxRate = 0.13;
+    if (product.isBasicGood === 'S') taxRate = 0.01;
+    if (exemptionInfo && exemptionInfo.erpExemption.percentage > 0 && (exemptionInfo.isSpecialLaw || exemptionInfo.isHaciendaValid)) {
+        taxRate = 0;
+    }
+    const newLine: QuoteLine = {
+        id: newLineId, product, quantity: 1, price: 0, tax: taxRate,
+        displayQuantity: "1", displayPrice: "0",
+    };
+    setLines(prev => [...prev, newLine]);
+  }, [exemptionInfo]);
+
   const addManualLine = useCallback(() => {
-    actions.addLine({
+    const newLineId = new Date().getTime().toString();
+    const newProduct: Product = {
       id: "",
       description: "",
       active: "S",
@@ -344,8 +340,18 @@ export const useQuoter = () => {
       lastEntry: "",
       notes: "",
       unit: "UN",
-    });
-  }, [actions]);
+    };
+    const newLine: QuoteLine = {
+      id: newLineId,
+      product: newProduct,
+      quantity: 1,
+      price: 0,
+      tax: 0.13,
+      displayQuantity: "1",
+      displayPrice: "0",
+    };
+    setLines(prev => [...prev, newLine]);
+  }, []);
 
   const handleSelectProduct = useCallback((productId: string) => {
     setProductSearchOpen(false);
@@ -355,10 +361,10 @@ export const useQuoter = () => {
     }
     const product = products.find((p) => p.id === productId);
     if (product) {
-      actions.addLine(product);
+      addLine(product);
       setProductSearchTerm("");
     }
-  }, [products, actions]);
+  }, [products, addLine]);
 
   const handleSelectCustomer = useCallback((customerId: string) => {
     setCustomerSearchOpen(false);
@@ -760,7 +766,7 @@ export const useQuoter = () => {
       setCreditDays, setValidUntilDate, setNotes, setShowInactiveCustomers,
       setShowInactiveProducts, setSelectedLineForInfo, setDecimalPlaces, setQuoteNumber,
       setProductSearchTerm, setCustomerSearchTerm, setProductSearchOpen, setCustomerSearchOpen,
-      addLine: actions.addLine, removeLine, updateLine, updateLineProductDetail: updateLine, handleCurrencyToggle, formatCurrency,
+      addLine, removeLine, updateLine, updateLineProductDetail, handleCurrencyToggle, formatCurrency,
       handleSelectCustomer, handleSelectProduct, incrementAndSaveQuoteNumber, handleSaveDecimalPlaces,
       generatePDF, resetQuote, saveDraft, loadDrafts, handleLoadDraft, handleDeleteDraft, handleNumericInputBlur,
       handleCustomerDetailsChange, loadInitialData, handleLineInputKeyDown, checkExemptionStatus, handleProductInputKeyDown, handleCustomerInputKeyDown,
