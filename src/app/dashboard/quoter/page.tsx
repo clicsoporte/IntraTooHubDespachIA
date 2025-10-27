@@ -415,43 +415,7 @@ export default function QuoterPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Condiciones de Pago</Label>
-              <div className="flex items-center gap-4">
-                <RadioGroup
-                  value={state.paymentTerms}
-                  onValueChange={actions.setPaymentTerms}
-                  className="flex items-center gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="contado" id="r-contado" />
-                    <Label htmlFor="r-contado">Contado</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="credito" id="r-credito" />
-                    <Label htmlFor="r-credito">Crédito</Label>
-                  </div>
-                </RadioGroup>
-                {state.paymentTerms === "credito" && (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      className="w-24 hide-number-arrows"
-                      placeholder="Días"
-                      value={state.creditDays || ""}
-                      onChange={(e) =>
-                        actions.setCreditDays(Number(e.target.value))
-                      }
-                    />
-                    <Label>días</Label>
-                  </div>
-                )}
-              </div>
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Agregar Producto</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <Label>Agregar Producto</Label>
                 <SearchInput
                     ref={refs.productInputRef}
                     options={selectors.productOptions}
@@ -478,8 +442,7 @@ export default function QuoterPage() {
                     Mostrar artículos inactivos
                   </Label>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <Dialog>
@@ -532,9 +495,7 @@ export default function QuoterPage() {
                             placeholder="Código"
                             value={line.product.id}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLineProductDetail(line.id, 'id', e.target.value)
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { product: { ...line.product, id: e.target.value } })}
                             className={cn("h-auto p-1 border-0", line.product.active === "N" ? "text-red-500" : "")}
                             />
                         </TableCell>
@@ -545,9 +506,7 @@ export default function QuoterPage() {
                             placeholder="Descripción del artículo"
                             value={line.product.description}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLineProductDetail(line.id, 'description', e.target.value)
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { product: { ...line.product, description: e.target.value } })}
                              className="h-auto p-1 border-0"
                             />
                         </TableCell>
@@ -559,18 +518,8 @@ export default function QuoterPage() {
                             type="text"
                             value={line.displayQuantity}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLine(line.id, {
-                                displayQuantity: e.target.value,
-                                })
-                            }
-                            onBlur={(e) =>
-                                actions.handleNumericInputBlur(
-                                line.id,
-                                "quantity",
-                                e.target.value
-                                )
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { displayQuantity: e.target.value })}
+                            onBlur={(e) => actions.handleNumericInputBlur(line.id, "quantity", e.target.value)}
                             onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'qty')}
                             className="text-right h-auto p-1 border-0"
                             />
@@ -582,9 +531,7 @@ export default function QuoterPage() {
                             placeholder="Unidad"
                             value={line.product.unit}
                              onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLineProductDetail(line.id, 'unit', e.target.value)
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { product: { ...line.product, unit: e.target.value } })}
                              className="h-auto p-1 border-0"
                             />
                         </TableCell>
@@ -595,9 +542,7 @@ export default function QuoterPage() {
                             placeholder="Cabys"
                             value={line.product.cabys}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLineProductDetail(line.id, 'cabys', e.target.value)
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { product: { ...line.product, cabys: e.target.value } })}
                              className="h-auto p-1 border-0"
                             />
                         </TableCell>
@@ -609,18 +554,8 @@ export default function QuoterPage() {
                             type="text"
                             value={line.displayPrice}
                             onFocus={(e) => e.target.select()}
-                            onChange={(e) =>
-                                actions.updateLine(line.id, {
-                                displayPrice: e.target.value,
-                                })
-                            }
-                            onBlur={(e) =>
-                                actions.handleNumericInputBlur(
-                                line.id,
-                                "price",
-                                e.target.value
-                                )
-                            }
+                            onChange={(e) => actions.updateLine(line.id, { displayPrice: e.target.value })}
+                            onBlur={(e) => actions.handleNumericInputBlur(line.id, "price", e.target.value)}
                             onKeyDown={(e) => actions.handleLineInputKeyDown(e, line.id, 'price')}
                             className="text-right h-auto p-1 border-0"
                             />

@@ -263,15 +263,12 @@ export const useQuoter = () => {
       }
   }, [authCompanyData, exchangeRateData]);
 
+  const setLineRef = useCallback((lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
+    const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
+    refs[field] = el;
+    lineInputRefs.current.set(lineId, refs);
+  }, []);
 
-  const actions = useMemo(() => ({
-    setLineRef: (lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
-      const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
-      refs[field] = el;
-      lineInputRefs.current.set(lineId, refs);
-    }
-    // All other actions can be defined here and will be stable if their dependencies are stable
-  }), []);
 
   useEffect(() => {
     if (lines.length > 0) {
@@ -283,7 +280,7 @@ export const useQuoter = () => {
             lastLineRefs?.qty?.select();
         }, 0);
     }
-  }, [lines, actions]);
+  }, [lines, setLineRef]);
 
 
   const customerOptions = useMemo(() => {
@@ -449,14 +446,8 @@ export const useQuoter = () => {
     lineInputRefs.current.delete(id);
   };
 
-  const updateLine = (id: string, updatedField: Partial<QuoteLine>) => {
-    setLines((prev) => prev.map((line) => (line.id === id ? { ...line, ...updatedField } : line)));
-  };
-
-  const updateLineProductDetail = (id: string, field: keyof Product, value: string) => {
-    setLines((prev) => prev.map((line) =>
-      line.id === id ? { ...line, product: { ...line.product, [field]: value } } : line
-    ));
+  const updateLine = (id: string, updatedFields: Partial<QuoteLine>) => {
+    setLines((prev) => prev.map((line) => (line.id === id ? { ...line, ...updatedFields } : line)));
   };
 
   const handleCurrencyToggle = useCallback(async () => {
@@ -786,18 +777,15 @@ export const useQuoter = () => {
       setCreditDays, setValidUntilDate, setNotes, setShowInactiveCustomers,
       setShowInactiveProducts, setSelectedLineForInfo, setDecimalPlaces, setQuoteNumber,
       setProductSearchTerm, setCustomerSearchTerm, setProductSearchOpen, setCustomerSearchOpen,
-      addLine, removeLine, updateLine, updateLineProductDetail, handleCurrencyToggle, formatCurrency,
+      addLine, removeLine, updateLine,
+      handleCurrencyToggle, formatCurrency,
       handleSelectCustomer, handleSelectProduct, incrementAndSaveQuoteNumber, handleSaveDecimalPlaces,
       generatePDF, resetQuote, saveDraft, loadDrafts, handleLoadDraft, handleDeleteDraft, handleNumericInputBlur,
       handleCustomerDetailsChange, loadInitialData, handleLineInputKeyDown, checkExemptionStatus, handleProductInputKeyDown, handleCustomerInputKeyDown,
       addManualLine,
       handleColumnVisibilityChange,
       handleSaveColumnVisibility,
-      setLineRef: (lineId: string, field: 'qty' | 'price', el: HTMLInputElement | null) => {
-        const refs = lineInputRefs.current.get(lineId) || { qty: null, price: null };
-        refs[field] = el;
-        lineInputRefs.current.set(lineId, refs);
-      }
+      setLineRef,
     },
     refs: { productInputRef, customerInputRef, lineInputRefs },
     selectors,
