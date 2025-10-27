@@ -21,7 +21,6 @@ import { format, parseISO, isValid } from 'date-fns';
 import { useDebounce } from "use-debounce";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import { generateDocument } from "@/modules/core/lib/pdf-generator";
-import { getExemptionStatus } from "@/modules/hacienda/lib/actions";
 import type { RowInput } from "jspdf-autotable";
 
 /**
@@ -548,7 +547,7 @@ export const useQuoter = () => {
         totals: [
             { label: 'Subtotal:', value: formatCurrency(totals.subtotal) },
             { label: 'Impuestos:', value: formatCurrency(totals.totalTaxes) },
-            { label: `Total ${currency}:`, value: formatCurrency(totals.total) },
+            { label: `Total:`, value: formatCurrency(totals.total) },
         ]
     });
     
