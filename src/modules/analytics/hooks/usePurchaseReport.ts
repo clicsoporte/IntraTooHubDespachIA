@@ -4,6 +4,7 @@
  */
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
@@ -16,7 +17,6 @@ import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -181,7 +181,15 @@ export function usePurchaseReport() {
 
     const getColumnContent = (item: PurchaseSuggestion, colId: string): { content: React.ReactNode, className?: string } => {
         switch (colId) {
-            case 'item': return { content: <><p className="font-medium">{item.itemDescription}</p><p className="text-sm text-muted-foreground">{item.itemId}</p></> };
+            case 'item': {
+                const itemContent = (
+                    <div>
+                        <p className="font-medium">{item.itemDescription}</p>
+                        <p className="text-sm text-muted-foreground">{item.itemId}</p>
+                    </div>
+                );
+                return { content: itemContent };
+            }
             case 'sourceOrders': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.sourceOrders.join(', ')}>{item.sourceOrders.join(', ')}</p> };
             case 'clients': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.involvedClients.map(c => `${c.name} (${c.id})`).join(', ')}>{item.involvedClients.map(c => c.name).join(', ')}</p> };
             case 'erpUsers': return { content: <p className="text-xs text-muted-foreground">{item.erpUsers.join(', ')}</p> };
