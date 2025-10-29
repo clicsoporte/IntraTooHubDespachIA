@@ -30,7 +30,7 @@ Este documento es la lista de verificación maestra para asegurar que las funcio
 - [ ] **Carga sin Parpadeos:** Al iniciar sesión o recargar la página, no hay "flashes" o cambios bruscos de contenido.
 - [ ] **Menú Lateral (Sidebar):** El menú lateral se puede colapsar y expandir en escritorio.
 - [ ] **Menú Lateral (Móvil):** El menú lateral se abre y se cierra correctamente en dispositivos móviles.
--_**Sincronización ERP:** El botón de "Sincronizar ERP" en el encabezado es funcional y muestra el texto completo en escritorio y solo el ícono en móvil.
+- [ ] **Sincronización ERP:** El botón de "Sincronizar ERP" en el encabezado es funcional y muestra el texto completo en escritorio y solo el ícono en móvil.
 - [ ] **Buzón de Sugerencias:** El botón "Sugerencias" del encabezado abre el diálogo para enviar feedback.
 - [ ] **Centro de Notificaciones:** El icono de la campana muestra el contador de notificaciones no leídas y despliega el panel correctamente.
 
@@ -116,4 +116,3 @@ Este documento es la lista de verificación maestra para asegurar que las funcio
 - [ ] **Mantenimiento:** Se puede crear un punto de restauración.
 - [ ] **Mantenimiento:** La función de "Auditoría de Bases de Datos" se ejecuta y muestra un resultado.
 - [ ] **Visor de Eventos:** Los logs del sistema se cargan y se pueden filtrar.
-```

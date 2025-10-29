@@ -74,7 +74,7 @@
 - **Exportación Flexible:** Permite exportar la vista actual (con filtros) a un archivo **PDF** o **Excel (.xlsx)**.
 
 ### 3.5. Solicitud de Compra (`/dashboard/requests`)
-- **Visibilidad Controlada:** Por defecto, los usuarios ven solo sus propias solicitudes. El permiso `requests:read:all` otorga visibilidad total.
+- **Visibilidad Controlada:** Por defecto, los usuarios solo ven sus propias solicitudes. El permiso `requests:read:all` otorga visibilidad total al desmarcar el filtro "Mostrar solo mis solicitudes".
 - **Flujo de Aprobación Flexible:**
   - Controla el ciclo de vida de una solicitud, desde "Pendiente" hasta "Recibida".
   - **Pasos Opcionales:** Desde administración se puede activar el estado "Recibido en Bodega" y el estado final "Ingresado en ERP" para una trazabilidad completa.
