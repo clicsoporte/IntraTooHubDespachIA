@@ -51,6 +51,8 @@ export type Company = {
     locationFilePath?: string;
     cabysFilePath?: string;
     supplierFilePath?: string;
+    erpPurchaseOrderHeaderFilePath?: string;
+    erpPurchaseOrderLineFilePath?: string;
 };
 
 /**
@@ -393,6 +395,8 @@ export type PurchaseRequest = {
   hasBeenModified?: boolean;
   sourceOrders?: string[];
   involvedClients?: { id: string; name: string }[];
+  salePriceCurrency?: 'CRC' | 'USD';
+  requiresCurrency?: boolean;
 };
 
 export type UpdatePurchaseRequestPayload = Partial<Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>> & {
@@ -590,16 +594,8 @@ export type InventoryItem = {
 
 
 // --- SQL Import Types ---
-export type SqlConfig = {
-    user?: string;
-    password?: string;
-    host?: string;
-    database?: string;
-    port?: string;
-}
-
 export type ImportQuery = {
-    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines';
+    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines';
     query: string;
 }
 
@@ -690,6 +686,20 @@ export type ErpOrderLine = {
     ARTICULO: string;
     CANTIDAD_PEDIDA: number;
     PRECIO_UNITARIO: number;
+};
+
+// --- ERP Purchase Order (Transit) Types ---
+export type ErpPurchaseOrderHeader = {
+    ORDEN_COMPRA: string;
+    PROVEEDOR: string;
+    FECHA_HORA: string | Date;
+    ESTADO: string; // 'A' = Activa/Abierta, 'R' = Recibida/Cerrada, 'N' = Anulada
+};
+
+export type ErpPurchaseOrderLine = {
+    ORDEN_COMPRA: string;
+    ARTICULO: string;
+    CANTIDAD_ORDENADA: number;
 };
 
 

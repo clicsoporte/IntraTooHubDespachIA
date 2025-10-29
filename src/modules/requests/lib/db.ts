@@ -38,6 +38,8 @@ export async function initializeRequestsDb(db: import('better-sqlite3').Database
             priority TEXT DEFAULT 'medium',
             purchaseType TEXT DEFAULT 'single',
             unitSalePrice REAL,
+            salePriceCurrency TEXT DEFAULT 'CRC',
+            requiresCurrency BOOLEAN DEFAULT FALSE,
             erpOrderNumber TEXT,
             erpOrderLine INTEGER,
             erpEntryNumber TEXT,
@@ -114,6 +116,8 @@ export async function runRequestMigrations(db: import('better-sqlite3').Database
         if (!columns.has('hasBeenModified')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN hasBeenModified BOOLEAN DEFAULT FALSE`);
         if (!columns.has('clientTaxId')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN clientTaxId TEXT`);
         if (!columns.has('erpEntryNumber')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN erpEntryNumber TEXT`);
+        if (!columns.has('salePriceCurrency')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN salePriceCurrency TEXT DEFAULT 'CRC'`);
+        if (!columns.has('requiresCurrency')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN requiresCurrency BOOLEAN DEFAULT FALSE`);
         
         const settingsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='request_settings'`).get();
         if(settingsTable){
@@ -265,11 +269,11 @@ export async function addRequest(request: Omit<PurchaseRequest, 'id' | 'consecut
         INSERT INTO purchase_requests (
             consecutive, requestDate, requiredDate, clientId, clientName, clientTaxId,
             itemId, itemDescription, quantity, unitSalePrice, erpOrderNumber, erpOrderLine, manualSupplier, route, shippingMethod, purchaseOrder,
-            status, pendingAction, notes, requestedBy, reopened, inventory, priority, purchaseType, arrivalDate
+            status, pendingAction, notes, requestedBy, reopened, inventory, priority, purchaseType, arrivalDate, salePriceCurrency, requiresCurrency
         ) VALUES (
             @consecutive, @requestDate, @requiredDate, @clientId, @clientName, @clientTaxId,
             @itemId, @itemDescription, @quantity, @unitSalePrice, @erpOrderNumber, @erpOrderLine, @manualSupplier, @route, @shippingMethod, @purchaseOrder,
-            @status, @pendingAction, @notes, @requestedBy, @reopened, @inventory, @priority, @purchaseType, @arrivalDate
+            @status, @pendingAction, @notes, @requestedBy, @reopened, @inventory, @priority, @purchaseType, @arrivalDate, @salePriceCurrency, @requiresCurrency
         )
     `);
 
@@ -288,6 +292,8 @@ export async function addRequest(request: Omit<PurchaseRequest, 'id' | 'consecut
         purchaseType: newRequest.purchaseType || 'single',
         arrivalDate: newRequest.arrivalDate || null,
         clientTaxId: newRequest.clientTaxId || null,
+        salePriceCurrency: newRequest.salePriceCurrency || 'CRC',
+        requiresCurrency: newRequest.requiresCurrency ? 1 : 0,
     };
 
     const info = stmt.run(preparedRequest);
@@ -327,6 +333,8 @@ export async function updateRequest(payload: UpdatePurchaseRequestPayload): Prom
                 itemDescription = @itemDescription,
                 quantity = @quantity,
                 unitSalePrice = @unitSalePrice,
+                salePriceCurrency = @salePriceCurrency,
+                requiresCurrency = @requiresCurrency,
                 erpOrderNumber = @erpOrderNumber,
                 erpOrderLine = @erpOrderLine,
                 manualSupplier = @manualSupplier,

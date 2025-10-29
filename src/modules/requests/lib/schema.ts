@@ -11,10 +11,11 @@ export const requestSchema: ExpectedSchema = {
         'id', 'consecutive', 'purchaseOrder', 'requestDate', 'requiredDate', 'arrivalDate',
         'receivedDate', 'clientId', 'clientName', 'clientTaxId', 'itemId', 'itemDescription',
         'quantity', 'deliveredQuantity', 'inventory', 'priority', 'purchaseType', 'unitSalePrice',
-        'erpOrderNumber', 'erpOrderLine', 'erpEntryNumber', 'manualSupplier', 'route',
-        'shippingMethod', 'status', 'pendingAction', 'notes', 'requestedBy', 'approvedBy',
-        'receivedInWarehouseBy', 'lastStatusUpdateBy', 'lastStatusUpdateNotes', 'reopened',
-        'previousStatus', 'lastModifiedBy', 'lastModifiedAt', 'hasBeenModified'
+        'salePriceCurrency', 'requiresCurrency', 'erpOrderNumber', 'erpOrderLine', 'erpEntryNumber',
+        'manualSupplier', 'route', 'shippingMethod', 'status', 'pendingAction', 'notes',
+        'requestedBy', 'approvedBy', 'receivedInWarehouseBy', 'lastStatusUpdateBy',
+        'lastStatusUpdateNotes', 'reopened', 'previousStatus', 'lastModifiedBy', 'lastModifiedAt',
+        'hasBeenModified'
     ],
     'purchase_request_history': ['id', 'requestId', 'timestamp', 'status', 'notes', 'updatedBy'],
 };
