@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
-import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Layers, ShoppingCart } from 'lucide-react';
+import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Layers, ShoppingCart, Columns3, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -24,24 +24,20 @@ import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 // New internal component to render cell content based on type
 const CellRenderer: React.FC<{ cell: { type: string, data: any } }> = ({ cell }) => {
-    switch (cell.type) {
-        case 'item':
-            return (
-                <div>
-                    <p className="font-medium">{cell.data.itemDescription}</p>
-                    <p className="text-sm text-muted-foreground">{cell.data.itemId}</p>
-                </div>
-            );
-        case 'date':
-            return <>{cell.data ? new Date(cell.data).toLocaleDateString('es-CR') : 'N/A'}</>;
-        case 'number':
-            return <>{(cell.data ?? 0).toLocaleString()}</>;
-        default:
-            return <>{cell.data}</>;
+    if (cell.type === 'reactNode') {
+        return <>{cell.data}</>;
     }
+    if (cell.type === 'date') {
+        return <>{cell.data ? new Date(cell.data).toLocaleDateString('es-CR') : 'N/A'}</>;
+    }
+    if (cell.type === 'number') {
+        return <>{(cell.data ?? 0).toLocaleString()}</>;
+    }
+    return <>{cell.data}</>;
 };
 
 export default function PurchaseReportPage() {
@@ -53,7 +49,7 @@ export default function PurchaseReportPage() {
         isInitialLoading,
     } = usePurchaseReport();
 
-    const { isLoading, dateRange, searchTerm, classificationFilter, sortKey, sortDirection, showOnlyMyOrders, currentPage, rowsPerPage } = state;
+    const { isLoading, dateRange, searchTerm, classificationFilter, sortKey, sortDirection, showOnlyMyOrders, currentPage, rowsPerPage, visibleColumns } = state;
     const { paginatedSuggestions } = selectors;
 
     if (isInitialLoading) {
@@ -95,10 +91,13 @@ export default function PurchaseReportPage() {
                             <CardTitle>Filtros de Análisis</CardTitle>
                             <CardDescription>Selecciona los filtros para analizar los pedidos del ERP.</CardDescription>
                         </div>
-                        <Button onClick={actions.handleAnalyze} disabled={isLoading}>
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                            Analizar Pedidos
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={actions.savePreferences} disabled={isLoading}><Save className="mr-2 h-4 w-4"/> Guardar Preferencias</Button>
+                            <Button onClick={actions.handleAnalyze} disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                                Analizar Pedidos
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -128,6 +127,12 @@ export default function PurchaseReportPage() {
                         <div className="flex justify-between items-center">
                             <div><CardTitle>Resultados del Análisis ({selectors.filteredSuggestions.length})</CardTitle></div>
                             <div className="flex items-center gap-2">
+                                <DialogColumnSelector
+                                    allColumns={selectors.availableColumns}
+                                    visibleColumns={visibleColumns}
+                                    onColumnChange={actions.handleColumnVisibilityChange}
+                                    onSave={actions.savePreferences}
+                                />
                                 <Button onClick={actions.handleExportExcel} variant="outline" disabled={isLoading || selectors.filteredSuggestions.length === 0}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar a Excel</Button>
                             </div>
                         </div>

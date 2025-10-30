@@ -10,32 +10,15 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
-import { getRequestSuggestions } from '@/modules/requests/lib/actions';
-import type { DateRange, PurchaseRequest, UserPreferences } from '@/modules/core/types';
+import { getRequestSuggestions, savePurchaseSuggestionsPreferences, getPurchaseSuggestionsPreferences } from '@/modules/requests/lib/actions';
+import type { DateRange, PurchaseSuggestion, UserPreferences } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
-import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { cn } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
-export interface PurchaseSuggestion {
-    itemId: string;
-    itemDescription: string;
-    itemClassification: string;
-    totalRequired: number;
-    currentStock: number;
-    inTransitStock: number;
-    shortage: number;
-    sourceOrders: string[];
-    involvedClients: { id: string; name: string }[];
-    erpUsers: string[];
-    earliestCreationDate: string | null;
-    earliestDueDate: string | null;
-    existingActiveRequests: { id: number; consecutive: string, status: string, quantity: number, purchaseOrder?: string, erpOrderNumber?: string }[];
-}
 
 export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
 export type SortDirection = 'asc' | 'desc';
@@ -125,10 +108,26 @@ export function usePurchaseReport() {
     
     useEffect(() => {
         setTitle("Reporte de Compras");
+        const loadPrefsAndData = async () => {
+             if(currentUser) {
+                const prefs = await getPurchaseSuggestionsPreferences(currentUser.id);
+                if (prefs) {
+                    updateState({
+                        classificationFilter: prefs.classificationFilter || [],
+                        showOnlyMyOrders: prefs.showOnlyMyOrders || false,
+                        visibleColumns: prefs.visibleColumns || availableColumns.map(c => c.id),
+                        sortKey: prefs.sortKey || 'earliestCreationDate',
+                        sortDirection: prefs.sortDirection || 'desc',
+                        rowsPerPage: prefs.rowsPerPage || 10,
+                    });
+                }
+            }
+            await handleAnalyze();
+        };
         if(isAuthorized) {
-            handleAnalyze();
+            loadPrefsAndData();
         }
-    }, [setTitle, isAuthorized, handleAnalyze]);
+    }, [setTitle, isAuthorized, handleAnalyze, currentUser?.id]);
 
     const filteredSuggestions = useMemo(() => {
         let filtered = state.suggestions.filter(item => {
@@ -181,8 +180,15 @@ export function usePurchaseReport() {
 
     const getColumnContent = (item: PurchaseSuggestion, colId: string): { type: string, data: any, className?: string } => {
         switch (colId) {
-            case 'item':
-                return { type: 'item', data: { itemDescription: item.itemDescription, itemId: item.itemId } };
+            case 'item': {
+                 const itemContent = (
+                    <div>
+                        <p className="font-medium">{item.itemDescription}</p>
+                        <p className="text-sm text-muted-foreground">{item.itemId}</p>
+                    </div>
+                );
+                return { type: 'reactNode', data: itemContent };
+            }
             case 'sourceOrders': return { type: 'string', data: item.sourceOrders.join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
             case 'clients': return { type: 'string', data: item.involvedClients.map(c => c.name).join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
             case 'erpUsers': return { type: 'string', data: item.erpUsers.join(', '), className: "text-xs text-muted-foreground" };
@@ -199,6 +205,34 @@ export function usePurchaseReport() {
     const visibleColumnsData = useMemo(() => {
         return state.visibleColumns.map(id => availableColumns.find(col => col.id === id)).filter(Boolean) as (typeof availableColumns)[0][];
     }, [state.visibleColumns]);
+
+    const handleColumnVisibilityChange = (columnId: string, checked: boolean) => {
+        updateState({
+            visibleColumns: checked
+                ? [...state.visibleColumns, columnId]
+                : state.visibleColumns.filter(id => id !== columnId)
+        });
+    };
+
+    const savePreferences = async () => {
+        if (!currentUser) return;
+        const prefsToSave: Partial<UserPreferences> = {
+            classificationFilter: state.classificationFilter,
+            showOnlyMyOrders: state.showOnlyMyOrders,
+            visibleColumns: state.visibleColumns,
+            sortKey: state.sortKey,
+            sortDirection: state.sortDirection,
+            rowsPerPage: state.rowsPerPage,
+        };
+        try {
+            await savePurchaseSuggestionsPreferences(currentUser.id, prefsToSave);
+            toast({ title: "Preferencias Guardadas", description: "Tus filtros y configuraciones de vista han sido guardados." });
+        } catch (error: any) {
+            logError("Failed to save purchase report preferences", { error: error.message });
+            toast({ title: "Error", description: "No se pudieron guardar tus preferencias.", variant: "destructive" });
+        }
+    };
+
 
     const handleExportExcel = () => {
         const headers = visibleColumnsData.map(col => col.label);
@@ -247,6 +281,8 @@ export function usePurchaseReport() {
         handleSort,
         setCurrentPage: (page: number) => updateState({ currentPage: page }),
         setRowsPerPage: (size: number) => updateState({ rowsPerPage: size, currentPage: 0 }),
+        handleColumnVisibilityChange,
+        savePreferences,
     };
 
     const selectors = {
