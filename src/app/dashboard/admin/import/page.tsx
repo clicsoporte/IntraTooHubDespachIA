@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type ImportType = ImportQuery['type'];
-const importTypes: ImportType[] = ['customers', 'products', 'exemptions', 'stock', 'locations', 'cabys', 'suppliers', 'erp_order_headers', 'erp_order_lines'];
+const importTypes: ImportType[] = ['customers', 'products', 'exemptions', 'stock', 'locations', 'cabys', 'suppliers', 'erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines'];
 
 const importTypeTranslations: { [key in ImportType]: string } = {
     customers: 'Clientes',
@@ -35,6 +35,8 @@ const importTypeTranslations: { [key in ImportType]: string } = {
     erp_order_headers: 'Pedidos ERP (Cabeceras)',
     erp_order_lines: 'Pedidos ERP (Líneas)',
     suppliers: 'Proveedores',
+    erp_purchase_order_headers: 'Órdenes de Compra ERP (Cabeceras)',
+    erp_purchase_order_lines: 'Órdenes de Compra ERP (Líneas)',
 };
 
 const defaultQueries: { [key in ImportType]?: string } = {
@@ -46,6 +48,8 @@ const defaultQueries: { [key in ImportType]?: string } = {
     suppliers: "SELECT [PROVEEDOR], [NOMBRE], [ALIAS], [E_MAIL], [TELEFONO1] FROM [GAREND].[PROVEEDOR]",
     erp_order_headers: "SELECT T0.[PEDIDO], T0.[ESTADO], T0.[CLIENTE], T0.[FECHA_PEDIDO], T0.[FECHA_PROMETIDA], T0.[ORDEN_COMPRA], T0.[TOTAL_UNIDADES], T0.[MONEDA_PEDIDO], T0.[USUARIO] FROM [GAREND].[PEDIDO] AS T0 WHERE T0.[FECHA_PEDIDO] >= DATEADD(day, -60, GETDATE()) AND T0.[ESTADO] NOT IN ('F', 'C') ORDER BY T0.[FECHA_PEDIDO] DESC",
     erp_order_lines: "SELECT T1.[PEDIDO], T1.[PEDIDO_LINEA], T1.[ARTICULO], T1.[CANTIDAD_PEDIDA], T1.[PRECIO_UNITARIO] FROM [GAREND].[PEDIDO_LINEA] AS T1 INNER JOIN [GAREND].[PEDIDO] AS T0 ON T1.PEDIDO = T0.PEDIDO WHERE T0.FECHA_PEDIDO >= DATEADD(day, -60, GETDATE()) AND T1.[ESTADO] NOT IN ('F', 'C')",
+    erp_purchase_order_headers: "SELECT [ORDEN_COMPRA], [PROVEEDOR], [FECHA_HORA], [ESTADO] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA]",
+    erp_purchase_order_lines: "SELECT [ORDEN_COMPRA], [ARTICULO], [CANTIDAD_ORDENADA] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA_LINEA]",
 };
 
 

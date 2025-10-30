@@ -594,6 +594,14 @@ export type InventoryItem = {
 
 
 // --- SQL Import Types ---
+export type SqlConfig = {
+  host?: string;
+  port?: string;
+  user?: string;
+  password?: string;
+  database?: string;
+};
+
 export type ImportQuery = {
     type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines';
     query: string;
@@ -719,7 +727,7 @@ export interface UserPreferences {
     classificationFilter: string[];
     showOnlyMyOrders: boolean;
     visibleColumns: string[];
-    sortKey: 'earliestCreationDate' | 'shortage';
+    sortKey: 'item' | 'sourceOrders' | 'involvedClients' | 'erpUsers' | 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock';
     sortDirection: 'asc' | 'desc';
     rowsPerPage: number;
 };

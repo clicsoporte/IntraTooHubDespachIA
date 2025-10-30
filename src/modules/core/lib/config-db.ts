@@ -20,11 +20,11 @@ export async function getSqlConfig(): Promise<SqlConfig | null> {
             // If there's no config in the DB, it hasn't been saved yet.
             return null;
         }
-        const config: SqlConfig = {};
+        const config: Partial<SqlConfig> = {};
         for (const row of rows) {
             config[row.key as keyof SqlConfig] = row.value;
         }
-        return config;
+        return config as SqlConfig;
     } catch (error) {
         console.error("Failed to get SQL config:", error);
         return null;

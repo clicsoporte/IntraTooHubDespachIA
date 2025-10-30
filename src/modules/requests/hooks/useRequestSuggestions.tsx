@@ -36,6 +36,7 @@ export interface PurchaseSuggestion {
     itemClassification: string;
     totalRequired: number;
     currentStock: number;
+    inTransitStock: number;
     shortage: number;
     sourceOrders: string[];
     involvedClients: { id: string; name: string }[];
@@ -45,7 +46,7 @@ export interface PurchaseSuggestion {
     existingActiveRequests: { id: number; consecutive: string, status: string, quantity: number, purchaseOrder?: string, erpOrderNumber?: string }[];
 }
 
-export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
+export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
 export type SortDirection = 'asc' | 'desc';
 
 const availableColumns = [
@@ -57,7 +58,8 @@ const availableColumns = [
     { id: 'dueDate', label: 'Próxima Entrega', tooltip: 'La fecha de entrega más cercana para este artículo entre todos los pedidos analizados.', sortable: true, sortKey: 'earliestDueDate' },
     { id: 'required', label: 'Cant. Requerida', tooltip: 'La suma total de este artículo requerida para cumplir con todos los pedidos en el rango de fechas.', align: 'right', sortable: true, sortKey: 'totalRequired' },
     { id: 'stock', label: 'Inv. Actual (ERP)', tooltip: 'La cantidad total de este artículo disponible en todas las bodegas según la última sincronización del ERP.', align: 'right', sortable: true, sortKey: 'currentStock' },
-    { id: 'shortage', label: 'Faltante Total', tooltip: 'La cantidad que necesitas comprar para cubrir la demanda (Cant. Requerida - Inv. Actual).', align: 'right', sortable: true, sortKey: 'shortage' },
+    { id: 'inTransit', label: 'Tránsito OC (ERP)', tooltip: 'La cantidad total de este artículo que ya se ordenó a proveedores en el ERP y está en camino.', align: 'right', sortable: true, sortKey: 'inTransitStock'},
+    { id: 'shortage', label: 'Faltante Total', tooltip: 'La cantidad que necesitas comprar para cubrir la demanda (Cant. Requerida - Inv. Actual - Tránsito).', align: 'right', sortable: true, sortKey: 'shortage' },
 ];
 
 const normalizeText = (text: string | null | undefined): string => {
@@ -208,6 +210,8 @@ export function useRequestSuggestions() {
                     return (a.totalRequired - b.totalRequired) * dir;
                 case 'currentStock':
                     return (a.currentStock - b.currentStock) * dir;
+                case 'inTransitStock':
+                    return (a.inTransitStock - b.inTransitStock) * dir;
                 default:
                     return 0;
             }
@@ -331,8 +335,8 @@ export function useRequestSuggestions() {
         const totalRequestedInActive = item.existingActiveRequests.reduce((sum, req) => sum + req.quantity, 0);
 
         switch (colId) {
-            case 'item': return { 
-                content: (
+            case 'item': {
+                const itemContent = (
                     <div className="flex items-center gap-2">
                         {isDuplicate && (
                             <Tooltip>
@@ -355,9 +359,9 @@ export function useRequestSuggestions() {
                             <p className="text-sm text-muted-foreground">{item.itemId}</p>
                         </div>
                     </div>
-                ),
-                className: isDuplicate ? 'bg-amber-50' : ''
-            };
+                );
+                return { content: itemContent, className: isDuplicate ? 'bg-amber-50' : '' };
+            }
             case 'sourceOrders': return { content: <Tooltip><TooltipTrigger asChild><p className="text-xs text-muted-foreground truncate max-w-xs">{item.sourceOrders.join(', ')}</p></TooltipTrigger><TooltipContent><div className="max-w-md"><p className="font-bold mb-1">Pedidos de Origen:</p><p>{item.sourceOrders.join(', ')}</p></div></TooltipContent></Tooltip>, className: isDuplicate ? 'bg-amber-50' : '' };
             case 'clients': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.involvedClients.map(c => `${c.name} (${c.id})`).join(', ')}>{item.involvedClients.map(c => c.name).join(', ')}</p>, className: isDuplicate ? 'bg-amber-50' : '' };
             case 'erpUsers': return { content: <p className="text-xs text-muted-foreground">{item.erpUsers.join(', ')}</p>, className: isDuplicate ? 'bg-amber-50' : '' };
@@ -365,6 +369,7 @@ export function useRequestSuggestions() {
             case 'dueDate': return { content: item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A', className: isDuplicate ? 'bg-amber-50' : '' };
             case 'required': return { content: item.totalRequired.toLocaleString(), className: cn('text-right', isDuplicate ? 'bg-amber-50' : '') };
             case 'stock': return { content: item.currentStock.toLocaleString(), className: cn('text-right', isDuplicate ? 'bg-amber-50' : '') };
+            case 'inTransit': return { content: item.inTransitStock.toLocaleString(), className: cn('text-right font-semibold text-blue-600', isDuplicate ? 'bg-amber-50' : '') };
             case 'shortage': return { content: item.shortage.toLocaleString(), className: cn('text-right font-bold text-red-600', isDuplicate ? 'bg-amber-50' : '') };
             default: return { content: '', className: isDuplicate ? 'bg-amber-50' : '' };
         }
@@ -378,14 +383,19 @@ export function useRequestSuggestions() {
         const headers = visibleColumnsData.map(col => col.label);
         const dataToExport = filteredSuggestions.map(item =>
             state.visibleColumns.map(colId => {
-                 const colContent = getColumnContent(item, colId).content;
-                if (React.isValidElement(colContent) && colId === 'item') {
-                    return `${item.itemDescription} (${item.itemId})`;
+                switch(colId) {
+                    case 'item': return `${item.itemDescription} (${item.itemId})`;
+                    case 'sourceOrders': return item.sourceOrders.join(', ');
+                    case 'clients': return item.involvedClients.map(c => c.name).join(', ');
+                    case 'erpUsers': return item.erpUsers.join(', ');
+                    case 'creationDate': return item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A';
+                    case 'dueDate': return item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A';
+                    case 'required': return item.totalRequired;
+                    case 'stock': return item.currentStock;
+                    case 'inTransit': return item.inTransitStock;
+                    case 'shortage': return item.shortage;
+                    default: return '';
                 }
-                if (colId === 'sourceOrders') return item.sourceOrders.join(', ');
-                if (colId === 'clients') return item.involvedClients.map(c => c.name).join(', ');
-                if (colId === 'erpUsers') return item.erpUsers.join(', ');
-                return colContent?.toString() || '';
             })
         );
 
@@ -420,7 +430,7 @@ export function useRequestSuggestions() {
 
     const savePreferences = async () => {
         if (!currentUser) return;
-        const prefsToSave = {
+        const prefsToSave: Partial<UserPreferences> = {
             classificationFilter: state.classificationFilter,
             showOnlyMyOrders: state.showOnlyMyOrders,
             visibleColumns: state.visibleColumns,
