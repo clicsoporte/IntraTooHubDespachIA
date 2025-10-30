@@ -256,11 +256,7 @@ export const useRequests = () => {
             const finalStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
             const archivedStatuses = `'${finalStatus}', 'canceled'`;
 
-            const allRequests = requestsData.requests.map(req => ({
-                ...req,
-                sourceOrders: req.sourceOrders ? JSON.parse(req.sourceOrders as any) : [],
-                involvedClients: req.involvedClients ? JSON.parse(req.involvedClients as any) : [],
-            }));
+            const allRequests = requestsData.requests;
             
             updateState({
                 activeRequests: allRequests.filter(req => !archivedStatuses.includes(`'${req.status}'`)),
