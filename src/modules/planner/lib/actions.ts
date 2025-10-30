@@ -18,6 +18,7 @@ import {
     saveSettings as saveSettingsServer,
     addNote as addNoteServer,
     updatePendingAction as updatePendingActionServer,
+    confirmModification as confirmModificationServer,
     getUserByName,
     getRolesWithPermission,
 } from './db';
@@ -77,6 +78,19 @@ export async function updateProductionOrder(payload: UpdateProductionOrderPayloa
     await logInfo(`Production order ${updatedOrder.consecutive} edited by ${payload.updatedBy}`, { orderId: payload.orderId });
     return updatedOrder;
 }
+
+/**
+ * Confirms that a modification to an approved order has been reviewed.
+ * @param orderId - The ID of the order.
+ * @param updatedBy - The name of the user confirming the modification.
+ * @returns The updated production order.
+ */
+export async function confirmModification(orderId: number, updatedBy: string): Promise<ProductionOrder> {
+    const updatedOrder = await confirmModificationServer(orderId, updatedBy);
+    await logInfo(`Modification of order ${updatedOrder.consecutive} confirmed by ${updatedBy}`, { orderId });
+    return updatedOrder;
+}
+
 
 /**
  * Updates the status of a production order.

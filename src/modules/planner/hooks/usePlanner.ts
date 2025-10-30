@@ -15,7 +15,8 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getProductionOrders, saveProductionOrder, updateProductionOrder, 
     updateProductionOrderStatus, getOrderHistory, getPlannerSettings, 
-    updateProductionOrderDetails, addNoteToOrder, updatePendingAction 
+    updateProductionOrderDetails, addNoteToOrder, updatePendingAction,
+    confirmModification
 } from '@/modules/planner/lib/actions';
 import type { 
     ProductionOrder, ProductionOrderStatus, ProductionOrderPriority, 
@@ -173,15 +174,15 @@ export const usePlanner = () => {
             const newDynamicConfig = getStatusConfig(settingsData);
 
             const finalStatus = settingsData?.useWarehouseReception ? 'received-in-warehouse' : 'completed';
-            const activeFilter = (o: ProductionOrder) => o.status !== finalStatus && o.status !== 'canceled';
+            const archivedStatuses = `'${finalStatus}', 'canceled'`;
 
             const allOrders = [...ordersData.activeOrders, ...ordersData.archivedOrders];
 
             updateState({
                 plannerSettings: settingsData,
                 dynamicStatusConfig: newDynamicConfig,
-                activeOrders: allOrders.filter(activeFilter),
-                archivedOrders: allOrders.filter(o => !activeFilter(o)),
+                activeOrders: allOrders.filter(o => o.status !== finalStatus && o.status !== 'canceled'),
+                archivedOrders: allOrders.filter(o => o.status === finalStatus || o.status === 'canceled'),
                 totalArchived: ordersData.totalArchivedCount,
             });
 
@@ -236,7 +237,12 @@ export const usePlanner = () => {
         const isInProgress = order.status === 'in-progress';
         const isOnHold = order.status === 'on-hold' || order.status === 'in-maintenance';
         const isCompleted = order.status === 'completed';
-        const isFinalArchived = order.status === (state.plannerSettings?.useWarehouseReception ? 'received-in-warehouse' : 'completed');
+        
+        let finalArchivedStatus: ProductionOrderStatus = 'completed';
+        if (state.plannerSettings?.useWarehouseReception) {
+            finalArchivedStatus = 'received-in-warehouse';
+        }
+        const isFinalArchived = order.status === finalArchivedStatus || order.status === 'canceled';
     
         return {
             canEdit: (isPending && hasPermission('planner:edit:pending')) || (!isPending && hasPermission('planner:edit:approved')),
@@ -760,21 +766,19 @@ export const usePlanner = () => {
         },
         handleConfirmModification: async () => {
             if (!state.orderToConfirmModification || !currentUser) return;
-
-            const payload: UpdateProductionOrderPayload = {
-                orderId: state.orderToConfirmModification.id,
-                updatedBy: currentUser.name,
-                hasBeenModified: false, // Clear the flag
-            };
+        
+            await confirmModification(state.orderToConfirmModification.id, currentUser.name);
             
-            const updated = await updateProductionOrder(payload);
             toast({ title: "Modificación Confirmada", description: "La alerta de modificación ha sido eliminada." });
             
-            setState(prevState => ({
-                ...prevState,
-                activeOrders: prevState.activeOrders.map(o => o.id === updated.id ? updated : o),
-                orderToConfirmModification: null
-            }));
+            setState(prevState => {
+                const updatedOrder = { ...prevState.orderToConfirmModification!, hasBeenModified: false };
+                return {
+                    ...prevState,
+                    activeOrders: prevState.activeOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
+                    orderToConfirmModification: null
+                }
+            });
         },
         setOrderToConfirmModification: (order: ProductionOrder | null) => {
             updateState({ orderToConfirmModification: order });
