@@ -267,6 +267,11 @@ export const useCostAssistant = () => {
     const saveDraftAction = async () => {
         if (!user) return;
         
+        if (state.lines.length === 0) {
+            toast({ title: "Sin datos", description: "No puedes guardar un análisis vacío.", variant: "destructive" });
+            return;
+        }
+        
         const settings = await getCostAssistantSettings(user.id);
         const defaultName = `${settings.draftPrefix || 'AC-'}${String(settings.nextDraftNumber || 1).padStart(5, '0')} - Borrador de Costos`;
         const draftName = prompt("Asigna un nombre a este borrador:", defaultName);
@@ -276,12 +281,14 @@ export const useCostAssistant = () => {
         const newDraft: Omit<CostAnalysisDraft, 'id' | 'createdAt'> = {
             userId: user.id,
             name: draftName,
-            lines: state.lines,
+            lines: state.lines.map(({ displayMargin, displayTaxRate, displayUnitCost, ...line }) => line), // Remove display fields
             globalCosts: {
                 transportCost: state.transportCost,
                 otherCosts: state.otherCosts,
             },
-            processedInvoices: state.processedInvoices
+            processedInvoices: state.processedInvoices,
+            // New field to save
+            discountHandling: state.discountHandling,
         };
 
         try {
@@ -295,12 +302,21 @@ export const useCostAssistant = () => {
     };
     
     const loadDraft = (draftToLoad: CostAnalysisDraft) => {
+        // Re-create display fields from the loaded data
+        const linesWithDisplay = draftToLoad.lines.map(line => ({
+            ...line,
+            displayMargin: (line.margin * 100).toFixed(2),
+            displayTaxRate: (line.taxRate * 100).toFixed(0),
+            displayUnitCost: line.unitCostWithoutTax.toFixed(4)
+        }));
+
         setState(prevState => ({
             ...prevState,
-            lines: draftToLoad.lines,
+            lines: linesWithDisplay,
             transportCost: draftToLoad.globalCosts.transportCost,
             otherCosts: draftToLoad.globalCosts.otherCosts,
-            processedInvoices: draftToLoad.processedInvoices
+            processedInvoices: draftToLoad.processedInvoices,
+            discountHandling: draftToLoad.discountHandling || 'company' // Restore discount handling, default if not present
         }));
         toast({ title: "Borrador Cargado", description: `Se ha cargado el análisis "${draftToLoad.name}".` });
     };
@@ -339,7 +355,7 @@ export const useCostAssistant = () => {
             return {
                 ...line,
                 unitCostWithoutTax: finalUnitCost,
-                displayUnitCost: String(finalUnitCost.toFixed(4)),
+                displayUnitCost: line.isCostEdited ? line.displayUnitCost : String(finalUnitCost.toFixed(4)),
                 finalSellPrice,
                 sellPriceWithoutTax,
                 profitPerLine,

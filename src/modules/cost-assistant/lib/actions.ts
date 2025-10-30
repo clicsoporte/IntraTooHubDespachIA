@@ -239,10 +239,17 @@ export async function getCostAssistantSettings(userId: number): Promise<CostAssi
     return settings;
 }
 
-export async function saveCostAssistantSettings(userId: number, settings: CostAssistantSettings): Promise<void> {
+export async function saveCostAssistantSettings(userId: number, settings: Partial<CostAssistantSettings>): Promise<void> {
     const { draftPrefix, nextDraftNumber, ...userPrefs } = settings;
     await saveUserPreferences(userId, 'costAssistantSettings', userPrefs);
-    await saveDbSettings({ draftPrefix, nextDraftNumber });
+    
+    const dbSettingsToSave: Partial<CostAssistantSettings> = {};
+    if (draftPrefix !== undefined) dbSettingsToSave.draftPrefix = draftPrefix;
+    if (nextDraftNumber !== undefined) dbSettingsToSave.nextDraftNumber = nextDraftNumber;
+    
+    if (Object.keys(dbSettingsToSave).length > 0) {
+        await saveDbSettings(dbSettingsToSave);
+    }
     await logInfo('Cost Assistant settings updated', { userId });
 }
 

@@ -795,6 +795,7 @@ export type CostAnalysisDraft = {
         otherCosts: number;
     };
     processedInvoices: ProcessedInvoiceInfo[];
+    discountHandling: 'customer' | 'company';
 };
 
 export type CostAssistantSettings = {
