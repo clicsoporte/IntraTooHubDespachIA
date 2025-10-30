@@ -526,7 +526,7 @@ export default function HelpPage() {
                     <li>
                         **Paso 3: Alertas y Solicitudes de Cambio.**
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>**Aviso de &quot;Modificado&quot; (<AlertTriangle className="inline h-4 w-4 text-red-600" />):** Si una orden se edita después de ser aprobada, aparecerá esta alerta para notificar a todos sobre el cambio.</li>
+                            <li>**Aviso de &quot;Modificado&quot; (<AlertTriangle className="inline h-4 w-4 text-red-600" />):** Si una orden se edita después de ser aprobada, aparecerá esta alerta. Un supervisor deberá hacer clic en el nuevo botón <strong>&quot;Confirmar Modificación&quot;</strong> para limpiar la alerta, dejando un registro en el historial.</li>
                             <li>**Solicitar Desaprobación (<Undo2 className="inline h-4 w-4 text-orange-600"/>):** Si una orden ya aprobada necesita un cambio mayor (ej: cambiar de producto), un usuario puede &quot;Solicitar Desaprobación&quot;. Esto bloquea la orden y requiere que un administrador la apruebe o rechace para devolverla al estado &quot;Pendiente&quot;.</li>
                             <li>**Solicitar Cancelación (<XCircle className="inline h-4 w-4 text-red-600"/>):** Similar a la desaprobación, permite pedir la cancelación de una orden que ya está en el flujo, requiriendo aprobación administrativa.</li>
                         </ul>
@@ -842,10 +842,13 @@ export default function HelpPage() {
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Nueva Funcionalidad Mayor: Módulo de Analíticas.</strong> Se añadió una sección completa de inteligencia de negocio, incluyendo un reporte proactivo de "Sugerencias de Compra" y un reporte de "Auditoría de Permisos de Usuario".
+                        <strong>Nueva Funcionalidad Mayor: Módulo de Analíticas.</strong> Se añadió una sección completa de inteligencia de negocio, incluyendo un reporte proactivo de &quot;Sugerencias de Compra&quot; y un reporte de &quot;Auditoría de Permisos de Usuario&quot;.
                     </li>
                     <li>
                         <strong>Nueva Funcionalidad Mayor: Centro de Ayuda.</strong> Se implementó una guía de usuario interactiva y con capacidad de búsqueda directamente en la aplicación.
+                    </li>
+                     <li>
+                        <strong>Nueva Funcionalidad: Recuperación de Contraseña.</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo con una clave temporal. Incluye una pantalla de configuración SMTP para administradores.
                     </li>
                     <li>
                         <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones y redirecciones para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas.
@@ -853,20 +856,21 @@ export default function HelpPage() {
                     <li>
                         <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación.
                     </li>
-                    <li>
-                        <strong>Mejora Mayor de Seguridad: Recuperación de Contraseña.</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo con una clave temporal, configurable desde el panel de administración.
-                    </li>
                 </ul>
-                <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.8.0</h4>
+                <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.9.0</h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Nueva Funcionalidad: Centro de Notificaciones.</strong> Se añadió un sistema de notificaciones en tiempo real dentro de la aplicación.
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Un icono de campana en la cabecera alerta sobre nuevas notificaciones.</li>
-                            <li>El panel de notificaciones permite ver y navegar directamente a las órdenes o solicitudes relevantes.</li>
-                            <li>Ciertas notificaciones son accionables, permitiendo aprobar o rechazar tareas directamente desde el panel.</li>
-                        </ul>
+                        <strong>Mejora de Flujo:</strong> Se añadió el botón &quot;Confirmar Modificación&quot; en el Planificador para limpiar la alerta visual en órdenes aprobadas que han sido editadas.
+                    </li>
+                    <li>
+                        <strong>Mejora de Lógica:</strong> Se implementó un sistema de validación de datos basado en esquemas (Zod) para fortalecer la integridad de los datos, empezando por el módulo de usuarios.
+                    </li>
+                    <li>
+                        <strong>Mejora de Estabilidad:</strong> Se corrigieron múltiples inconsistencias en el guardado de datos en los módulos de Compras y Asistente de Costos para prevenir errores de `FOREIGN KEY`.
+                    </li>
+                    <li>
+                        <strong>Mejora de Rendimiento:</strong> Se eliminó una recarga de página innecesaria en el módulo de Almacén al sincronizar datos, mejorando la fluidez de la experiencia de usuario.
                     </li>
                 </ul>
             </div>
