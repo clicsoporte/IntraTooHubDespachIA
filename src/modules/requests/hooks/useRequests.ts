@@ -239,8 +239,8 @@ export const useRequests = () => {
              const [settingsData, requestsData, dbProducts, dbCustomers] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
-                    page: state.archivedPage,
-                    pageSize: state.pageSize,
+                    page: state.viewingArchived ? state.archivedPage : undefined,
+                    pageSize: state.viewingArchived ? state.pageSize : undefined,
                 }),
                 getAllProductsFromDB(),
                 getAllCustomersFromDB(),
@@ -254,13 +254,13 @@ export const useRequests = () => {
             const useErpEntry = settingsData.useErpEntry;
 
             const finalStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
-            const activeFilter = (o: PurchaseRequest) => o.status !== finalStatus && o.status !== 'canceled';
-            
+            const archivedStatuses = `'${finalStatus}', 'canceled'`;
+
             const allRequests = requestsData.requests;
             
             updateState({
-                activeRequests: allRequests.filter(activeFilter),
-                archivedRequests: allRequests.filter(req => !activeFilter(req)),
+                activeRequests: allRequests.filter(req => !archivedStatuses.includes(`'${req.status}'`)),
+                archivedRequests: allRequests.filter(req => archivedStatuses.includes(`'${req.status}'`)),
                 totalArchived: requestsData.totalArchivedCount,
             });
 
@@ -275,7 +275,7 @@ export const useRequests = () => {
             }
         }
          return () => { isMounted = false; };
-    }, [toast, state.archivedPage, state.pageSize, updateState]);
+    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
     
     useEffect(() => {
         setTitle("Solicitud de Compra");
@@ -814,7 +814,6 @@ export const useRequests = () => {
         },
         setNewRequest: (updater: (prev: State['newRequest']) => State['newRequest']) => {
             const newState = updater(state.newRequest);
-            // If the requiresCurrency checkbox is checked, ensure a default currency is set
             if (newState.requiresCurrency && !newState.salePriceCurrency) {
                 newState.salePriceCurrency = 'CRC';
             }
