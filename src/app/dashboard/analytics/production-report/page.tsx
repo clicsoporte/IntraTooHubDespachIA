@@ -18,11 +18,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { SearchInput } from '@/components/ui/search-input';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 export default function ProductionReportPage() {
     const {
@@ -144,30 +142,12 @@ export default function ProductionReportPage() {
                     <div className="flex justify-between items-center">
                         <CardTitle>Detalle de Órdenes</CardTitle>
                          <div className="flex items-center gap-2">
-                             <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline"><Columns3 className="mr-2 h-4 w-4"/> Columnas</Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle>Seleccionar Columnas Visibles</DialogTitle>
-                                    </DialogHeader>
-                                    <ScrollArea className="max-h-80">
-                                        <div className="space-y-2 p-1">
-                                        {selectors.availableColumns.map(column => (
-                                            <div key={column.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                                <Checkbox
-                                                    id={`col-${column.id}`}
-                                                    checked={visibleColumns.includes(column.id)}
-                                                    onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id, !!checked)}
-                                                />
-                                                <Label htmlFor={`col-${column.id}`} className="font-normal flex-1 cursor-pointer">{column.label}</Label>
-                                            </div>
-                                        ))}
-                                        </div>
-                                    </ScrollArea>
-                                </DialogContent>
-                            </Dialog>
+                            <DialogColumnSelector
+                                allColumns={selectors.availableColumns}
+                                visibleColumns={visibleColumns}
+                                onColumnChange={actions.handleColumnVisibilityChange}
+                                onSave={actions.handleSaveColumnVisibility}
+                            />
                             <Button variant="outline" onClick={() => actions.handleExportPDF('landscape')} disabled={isLoading || details.length === 0}><FileDown className="mr-2"/>Exportar PDF</Button>
                             <Button variant="outline" onClick={actions.handleExportExcel} disabled={isLoading || details.length === 0}><FileSpreadsheet className="mr-2"/>Exportar Excel</Button>
                         </div>

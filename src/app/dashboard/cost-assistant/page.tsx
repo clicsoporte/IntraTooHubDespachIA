@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { UploadCloud, Loader2, Percent, Calculator, Trash2, Settings2, FilePlus, Save, Briefcase, CheckCircle, XCircle, FolderClock, FileDown, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetClose, SheetTrigger } from '@/components/ui/sheet';
@@ -22,6 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { CostAnalysisDraft } from '@/modules/core/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 export default function CostAssistantPage() {
     const {
@@ -256,7 +256,13 @@ export default function CostAssistantPage() {
                                 <CardTitle>Artículos Extraídos</CardTitle>
                                 <CardDescription>Ajusta los datos y márgenes de ganancia para calcular el precio de venta final.</CardDescription>
                              </div>
-                             <div>
+                             <div className="flex items-center gap-2">
+                                 <DialogColumnSelector
+                                    allColumns={columns}
+                                    visibleColumns={Object.keys(state.columnVisibility).filter(k => state.columnVisibility[k as keyof typeof state.columnVisibility])}
+                                    onColumnChange={actions.handleColumnVisibilityChange}
+                                    onSave={actions.handleSaveColumnVisibility}
+                                />
                                 {state.exportStatus === 'idle' && (
                                     <Button onClick={actions.handleExportToERP} disabled={state.lines.length === 0}>
                                         <FileDown className="mr-2 h-4 w-4" />
@@ -284,27 +290,6 @@ export default function CostAssistantPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="border rounded-md p-4 mb-4">
-                             <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-sm flex items-center gap-2"><Settings2 className="h-4 w-4"/> Opciones de Visualización</h4>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={actions.handleSaveColumnVisibility}>
-                                    <Save className="h-4 w-4" />
-                                </Button>
-                            </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
-                                {columns.map(col => (
-                                    <div key={col.id} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={`vis-${col.id}`}
-                                            checked={state.columnVisibility[col.id as keyof typeof state.columnVisibility]}
-                                            onCheckedChange={(checked) => actions.setColumnVisibility(col.id as keyof typeof state.columnVisibility, !!checked)}
-                                        />
-                                        <Label htmlFor={`vis-${col.id}`} className="font-normal text-sm">{col.label}</Label>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
                         <div className="w-full overflow-x-auto">
                             <Table>
                                 <TableHeader>

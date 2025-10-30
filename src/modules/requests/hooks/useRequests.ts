@@ -536,10 +536,10 @@ export const useRequests = () => {
             try {
                 const { headers } = await getErpOrderData(state.erpOrderNumber);
                 
-                const enrichedHeaders = headers.map((h: ErpOrderHeader) => {
+                const enrichedHeaders = headers.map(h => {
                     const client = state.customers.find(c => c.id === h.CLIENTE);
                     return { ...h, CLIENTE_NOMBRE: client?.name || 'Cliente no encontrado' };
-                }).sort((a: ErpOrderHeader, b: ErpOrderHeader) => {
+                }).sort((a, b) => {
                     if (a.PEDIDO === state.erpOrderNumber) return -1;
                     if (b.PEDIDO === state.erpOrderNumber) return 1;
                     return a.PEDIDO.localeCompare(b.PEDIDO);

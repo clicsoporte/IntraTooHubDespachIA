@@ -89,7 +89,7 @@ async function initializeMainDatabase(db: import('better-sqlite3').Database) {
         CREATE TABLE IF NOT EXISTS erp_order_headers (PEDIDO TEXT PRIMARY KEY, ESTADO TEXT, CLIENTE TEXT, FECHA_PEDIDO TEXT, FECHA_PROMETIDA TEXT, ORDEN_COMPRA TEXT, TOTAL_UNIDADES REAL, MONEDA_PEDIDO TEXT, USUARIO TEXT);
         CREATE TABLE IF NOT EXISTS erp_order_lines (PEDIDO TEXT, PEDIDO_LINEA INTEGER, ARTICULO TEXT, CANTIDAD_PEDIDA REAL, PRECIO_UNITARIO REAL, PRIMARY KEY (PEDIDO, PEDIDO_LINEA));
         CREATE TABLE IF NOT EXISTS erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT);
-        CREATE TABLE IF NOT EXISTS erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY (ORDEN_COMPRA, ARTICULO));
+        CREATE TABLE IF NOT EXISTS erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL);
     `;
     db.exec(schema);
 
@@ -403,7 +403,16 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
 
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='erp_purchase_order_lines'`).get()) {
             console.log("MIGRATION: Creating erp_purchase_order_lines table.");
-            db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY (ORDEN_COMPRA, ARTICULO));`);
+            db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL);`);
+        } else {
+             const erpPOLinesInfo = db.prepare(`PRAGMA table_info(erp_purchase_order_lines)`).all() as { name: string }[];
+             const erpPOLinesColumns = new Set(erpPOLinesInfo.map(c => c.name));
+             if (!erpPOLinesColumns.has('ORDEN_COMPRA')) {
+                 // This indicates a legacy structure, so we need to recreate it.
+                 console.log("MIGRATION: Recreating erp_purchase_order_lines table with composite primary key.");
+                 db.exec(`DROP TABLE erp_purchase_order_lines;`);
+                 db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY (ORDEN_COMPRA, ARTICULO));`);
+             }
         }
 
     } catch (error) {
@@ -865,7 +874,7 @@ async function updateCabysCatalog(data: any[]): Promise<{ count: number }> {
     return { count: data.length };
 }
 
-export async function importDataFromFile(type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines'): Promise<{ count: number, source: string }> {
+export async function importDataFromFile(type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers'): Promise<{ count: number, source: string }> {
     const companySettings = await getCompanySettings();
     if (!companySettings) throw new Error("No se pudo cargar la configuración de la empresa.");
     
@@ -955,19 +964,12 @@ export async function importData(type: ImportQuery['type']): Promise<{ count: nu
     const companySettings = await getCompanySettings();
     if (!companySettings) throw new Error("No se pudo cargar la configuración de la empresa.");
     
-    // For these types, always use SQL if available, otherwise it's an error because file import is not supported.
-    if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines'].includes(type)) {
-        if (companySettings.importMode === 'sql') {
-            return importDataFromSql(type);
-        } else {
-             return { count: 0, source: 'file (skipped)' };
-        }
-    }
-    
-    // For other types, respect the configured importMode.
     if (companySettings.importMode === 'sql') {
         return importDataFromSql(type);
     } else {
+        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines'].includes(type)) {
+            return { count: 0, source: 'file (skipped)' };
+        }
         return importDataFromFile(type as any); // Cast as 'any' because we've already handled the SQL-only types.
     }
 }

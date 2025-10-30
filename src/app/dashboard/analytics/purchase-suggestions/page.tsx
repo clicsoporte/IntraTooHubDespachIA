@@ -23,10 +23,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 
 export default function PurchaseSuggestionsPage() {
@@ -172,30 +172,12 @@ export default function PurchaseSuggestionsPage() {
                                 </CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <Button variant="outline"><Columns3 className="mr-2 h-4 w-4"/> Columnas</Button>
-                                    </DialogTrigger>
-                                     <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>Seleccionar Columnas Visibles</DialogTitle>
-                                        </DialogHeader>
-                                        <ScrollArea className="max-h-80">
-                                            <div className="space-y-2 p-1">
-                                                {selectors.availableColumns.map((column: { id: string; label: string }) => (
-                                                    <div key={column.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                                        <Checkbox
-                                                            id={`col-${column.id}`}
-                                                            checked={visibleColumns.includes(column.id)}
-                                                            onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id, !!checked)}
-                                                        />
-                                                        <Label htmlFor={`col-${column.id}`} className="font-normal flex-1 cursor-pointer">{column.label}</Label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </DialogContent>
-                                </Dialog>
+                                <DialogColumnSelector
+                                    allColumns={selectors.availableColumns}
+                                    visibleColumns={visibleColumns}
+                                    onColumnChange={actions.handleColumnVisibilityChange}
+                                    onSave={actions.savePreferences}
+                                />
                                 <Button onClick={actions.handleExportExcel} variant="outline" disabled={isLoading || selectors.filteredSuggestions.length === 0}>
                                     <FileSpreadsheet className="mr-2 h-4 w-4" />
                                     Exportar a Excel
@@ -279,9 +261,7 @@ export default function PurchaseSuggestionsPage() {
                                     <Label htmlFor="rows-per-page">Filas por página:</Label>
                                     <Select value={String(rowsPerPage)} onValueChange={(value) => actions.setRowsPerPage(Number(value))}>
                                         <SelectTrigger id="rows-per-page" className="w-20"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {[5, 10, 25, 50, 100].map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}
-                                        </SelectContent>
+                                        <SelectContent>{[5, 10, 25, 50, 100].map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <span className="text-sm text-muted-foreground">Página {currentPage + 1} de {selectors.totalPages}</span>
