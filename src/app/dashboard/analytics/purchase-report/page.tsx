@@ -25,6 +25,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 
+// New internal component to render cell content based on type
+const CellRenderer: React.FC<{ cell: { type: string, data: any } }> = ({ cell }) => {
+    switch (cell.type) {
+        case 'item':
+            return (
+                <div>
+                    <p className="font-medium">{cell.data.itemDescription}</p>
+                    <p className="text-sm text-muted-foreground">{cell.data.itemId}</p>
+                </div>
+            );
+        case 'date':
+            return <>{cell.data ? new Date(cell.data).toLocaleDateString('es-CR') : 'N/A'}</>;
+        case 'number':
+            return <>{cell.data.toLocaleString()}</>;
+        default:
+            return <>{cell.data}</>;
+    }
+};
+
 export default function PurchaseReportPage() {
     const {
         state,
@@ -131,7 +150,7 @@ export default function PurchaseReportPage() {
                                             <TableRow key={item.itemId}>
                                                 {state.visibleColumns.map((colId: string) => {
                                                     const colData = selectors.getColumnContent(item, colId);
-                                                    return <TableCell key={colId} className={cn(colData.className)}>{colData.content}</TableCell>;
+                                                    return <TableCell key={colId} className={cn(colData.className)}><CellRenderer cell={colData} /></TableCell>;
                                                 })}
                                             </TableRow>
                                         ))

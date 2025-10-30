@@ -11,7 +11,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getRequestSuggestions } from '@/modules/requests/lib/actions';
-import type { DateRange, PurchaseRequest } from '@/modules/core/types';
+import type { DateRange, PurchaseRequest, UserPreferences } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
@@ -179,27 +179,30 @@ export function usePurchaseReport() {
         updateState({ sortKey: key, sortDirection: direction });
     };
 
-    const getColumnContent = (item: PurchaseSuggestion, colId: string): { content: React.ReactNode, className?: string } => {
+    const getColumnContent = (item: PurchaseSuggestion, colId: string): { type: string, data: any, className?: string } => {
         switch (colId) {
-            case 'item': {
-                const itemContent = (
-                    <div>
-                        <p className="font-medium">{item.itemDescription}</p>
-                        <p className="text-sm text-muted-foreground">{item.itemId}</p>
-                    </div>
-                );
-                return { content: itemContent };
-            }
-            case 'sourceOrders': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.sourceOrders.join(', ')}>{item.sourceOrders.join(', ')}</p> };
-            case 'clients': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.involvedClients.map(c => `${c.name} (${c.id})`).join(', ')}>{item.involvedClients.map(c => c.name).join(', ')}</p> };
-            case 'erpUsers': return { content: <p className="text-xs text-muted-foreground">{item.erpUsers.join(', ')}</p> };
-            case 'creationDate': return { content: item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A' };
-            case 'dueDate': return { content: item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A' };
-            case 'required': return { content: item.totalRequired.toLocaleString(), className: 'text-right' };
-            case 'stock': return { content: item.currentStock.toLocaleString(), className: 'text-right' };
-            case 'inTransit': return { content: item.inTransitStock.toLocaleString(), className: 'text-right font-semibold text-blue-600' };
-            case 'shortage': return { content: item.shortage.toLocaleString(), className: cn('text-right font-bold', item.shortage > 0 ? 'text-red-600' : 'text-green-600') };
-            default: return { content: '' };
+            case 'item':
+                return { type: 'item', data: item };
+            case 'sourceOrders':
+                return { type: 'string', data: item.sourceOrders.join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
+            case 'clients':
+                return { type: 'string', data: item.involvedClients.map(c => c.name).join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
+            case 'erpUsers':
+                return { type: 'string', data: item.erpUsers.join(', '), className: "text-xs text-muted-foreground" };
+            case 'creationDate':
+                return { type: 'date', data: item.earliestCreationDate };
+            case 'dueDate':
+                return { type: 'date', data: item.earliestDueDate };
+            case 'required':
+                return { type: 'number', data: item.totalRequired, className: 'text-right' };
+            case 'stock':
+                return { type: 'number', data: item.currentStock, className: 'text-right' };
+            case 'inTransit':
+                return { type: 'number', data: item.inTransitStock, className: 'text-right font-semibold text-blue-600' };
+            case 'shortage':
+                return { type: 'number', data: item.shortage, className: cn('text-right font-bold', item.shortage > 0 ? 'text-red-600' : 'text-green-600') };
+            default:
+                return { type: 'string', data: '' };
         }
     };
     
@@ -211,12 +214,19 @@ export function usePurchaseReport() {
         const headers = visibleColumnsData.map(col => col.label);
         const dataToExport = filteredSuggestions.map(item =>
             state.visibleColumns.map(colId => {
-                const colContent = getColumnContent(item, colId).content;
-                if (React.isValidElement(colContent) && colId === 'item') return `${item.itemDescription} (${item.itemId})`;
-                if (colId === 'sourceOrders') return item.sourceOrders.join(', ');
-                if (colId === 'clients') return item.involvedClients.map(c => c.name).join(', ');
-                if (colId === 'erpUsers') return item.erpUsers.join(', ');
-                return colContent?.toString() || '';
+                switch(colId) {
+                    case 'item': return `${item.itemDescription} (${item.itemId})`;
+                    case 'sourceOrders': return item.sourceOrders.join(', ');
+                    case 'clients': return item.involvedClients.map(c => c.name).join(', ');
+                    case 'erpUsers': return item.erpUsers.join(', ');
+                    case 'creationDate': return item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A';
+                    case 'dueDate': return item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A';
+                    case 'required': return item.totalRequired;
+                    case 'stock': return item.currentStock;
+                    case 'inTransit': return item.inTransitStock;
+                    case 'shortage': return item.shortage;
+                    default: return '';
+                }
             })
         );
         exportToExcel({
