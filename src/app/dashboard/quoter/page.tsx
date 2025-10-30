@@ -49,14 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -89,6 +81,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import type { HaciendaExemptionApiResponse } from "@/modules/core/types";
+import { DialogColumnSelector } from "@/components/ui/dialog-column-selector";
 
 const taxes = [
   { name: "IVA 13%", value: 0.13 },
@@ -445,31 +438,12 @@ export default function QuoterPage() {
               </div>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <Dialog>
-                    <DialogTrigger asChild>
-                        <Button variant="outline"><Columns3 className="mr-2 h-4 w-4"/> Columnas</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Seleccionar Columnas Visibles</DialogTitle>
-                        </DialogHeader>
-                        <ScrollArea className="max-h-80">
-                            <div className="space-y-2 p-1">
-                            {selectors.availableColumns.map(column => (
-                                <div key={column.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted">
-                                    <Checkbox
-                                        id={`col-${column.id}`}
-                                        checked={state.columnVisibility[column.id as keyof typeof state.columnVisibility]}
-                                        onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id, !!checked)}
-                                    />
-                                    <Label htmlFor={`col-${column.id}`} className="font-normal flex-1 cursor-pointer">{column.label}</Label>
-                                </div>
-                            ))}
-                            </div>
-                        </ScrollArea>
-                        <Button onClick={actions.handleSaveColumnVisibility}><Save className="mr-2 h-4 w-4"/> Guardar Preferencias</Button>
-                    </DialogContent>
-                </Dialog>
+                <DialogColumnSelector
+                    allColumns={selectors.availableColumns}
+                    visibleColumns={Object.keys(state.columnVisibility).filter(k => state.columnVisibility[k as keyof typeof state.columnVisibility])}
+                    onColumnChange={actions.handleColumnVisibilityChange}
+                    onSave={actions.handleSaveColumnVisibility}
+                />
             </div>
 
             <div className="rounded-lg border overflow-x-auto">

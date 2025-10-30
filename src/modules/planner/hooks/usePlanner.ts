@@ -32,6 +32,7 @@ import { addNoteToOrder as addNoteServer } from '@/modules/planner/lib/actions';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertCircle } from 'lucide-react';
 import { getStatusConfig } from '../lib/utils';
+import { saveUserPreferences, getUserPreferences } from '@/modules/core/lib/db';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -69,6 +70,29 @@ const priorityConfig = {
     high: { label: "Alta", className: "text-yellow-600" }, 
     urgent: { label: "Urgente", className: "text-red-600" }
 };
+
+const availableColumns = [
+    { id: 'consecutive', label: 'OP', defaultVisible: true },
+    { id: 'customerName', label: 'Cliente', defaultVisible: true },
+    { id: 'purchaseOrder', label: 'OC Cliente', defaultVisible: false },
+    { id: 'productDescription', label: 'Producto', defaultVisible: true },
+    { id: 'priority', label: 'Prioridad', defaultVisible: true },
+    { id: 'machineId', label: 'Asignación', defaultVisible: true },
+    { id: 'shiftId', label: 'Turno', defaultVisible: false },
+    { id: 'quantity', label: 'Solicitado', defaultVisible: true, align: 'right' },
+    { id: 'deliveredQuantity', label: 'Producido', defaultVisible: true, align: 'right' },
+    { id: 'defectiveQuantity', label: 'Defectuoso', defaultVisible: true, align: 'right' },
+    { id: 'netDifference', label: 'Dif. Neta', defaultVisible: true, align: 'right' },
+    { id: 'inventory', label: 'Inv. Manual (Crea)', defaultVisible: false, align: 'right' },
+    { id: 'inventoryErp', label: 'Inv. ERP (Crea)', defaultVisible: false, align: 'right' },
+    { id: 'requestDate', label: 'Fecha Solicitud', defaultVisible: false },
+    { id: 'deliveryDate', label: 'Fecha Requerida', defaultVisible: true },
+    { id: 'scheduledDate', label: 'Fecha Programada', defaultVisible: true },
+    { id: 'completionDate', label: 'Fecha Completada', defaultVisible: false },
+    { id: 'productionDurationDays', label: 'Días Producción', defaultVisible: false, align: 'right' },
+    { id: 'totalCycleDays', label: 'Días Ciclo Total', defaultVisible: false, align: 'right' },
+    { id: 'requestedBy', label: 'Solicitante', defaultVisible: false },
+];
 
 export const usePlanner = () => {
     const { isAuthorized, hasPermission } = useAuthorization(['planner:read']);
@@ -120,6 +144,7 @@ export const usePlanner = () => {
         notePayload: null as { orderId: number; notes: string } | null,
         isActionDialogOpen: false,
         activeOrdersForSelectedProduct: [] as ProductionOrder[], // For duplicate check
+        visibleColumns: availableColumns.filter(c => c.defaultVisible).map(c => c.id),
     });
     
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, authCompanyData?.searchDebounceTime ?? 500);
@@ -180,8 +205,18 @@ export const usePlanner = () => {
     
     useEffect(() => {
         setTitle("Planificador OP");
+        const loadPrefs = async () => {
+            if (currentUser) {
+                const prefs = await getUserPreferences(currentUser.id, 'plannerPrefs');
+                if (prefs && prefs.visibleColumns) {
+                    updateState({ visibleColumns: prefs.visibleColumns });
+                }
+            }
+        }
+
         if (isAuthReady) {
             loadInitialData(false);
+            loadPrefs();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setTitle, isAuthReady]);
@@ -270,6 +305,23 @@ export const usePlanner = () => {
         setAddNoteDialogOpen: (isOpen: boolean) => updateState({ isAddNoteDialogOpen: isOpen }),
         setNotePayload: (payload: { orderId: number; notes: string } | null) => updateState({ notePayload: payload }),
         setActionDialogOpen: (isOpen: boolean) => updateState({ isActionDialogOpen: isOpen }),
+        handleColumnVisibilityChange: (columnId: string, checked: boolean) => {
+            updateState({
+                visibleColumns: checked
+                    ? [...state.visibleColumns, columnId]
+                    : state.visibleColumns.filter(id => id !== columnId)
+            });
+        },
+        handleSaveColumnVisibility: async () => {
+            if (!currentUser) return;
+            try {
+                await saveUserPreferences(currentUser.id, 'plannerPrefs', { visibleColumns: state.visibleColumns });
+                toast({ title: "Preferencias Guardadas", description: "La visibilidad de las columnas ha sido guardada." });
+            } catch (error: any) {
+                logError("Failed to save planner column visibility", { error: error.message });
+                toast({ title: "Error", description: "No se pudo guardar la configuración de columnas.", variant: "destructive" });
+            }
+        },
         
         loadInitialData,
 
@@ -772,8 +824,8 @@ export const usePlanner = () => {
 
             return ordersToFilter.filter(order => {
                 const product = products.find(p => p.id === order.productId);
-
                 const targetText = normalizeText(`${order.consecutive} ${order.customerName} ${order.productDescription} ${order.purchaseOrder || ''}`);
+                
                 const searchMatch = debouncedSearchTerm ? searchTerms.every(term => targetText.includes(term)) : true;
                 
                 const statusMatch = state.statusFilter.length === 0 || state.statusFilter.includes(order.status);
@@ -785,6 +837,7 @@ export const usePlanner = () => {
             });
         }, [state.viewingArchived, state.activeOrders, state.archivedOrders, debouncedSearchTerm, state.statusFilter, state.classificationFilter, products, state.dateFilter, state.showOnlyMyOrders, currentUser]),
         stockLevels: stockLevels,
+        availableColumns,
     };
 
     return {
