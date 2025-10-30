@@ -335,7 +335,7 @@ export const useRequests = () => {
         if (!state.requestToUpdate || !finalStatus || !currentUser) return;
         updateState({ isSubmitting: true });
         try {
-            await updatePurchaseRequestStatus({ 
+            const updatedRequest = await updatePurchaseRequestStatus({ 
                 requestId: state.requestToUpdate.id, 
                 status: finalStatus, 
                 notes: state.statusUpdateNotes, 
@@ -345,13 +345,30 @@ export const useRequests = () => {
                 arrivalDate: finalStatus === 'ordered' ? state.arrivalDate : undefined,
                 erpEntryNumber: finalStatus === 'entered-erp' ? state.erpEntryNumber : undefined,
             });
+
             toast({ title: "Estado Actualizado" });
-            updateState({ isStatusDialogOpen: false, isActionDialogOpen: false });
-            await loadInitialData(false);
+            
+            // Smart state update instead of full reload
+            const useWarehouse = state.requestSettings?.useWarehouseReception;
+            const useErpEntry = state.requestSettings?.useErpEntry;
+            const finalArchivedStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
+            const isArchived = updatedRequest.status === finalArchivedStatus || updatedRequest.status === 'canceled';
+
+            setState(prevState => ({
+                ...prevState,
+                isStatusDialogOpen: false,
+                isActionDialogOpen: false,
+                activeRequests: isArchived 
+                    ? prevState.activeRequests.filter(r => r.id !== updatedRequest.id)
+                    : prevState.activeRequests.map(r => r.id === updatedRequest.id ? updatedRequest : r),
+                archivedRequests: isArchived
+                    ? [updatedRequest, ...prevState.archivedRequests.filter(r => r.id !== updatedRequest.id)]
+                    : prevState.archivedRequests.filter(r => r.id !== updatedRequest.id),
+            }));
+
         } catch (error: any) {
             logError("Failed to update status", { error: error.message });
             toast({ title: "Error", variant: "destructive" });
-            await loadInitialData(false);
         } finally {
             updateState({ isSubmitting: false });
         }
@@ -487,11 +504,10 @@ export const useRequests = () => {
                 await updatePurchaseRequestStatus({ requestId: state.requestToUpdate.id, status: 'pending', notes: 'Solicitud reabierta.', updatedBy: currentUser.name, reopen: true });
                 toast({ title: "Solicitud Reabierta" });
                 updateState({ isReopenDialogOpen: false });
-                await loadInitialData();
+                await loadInitialData(true);
             } catch (error: any) {
                 logError("Failed to reopen request", { error: error.message });
                 toast({ title: "Error", variant: "destructive" });
-                await loadInitialData();
             } finally {
                 updateState({ isSubmitting: false });
             }
@@ -805,7 +821,12 @@ export const useRequests = () => {
             updateState({ newRequest: newState });
         },
         // setters
-        setNewRequestDialogOpen: (isOpen: boolean) => updateState({ isNewRequestDialogOpen: isOpen, newRequest: { ...emptyRequest, requiredDate: new Date().toISOString().split('T')[0] }, clientSearchTerm: '', itemSearchTerm: '' }),
+        setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
+            isNewRequestDialogOpen: isOpen, 
+            newRequest: { ...emptyRequest, requiredDate: new Date().toISOString().split('T')[0] }, 
+            clientSearchTerm: '', 
+            itemSearchTerm: '' 
+        }),
         setEditRequestDialogOpen: (isOpen: boolean) => updateState({ isEditRequestDialogOpen: isOpen }),
         setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, archivedPage: 0 }),
         setArchivedPage: (updater: (prev: number) => number) => updateState({ archivedPage: updater(state.archivedPage) }),
