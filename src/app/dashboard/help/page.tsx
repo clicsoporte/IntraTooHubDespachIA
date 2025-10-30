@@ -384,7 +384,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -838,36 +838,35 @@ export default function HelpPage() {
         icon: <ListChecks className="mr-4 h-6 w-6 text-fuchsia-600" />,
         content: (
              <div className="space-y-4">
-                <h4 className="font-semibold text-lg">Versión 1.9.0 <Badge variant="secondary">Actual</Badge></h4>
+                <h4 className="font-semibold text-lg">Versión 2.0.0 <Badge variant="secondary">Actual</Badge></h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Reescritura del Flujo de Autenticación:</strong> Se mejoró el manejo de sesiones para eliminar parpadeos de pantalla y gestionar robustamente sesiones inválidas, previniendo errores de `Cannot read properties of undefined`.
+                        <strong>Nueva Funcionalidad Mayor: Módulo de Analíticas.</strong> Se añadió una sección completa de inteligencia de negocio, incluyendo un reporte proactivo de "Sugerencias de Compra" y un reporte de "Auditoría de Permisos de Usuario".
                     </li>
                     <li>
-                        <strong>Sistema de Migraciones de Base de Datos:</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos al iniciar la aplicación, garantizando que las actualizaciones futuras sean seguras.
+                        <strong>Nueva Funcionalidad Mayor: Centro de Ayuda.</strong> Se implementó una guía de usuario interactiva y con capacidad de búsqueda directamente en la aplicación.
                     </li>
                     <li>
-                        <strong>Nueva Herramienta de Auditoría:</strong> En `Mantenimiento`, se añadió una función para verificar la integridad de todas las bases de datos y asegurar que las tablas y columnas sean correctas.
+                        <strong>Mejora Mayor de Arquitectura: Flujo de Autenticación.</strong> Se reescribió por completo el manejo de sesiones y redirecciones para eliminar parpadeos de pantalla, prevenir condiciones de carrera y gestionar de forma robusta las sesiones inválidas o caducadas.
                     </li>
                     <li>
-                        <strong>Nueva Funcionalidad de Recuperación de Contraseña:</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo con una clave temporal. Incluye una pantalla de configuración SMTP para administradores.
+                        <strong>Mejora Mayor de Arquitectura: Sistema de Migraciones de Base de Datos.</strong> Se implementó un sistema centralizado que verifica y actualiza automáticamente el esquema de **todas** las bases de datos del sistema (`planner.db`, `requests.db`, `cost_assistant.db`, etc.) al iniciar la aplicación.
                     </li>
-                     <li>
-                        <strong>Nuevo Reporte de Permisos de Usuario:</strong> En la sección de `Analíticas`, se ha añadido un reporte para auditar y exportar qué permisos tiene cada usuario según su rol.
-                    </li>
-                     <li>
-                        <strong>Completitud de Funcionalidades:</strong> Se implementó la lógica faltante en los módulos de Compras (retroceso de estados) y Mantenimiento (reseteo de fábrica y restauración individual de módulos).
+                    <li>
+                        <strong>Mejora Mayor de Seguridad: Recuperación de Contraseña.</strong> Se implementó un flujo completo para que los usuarios puedan recuperar su contraseña a través de un correo con una clave temporal, configurable desde el panel de administración.
                     </li>
                 </ul>
                 <h4 className="font-semibold text-lg pt-4 border-t">Versión 1.8.0</h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Nuevo Centro de Notificaciones:</strong> Se añadió un sistema de notificaciones en tiempo real dentro de la aplicación. Un icono de campana alerta sobre nuevas notificaciones y permite acciones rápidas.
-                    </li>
-                     <li>
-                        <strong>Nuevo Centro de Ayuda:</strong> Se añadió una guía de usuario interactiva y con capacidad de búsqueda directamente en la aplicación para mejorar la autonomía del usuario.
+                        <strong>Nueva Funcionalidad: Centro de Notificaciones.</strong> Se añadió un sistema de notificaciones en tiempo real dentro de la aplicación.
+                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
+                            <li>Un icono de campana en la cabecera alerta sobre nuevas notificaciones.</li>
+                            <li>El panel de notificaciones permite ver y navegar directamente a las órdenes o solicitudes relevantes.</li>
+                            <li>Ciertas notificaciones son accionables, permitiendo aprobar o rechazar tareas directamente desde el panel.</li>
+                        </ul>
                     </li>
                 </ul>
             </div>

@@ -1,6 +1,8 @@
 # Clic-Tools: Documentación Técnica y Manual de Usuario
 
-**Clic-Tools v1.9.0** es una aplicación web interna diseñada para centralizar herramientas y procesos empresariales clave en un único panel de control. El objetivo es proporcionar una plataforma sencilla, rápida, segura y altamente configurable, optimizada para su uso en una red local (LAN).
+**Clic-Tools v2.0.0** es una aplicación web interna diseñada para centralizar herramientas y procesos empresariales clave en un único panel de control. El objetivo es proporcionar una plataforma sencilla, rápida, segura y altamente configurable, optimizada para su uso en una red local (LAN).
+
+Esta versión marca un hito importante, introduciendo mejoras significativas en la arquitectura, la experiencia de usuario y la inteligencia de negocio.
 
 ---
 
@@ -8,7 +10,7 @@
 
 -   **Stack Tecnológico**:
     -   **Framework**: Next.js 14+ (con App Router).
-    -   **Lenguaje**: TypeScript.
+    -   **Lenguaje**: TypeScript y Zod para validación de esquemas.
     -   **UI**: React, Tailwind CSS, ShadCN UI y Lucide React (iconos).
     -   **Base de Datos Local**: `better-sqlite3` para bases de datos locales basadas en archivos, garantizando alta velocidad y funcionamiento offline.
     -   **Conectividad ERP**: Soporte para `mssql` para conexión directa y de solo lectura a bases de datos de SQL Server.
@@ -67,7 +69,7 @@
 - **Flujo de Estados Completo:** Controla el ciclo de vida de una orden (Pendiente, Aprobada, En Progreso, Completada, etc.).
 - **Trazabilidad:** Cada cambio de estado, nota o modificación queda registrada en un historial detallado por orden.
 - **Alertas Visuales:**
-    - Las órdenes modificadas después de ser aprobadas se marcan visualmente para alertar a los supervisores.
+    - Las órdenes modificadas después de ser aprobadas se marcan visualmente para alertar a los supervisores, quienes pueden "Confirmar la Modificación".
     - Al crear una nueva orden, el sistema avisa si ya existen otras órdenes activas para el mismo producto.
 - **Gestión de Turnos Personalizable**: Desde administración, se puede cambiar el nombre de la etiqueta "Turno" y añadir, editar o eliminar los diferentes turnos de trabajo disponibles.
 - **Interfaz Optimizada**: La vista de órdenes ahora cuenta con un **encabezado fijo** que permanece visible al hacer scroll, mejorando la legibilidad.
@@ -188,7 +190,7 @@ Actualizar la aplicación a una nueva versión sin perder datos es un proceso cr
 
 4.  **Paso 4: Reiniciar la Aplicación**
     -   Inicia la aplicación nuevamente.
-    -   Al primer inicio, la aplicación detectará las diferencias en la base de datos y aplicará las migraciones necesarias automáticamente.
+    -   Al primer inicio, la aplicación detectará las diferencias y aplicará las migraciones necesarias automáticamente.
 
 5.  **Paso 5: Verificar**
     -   Accede a la aplicación y verifica que tus datos sigan ahí y que las nuevas funcionalidades operen correctamente.

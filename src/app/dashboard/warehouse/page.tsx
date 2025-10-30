@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWarehouseData } from '@/modules/warehouse/lib/actions';
-import { importAllDataFromFiles } from '@/modules/core/lib/db';
+import { syncAllData } from '@/modules/core/lib/actions';
 import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer } from '@/modules/core/types';
 import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, RefreshCw, Loader2, Info, User } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
@@ -59,12 +59,8 @@ export default function WarehousePage() {
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
     const [warehouseSettings, setWarehouseSettings] = useState<{ enablePhysicalInventoryTracking: boolean } | null>(null);
 
-    const loadData = useCallback(async (isRefresh = false) => {
-        if (isRefresh) {
-            setIsRefreshing(true);
-        } else {
-            setIsLoading(true);
-        }
+    const loadData = useCallback(async () => {
+        setIsLoading(true);
         try {
             const wData = await getWarehouseData();
             setLocations(wData.locations);
@@ -78,11 +74,7 @@ export default function WarehousePage() {
             logError("Failed to load warehouse data", { error });
             toast({ title: "Error de Carga", description: "No se pudieron cargar los datos del almacén.", variant: "destructive"});
         } finally {
-            if (isRefresh) {
-                setIsRefreshing(false);
-            } else {
-                setIsLoading(false);
-            }
+            setIsLoading(false);
         }
     }, [toast]);
     
@@ -94,13 +86,12 @@ export default function WarehousePage() {
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            await importAllDataFromFiles();
+            await syncAllData();
             toast({
-                title: "Datos Actualizados",
-                description: `Los datos del ERP se han sincronizado. La página se recargará para reflejar los cambios.`
+                title: "Datos Sincronizados",
+                description: `Los datos del ERP se han sincronizado. Recargando vista...`
             });
-            // A full reload is simpler here to ensure all contexts and states are updated
-            window.location.reload();
+            await loadData();
         } catch (error: any) {
             logError("Error during manual data refresh", { error: error.message });
             toast({
@@ -220,7 +211,7 @@ export default function WarehousePage() {
 
     }, [debouncedSearchTerm, products, customers, inventory, itemLocations, stock, warehouseSettings, renderLocationPath]);
 
-    if (isLoading) {
+    if (isLoading || !warehouseSettings) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                  <Card className="max-w-4xl mx-auto">
@@ -270,7 +261,7 @@ export default function WarehousePage() {
                             />
                         </div>
                          {
-                            warehouseSettings && !warehouseSettings.enablePhysicalInventoryTracking && (
+                            !warehouseSettings.enablePhysicalInventoryTracking && (
                                 <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
                                     <Info className="h-5 w-5"/>
                                     <p className="text-sm">El modo de control de inventario físico está desactivado. Solo se mostrarán ubicaciones asignadas, no cantidades.</p>

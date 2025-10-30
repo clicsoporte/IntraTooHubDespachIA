@@ -1,4 +1,4 @@
-Clic-Tools v1.9.0 - Lanzamiento de Producción
+Clic-Tools v2.0.0 - Lanzamiento de Producción
 
 Esta versión se enfoca en la robustez, estabilidad y corrección de errores críticos para un entorno de producción.
 
@@ -6,4 +6,6 @@ Esta versión se enfoca en la robustez, estabilidad y corrección de errores cr�
 - Implementación de un sistema de migración de base deatos para actualizaciones seguras.
 - Adición de recuperación de contraseña y auditoría de permisos de usuario.
 - Solución de errores de compilación y ejecución en servidores IIS.
+- Adición de módulos de analíticas y reportes.
+- Introducción de validación de esquemas con Zod para mayor integridad de datos.
 - Actualización completa de la documentación interna y externa.
