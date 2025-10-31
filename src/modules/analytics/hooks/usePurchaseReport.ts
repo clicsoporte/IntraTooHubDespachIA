@@ -11,7 +11,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getRequestSuggestions } from '@/modules/requests/lib/actions';
-import type { DateRange, PurchaseSuggestion, UserPreferences } from '@/modules/core/types';
+import type { DateRange, UserPreferences, PurchaseSuggestion } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
@@ -190,10 +190,22 @@ export function usePurchaseReport() {
                 };
                 return { type: 'item', data };
             }
-            case 'sourceOrders':
-                return { type: 'string', data: item.sourceOrders.join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
-            case 'clients':
-                return { type: 'string', data: item.involvedClients.map((c: any) => c.name).join(', '), className: "text-xs text-muted-foreground truncate max-w-xs" };
+             case 'sourceOrders': {
+                const content = (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                        {item.sourceOrders.map(order => <div key={order}>{order}</div>)}
+                    </div>
+                );
+                return { type: 'reactNode', data: content };
+            }
+            case 'clients': {
+                const content = (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                        {item.involvedClients.map(client => <div key={client.id} className="truncate" title={`${client.name} (${client.id})`}>{client.name}</div>)}
+                    </div>
+                );
+                return { type: 'reactNode', data: content };
+            }
             case 'erpUsers':
                 return { type: 'string', data: item.erpUsers.join(', '), className: "text-xs text-muted-foreground" };
             case 'creationDate':

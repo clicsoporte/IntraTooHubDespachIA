@@ -366,8 +366,22 @@ export function useRequestSuggestions() {
                 );
                 return { content: badgeContent, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
             }
-            case 'sourceOrders': return { content: <Tooltip><TooltipTrigger asChild><p className="text-xs text-muted-foreground truncate max-w-xs">{item.sourceOrders.join(', ')}</p></TooltipTrigger><TooltipContent><div className="max-w-md"><p className="font-bold mb-1">Pedidos de Origen:</p><p>{item.sourceOrders.join(', ')}</p></div></TooltipContent></Tooltip>, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
-            case 'clients': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.involvedClients.map(c => `${c.name} (${c.id})`).join(', ')}>{item.involvedClients.map(c => c.name).join(', ')}</p>, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
+            case 'sourceOrders': {
+                const content = (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                        {item.sourceOrders.map(order => <div key={order}>{order}</div>)}
+                    </div>
+                );
+                return { content, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
+            }
+            case 'clients': {
+                const content = (
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                        {item.involvedClients.map(client => <div key={client.id} className="truncate" title={`${client.name} (${client.id})`}>{client.name}</div>)}
+                    </div>
+                );
+                return { content, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
+            }
             case 'erpUsers': return { content: <p className="text-xs text-muted-foreground">{item.erpUsers.join(', ')}</p>, className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
             case 'creationDate': return { content: item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A', className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
             case 'dueDate': return { content: item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A', className: isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '' };
