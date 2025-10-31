@@ -211,14 +211,18 @@ export const generateDocument = (data: DocumentData): jsPDF => {
     }
     
     const totalsX = pageWidth - margin;
-    doc.setFontSize(10);
+    const padding = 10; 
+    
     data.totals.forEach((total, index) => {
         const isLast = index === data.totals.length - 1;
         
         doc.setFont('Helvetica', isLast ? 'bold' : 'normal');
         doc.setFontSize(isLast ? 12 : 10);
         
-        doc.text(total.label, totalsX - 100, rightY, { align: 'right' });
+        const valueWidth = doc.getTextWidth(total.value);
+        const labelX = totalsX - valueWidth - padding;
+
+        doc.text(total.label, labelX, rightY, { align: 'right' });
         doc.text(total.value, totalsX, rightY, { align: 'right' });
         
         rightY += isLast ? 18 : 14;
