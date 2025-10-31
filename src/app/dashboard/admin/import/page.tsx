@@ -61,6 +61,8 @@ const importTypeFieldMapping: { [key in ImportType]?: keyof Company } = {
     locations: 'locationFilePath',
     cabys: 'cabysFilePath',
     suppliers: 'supplierFilePath',
+    erp_purchase_order_headers: 'erpPurchaseOrderHeaderFilePath',
+    erp_purchase_order_lines: 'erpPurchaseOrderLineFilePath',
 };
 
 /**

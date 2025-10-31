@@ -62,7 +62,8 @@ async function initializeMainDatabase(db: import('better-sqlite3').Database) {
             name TEXT, taxId TEXT, address TEXT, phone TEXT, email TEXT, logoUrl TEXT,
             systemName TEXT, quotePrefix TEXT, nextQuoteNumber INTEGER, decimalPlaces INTEGER, quoterShowTaxId BOOLEAN,
             searchDebounceTime INTEGER, syncWarningHours REAL, lastSyncTimestamp TEXT,
-            importMode TEXT, customerFilePath TEXT, productFilePath TEXT, exemptionFilePath TEXT, stockFilePath TEXT, locationFilePath TEXT, cabysFilePath TEXT, supplierFilePath TEXT
+            importMode TEXT, customerFilePath TEXT, productFilePath TEXT, exemptionFilePath TEXT, stockFilePath TEXT, locationFilePath TEXT, cabysFilePath TEXT, supplierFilePath TEXT,
+            erpPurchaseOrderHeaderFilePath TEXT, erpPurchaseOrderLineFilePath TEXT
         );
         CREATE TABLE IF NOT EXISTS logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,7 +121,7 @@ const DB_MODULES: DatabaseModule[] = [
         schema: {
             'users': ['id', 'name', 'email', 'password', 'phone', 'whatsapp', 'erpAlias', 'avatar', 'role', 'recentActivity', 'securityQuestion', 'securityAnswer', 'forcePasswordChange'],
             'roles': ['id', 'name', 'permissions'],
-            'company_settings': ['id', 'name', 'taxId', 'address', 'phone', 'email', 'logoUrl', 'systemName', 'quotePrefix', 'nextQuoteNumber', 'decimalPlaces', 'quoterShowTaxId', 'searchDebounceTime', 'syncWarningHours', 'lastSyncTimestamp', 'importMode', 'customerFilePath', 'productFilePath', 'exemptionFilePath', 'stockFilePath', 'locationFilePath', 'cabysFilePath', 'supplierFilePath'],
+            'company_settings': ['id', 'name', 'taxId', 'address', 'phone', 'email', 'logoUrl', 'systemName', 'quotePrefix', 'nextQuoteNumber', 'decimalPlaces', 'quoterShowTaxId', 'searchDebounceTime', 'syncWarningHours', 'lastSyncTimestamp', 'importMode', 'customerFilePath', 'productFilePath', 'exemptionFilePath', 'stockFilePath', 'locationFilePath', 'cabysFilePath', 'supplierFilePath', 'erpPurchaseOrderHeaderFilePath', 'erpPurchaseOrderLineFilePath'],
             'logs': ['id', 'timestamp', 'type', 'message', 'details'],
             'api_settings': ['id', 'exchangeRateApi', 'haciendaExemptionApi', 'haciendaTributariaApi'],
             'customers': ['id', 'name', 'address', 'phone', 'taxId', 'currency', 'creditLimit', 'paymentCondition', 'salesperson', 'active', 'email', 'electronicDocEmail'],
@@ -323,6 +324,8 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
         if (!companyColumns.has('locationFilePath')) db.exec(`ALTER TABLE company_settings ADD COLUMN locationFilePath TEXT`);
         if (!companyColumns.has('cabysFilePath')) db.exec(`ALTER TABLE company_settings ADD COLUMN cabysFilePath TEXT`);
         if (!companyColumns.has('supplierFilePath')) db.exec(`ALTER TABLE company_settings ADD COLUMN supplierFilePath TEXT`);
+        if (!companyColumns.has('erpPurchaseOrderHeaderFilePath')) db.exec(`ALTER TABLE company_settings ADD COLUMN erpPurchaseOrderHeaderFilePath TEXT`);
+        if (!companyColumns.has('erpPurchaseOrderLineFilePath')) db.exec(`ALTER TABLE company_settings ADD COLUMN erpPurchaseOrderLineFilePath TEXT`);
         if (!companyColumns.has('importMode')) db.exec(`ALTER TABLE company_settings ADD COLUMN importMode TEXT DEFAULT 'file'`);
         if (!companyColumns.has('logoUrl')) db.exec(`ALTER TABLE company_settings ADD COLUMN logoUrl TEXT`);
         if (!companyColumns.has('searchDebounceTime')) db.exec(`ALTER TABLE company_settings ADD COLUMN searchDebounceTime INTEGER DEFAULT 500`);
@@ -458,7 +461,8 @@ export async function saveCompanySettings(settings: Company): Promise<void> {
                 decimalPlaces = @decimalPlaces, searchDebounceTime = @searchDebounceTime,
                 customerFilePath = @customerFilePath, productFilePath = @productFilePath, exemptionFilePath = @exemptionFilePath,
                 stockFilePath = @stockFilePath, locationFilePath = @locationFilePath, cabysFilePath = @cabysFilePath,
-                supplierFilePath = @supplierFilePath,
+                supplierFilePath = @supplierFilePath, erpPurchaseOrderHeaderFilePath = @erpPurchaseOrderHeaderFilePath,
+                erpPurchaseOrderLineFilePath = @erpPurchaseOrderLineFilePath,
                 importMode = @importMode, lastSyncTimestamp = @lastSyncTimestamp, quoterShowTaxId = @quoterShowTaxId, syncWarningHours = @syncWarningHours
             WHERE id = 1
         `).run(settingsToSave);
@@ -972,10 +976,10 @@ export async function importData(type: ImportQuery['type']): Promise<{ count: nu
     if (companySettings.importMode === 'sql') {
         return importDataFromSql(type);
     } else {
-        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines'].includes(type)) {
+        if (['erp_order_headers', 'erp_order_lines'].includes(type)) {
             return { count: 0, source: 'file (skipped)' };
         }
-        return importDataFromFile(type as 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' );
+        return importDataFromFile(type as 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines');
     }
 }
 
