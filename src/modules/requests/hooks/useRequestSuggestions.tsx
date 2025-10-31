@@ -3,19 +3,20 @@
  */
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getRequestSuggestions, savePurchaseRequest, getPurchaseSuggestionsPreferences, savePurchaseSuggestionsPreferences } from '@/modules/requests/lib/actions';
-import type { Customer, DateRange, PurchaseRequest, UserPreferences } from '@/modules/core/types';
+import { getRequestSuggestions, savePurchaseRequest, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/requests/lib/actions';
+import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
+import type { DateRange, PurchaseRequest, UserPreferences, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, PurchaseSuggestion } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
-import { subDays, startOfDay, format, parseISO } from 'date-fns';
+import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import React from 'react';
 import { cn } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import {
@@ -30,27 +31,12 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-export interface PurchaseSuggestion {
-    itemId: string;
-    itemDescription: string;
-    itemClassification: string;
-    totalRequired: number;
-    currentStock: number;
-    inTransitStock: number;
-    shortage: number;
-    sourceOrders: string[];
-    involvedClients: { id: string; name: string }[];
-    erpUsers: string[];
-    earliestCreationDate: string | null;
-    earliestDueDate: string | null;
-    existingActiveRequests: { id: number; consecutive: string, status: string, quantity: number, purchaseOrder?: string, erpOrderNumber?: string }[];
-}
-
 export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
 export type SortDirection = 'asc' | 'desc';
 
 const availableColumns = [
     { id: 'item', label: 'Artículo', tooltip: 'Código y descripción del artículo con faltante de inventario.', sortable: true },
+    { id: 'activeRequests', label: 'Solicitudes Activas (SC)', tooltip: 'Muestra si ya existen solicitudes de compra activas en Clic-Tools para este artículo.' },
     { id: 'sourceOrders', label: 'Pedidos Origen', tooltip: 'Números de pedido del ERP que requieren este artículo.', sortable: true, sortKey: 'sourceOrders' },
     { id: 'clients', label: 'Clientes Involucrados', tooltip: 'Lista de todos los clientes de los pedidos analizados que están esperando este artículo.', sortable: true, sortKey: 'involvedClients' },
     { id: 'erpUsers', label: 'Usuario ERP', tooltip: 'Usuario que creó el pedido en el sistema ERP.', sortable: true, sortKey: 'erpUsers' },
@@ -83,10 +69,12 @@ interface State {
     itemsToCreate: PurchaseSuggestion[];
     currentPage: number;
     rowsPerPage: number;
+    erpPoHeaders: ErpPurchaseOrderHeader[];
+    erpPoLines: ErpPurchaseOrderLine[];
 }
 
 export function useRequestSuggestions() {
-    const { isAuthorized, hasPermission } = useAuthorization(['requests:create', 'analytics:purchase-suggestions:read']);
+    const { isAuthorized, hasPermission } = useAuthorization(['requests:create', 'analytics:purchase-suggestions:read', 'requests:create:duplicate']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user: currentUser, products } = useAuth();
@@ -112,6 +100,8 @@ export function useRequestSuggestions() {
         itemsToCreate: [],
         currentPage: 0,
         rowsPerPage: 5,
+        erpPoHeaders: [],
+        erpPoLines: [],
     });
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
@@ -143,18 +133,21 @@ export function useRequestSuggestions() {
     useEffect(() => {
         setTitle("Sugerencias de Compra");
         const loadPrefsAndData = async () => {
-            if(currentUser) {
-                const prefs = await getPurchaseSuggestionsPreferences(currentUser.id);
+             if(currentUser) {
+                const prefs = await getUserPreferences(currentUser.id, 'purchaseSuggestionsPrefs');
+                const [poHeaders, poLines] = await Promise.all([getAllErpPurchaseOrderHeaders(), getAllErpPurchaseOrderLines()]);
+
+                const newState: Partial<State> = { erpPoHeaders: poHeaders, erpPoLines: poLines };
+                
                 if (prefs) {
-                    updateState({
-                        classificationFilter: prefs.classificationFilter || [],
-                        showOnlyMyOrders: prefs.showOnlyMyOrders || false,
-                        visibleColumns: prefs.visibleColumns || availableColumns.map(c => c.id),
-                        sortKey: prefs.sortKey || 'earliestCreationDate',
-                        sortDirection: prefs.sortDirection || 'desc',
-                        rowsPerPage: prefs.rowsPerPage || 5,
-                    });
+                    newState.classificationFilter = prefs.classificationFilter || [];
+                    newState.showOnlyMyOrders = prefs.showOnlyMyOrders || false;
+                    newState.visibleColumns = prefs.visibleColumns || availableColumns.map(c => c.id);
+                    newState.sortKey = prefs.sortKey || 'earliestCreationDate';
+                    newState.sortDirection = prefs.sortDirection || 'desc';
+                    newState.rowsPerPage = prefs.rowsPerPage || 5;
                 }
+                updateState(newState);
             }
             await handleAnalyze();
         };
@@ -308,6 +301,7 @@ export function useRequestSuggestions() {
                     pendingAction: 'none' as const,
                     sourceOrders: item.sourceOrders,
                     involvedClients: item.involvedClients,
+                    inventoryErp: item.currentStock,
                 };
                 await savePurchaseRequest(requestPayload, currentUser.name);
                 createdCount++;
@@ -337,30 +331,35 @@ export function useRequestSuggestions() {
         switch (colId) {
             case 'item': {
                 const itemContent = (
-                    <div className="flex items-center gap-2">
-                        {isDuplicate && (
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <Info className="h-4 w-4 text-amber-500"/>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
-                                    <ul className="list-disc list-inside mt-1 text-xs">
-                                        {item.existingActiveRequests.map(req => (
-                                            <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
-                                        ))}
-                                        <li className="font-semibold mt-1">Total activo: {totalRequestedInActive}</li>
-                                    </ul>
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
-                        <div>
-                            <p className="font-medium">{item.itemDescription}</p>
-                            <p className="text-sm text-muted-foreground">{item.itemId}</p>
-                        </div>
+                    <div>
+                        <p className="font-medium">{item.itemDescription}</p>
+                        <p className="text-sm text-muted-foreground">{item.itemId}</p>
                     </div>
                 );
                 return { content: itemContent, className: isDuplicate ? 'bg-amber-50' : '' };
+            }
+            case 'activeRequests': {
+                if (!isDuplicate) return { content: <p className="text-xs text-muted-foreground">Ninguna</p> };
+                const badgeContent = (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800">
+                                <Info className="h-3 w-3" />
+                                {totalRequestedInActive.toLocaleString()}
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
+                            <ul className="list-disc list-inside mt-1 text-xs">
+                                {item.existingActiveRequests.map(req => (
+                                    <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
+                                ))}
+                                <li className="font-semibold mt-1">Total activo: {totalRequestedInActive}</li>
+                            </ul>
+                        </TooltipContent>
+                    </Tooltip>
+                );
+                return { content: badgeContent, className: isDuplicate ? 'bg-amber-50' : '' };
             }
             case 'sourceOrders': return { content: <Tooltip><TooltipTrigger asChild><p className="text-xs text-muted-foreground truncate max-w-xs">{item.sourceOrders.join(', ')}</p></TooltipTrigger><TooltipContent><div className="max-w-md"><p className="font-bold mb-1">Pedidos de Origen:</p><p>{item.sourceOrders.join(', ')}</p></div></TooltipContent></Tooltip>, className: isDuplicate ? 'bg-amber-50' : '' };
             case 'clients': return { content: <p className="text-xs text-muted-foreground truncate max-w-xs" title={item.involvedClients.map(c => `${c.name} (${c.id})`).join(', ')}>{item.involvedClients.map(c => c.name).join(', ')}</p>, className: isDuplicate ? 'bg-amber-50' : '' };
@@ -385,6 +384,7 @@ export function useRequestSuggestions() {
             state.visibleColumns.map(colId => {
                 switch(colId) {
                     case 'item': return `${item.itemDescription} (${item.itemId})`;
+                    case 'activeRequests': return item.existingActiveRequests.map(r => r.consecutive).join(', ');
                     case 'sourceOrders': return item.sourceOrders.join(', ');
                     case 'clients': return item.involvedClients.map(c => c.name).join(', ');
                     case 'erpUsers': return item.erpUsers.join(', ');
@@ -398,7 +398,6 @@ export function useRequestSuggestions() {
                 }
             })
         );
-
         exportToExcel({
             fileName: 'sugerencias_compra',
             sheetName: 'Sugerencias',
@@ -421,7 +420,6 @@ export function useRequestSuggestions() {
         if (state.sortKey === key && state.sortDirection === 'asc') {
             direction = 'desc';
         } else if (state.sortKey === key && state.sortDirection === 'desc') {
-            // Optional: cycle back to default sort
             key = 'earliestCreationDate';
             direction = 'desc';
         }
@@ -439,13 +437,21 @@ export function useRequestSuggestions() {
             rowsPerPage: state.rowsPerPage,
         };
         try {
-            await savePurchaseSuggestionsPreferences(currentUser.id, prefsToSave);
+            await saveUserPreferences(currentUser.id, 'purchaseSuggestionsPrefs', prefsToSave);
             toast({ title: "Preferencias Guardadas", description: "Tus filtros y configuraciones de vista han sido guardados." });
         } catch (error: any) {
             logError("Failed to save purchase suggestions preferences", { error: error.message });
             toast({ title: "Error", description: "No se pudieron guardar tus preferencias.", variant: "destructive" });
         }
     };
+    
+    const getInTransitStock = useCallback((itemId: string): number => {
+        const activePoNumbers = new Set(state.erpPoHeaders.filter(h => h.ESTADO === 'A').map(h => h.ORDEN_COMPRA));
+        return state.erpPoLines
+            .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
+            .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
+    }, [state.erpPoHeaders, state.erpPoLines]);
+
 
     const selectors = {
         filteredSuggestions,
@@ -465,7 +471,8 @@ export function useRequestSuggestions() {
         , [products]),
         availableColumns,
         visibleColumnsData,
-        getColumnContent
+        getColumnContent,
+        getInTransitStock
     };
 
 

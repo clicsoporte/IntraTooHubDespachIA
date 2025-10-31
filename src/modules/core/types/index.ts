@@ -826,9 +826,4 @@ export type CostAssistantSettings = {
 export interface EmailSettings {
   smtpHost: string;
   smtpPort: number;
-  smtpUser: string;
-  smtpPass: string;
-  smtpSecure: boolean;
-  recoveryEmailSubject: string;
-  recoveryEmailBody: string;
-}
+  smtpUser:
