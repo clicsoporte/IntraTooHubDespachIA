@@ -405,7 +405,7 @@ export function useRequestSuggestions() {
                     case 'item': return `${item.itemDescription} (${item.itemId})`;
                     case 'activeRequests': return item.existingActiveRequests.map(r => r.consecutive).join(', ');
                     case 'sourceOrders': return item.sourceOrders.join(', ');
-                    case 'clients': return item.involvedClients.map(c => c.name).join(', ');
+                    case 'clients': return item.involvedClients.map((c: any) => c.name).join(', ');
                     case 'erpUsers': return item.erpUsers.join(', ');
                     case 'creationDate': return item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A';
                     case 'dueDate': return item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A';
