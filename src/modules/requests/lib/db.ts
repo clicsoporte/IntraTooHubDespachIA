@@ -36,6 +36,7 @@ export async function initializeRequestsDb(db: import('better-sqlite3').Database
             quantity REAL NOT NULL,
             deliveredQuantity REAL,
             inventory REAL,
+            inventoryErp REAL,
             priority TEXT DEFAULT 'medium',
             purchaseType TEXT DEFAULT 'single',
             unitSalePrice REAL,
@@ -123,6 +124,7 @@ export async function runRequestMigrations(db: import('better-sqlite3').Database
         if (!columns.has('requiresCurrency')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN requiresCurrency BOOLEAN DEFAULT FALSE`);
         if (!columns.has('sourceOrders')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN sourceOrders TEXT`);
         if (!columns.has('involvedClients')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN involvedClients TEXT`);
+        if (!columns.has('inventoryErp')) db.exec(`ALTER TABLE purchase_requests ADD COLUMN inventoryErp REAL`);
         
         const settingsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='request_settings'`).get();
         if(settingsTable){
@@ -225,18 +227,19 @@ export async function getRequests(options: {
     const archivedStatuses = `'${finalStatus}', 'canceled'`;
 
     // Function to parse JSON fields safely
-    const parseJsonFields = (req: any) => {
+    const parseJsonFields = (req: any): PurchaseRequest => {
+        const sanitized = { ...req };
         try {
-            req.sourceOrders = req.sourceOrders ? JSON.parse(req.sourceOrders) : [];
+            sanitized.sourceOrders = sanitized.sourceOrders ? JSON.parse(sanitized.sourceOrders) : [];
         } catch (e) {
-            req.sourceOrders = [];
+            sanitized.sourceOrders = [];
         }
         try {
-            req.involvedClients = req.involvedClients ? JSON.parse(req.involvedClients) : [];
+            sanitized.involvedClients = sanitized.involvedClients ? JSON.parse(sanitized.involvedClients) : [];
         } catch (e) {
-            req.involvedClients = [];
+            sanitized.involvedClients = [];
         }
-        return req;
+        return sanitized as PurchaseRequest;
     };
 
 
@@ -303,6 +306,7 @@ export async function addRequest(request: Omit<PurchaseRequest, 'id' | 'consecut
         purchaseOrder: newRequest.purchaseOrder || null,
         notes: newRequest.notes || null,
         inventory: newRequest.inventory ?? null,
+        inventoryErp: newRequest.inventoryErp ?? null,
         reopened: newRequest.reopened ? 1 : 0,
         purchaseType: newRequest.purchaseType || 'single',
         arrivalDate: newRequest.arrivalDate || null,
@@ -318,13 +322,13 @@ export async function addRequest(request: Omit<PurchaseRequest, 'id' | 'consecut
                     consecutive, requestDate, requiredDate, clientId, clientName, clientTaxId,
                     itemId, itemDescription, quantity, unitSalePrice, salePriceCurrency, requiresCurrency,
                     erpOrderNumber, erpOrderLine, manualSupplier, route, shippingMethod, purchaseOrder,
-                    status, pendingAction, notes, requestedBy, reopened, inventory, priority, purchaseType, arrivalDate,
+                    status, pendingAction, notes, requestedBy, reopened, inventory, inventoryErp, priority, purchaseType, arrivalDate,
                     sourceOrders, involvedClients
                 ) VALUES (
                     @consecutive, @requestDate, @requiredDate, @clientId, @clientName, @clientTaxId,
                     @itemId, @itemDescription, @quantity, @unitSalePrice, @salePriceCurrency, @requiresCurrency,
                     @erpOrderNumber, @erpOrderLine, @manualSupplier, @route, @shippingMethod, @purchaseOrder,
-                    @status, @pendingAction, @notes, @requestedBy, @reopened, @inventory, @priority, @purchaseType, @arrivalDate,
+                    @status, @pendingAction, @notes, @requestedBy, @reopened, @inventory, @inventoryErp, @priority, @purchaseType, @arrivalDate,
                     @sourceOrders, @involvedClients
                 )
             `);

@@ -371,6 +371,7 @@ export type PurchaseRequest = {
   quantity: number;
   deliveredQuantity?: number;
   inventory?: number;
+  inventoryErp?: number;
   priority: PurchaseRequestPriority;
   purchaseType: PurchaseType;
   unitSalePrice?: number; // Precio de venta unitario sin IVA

@@ -446,18 +446,24 @@ export default function PurchaseRequestPage() {
                         <DialogDescription>Esta solicitud fue generada a partir de los siguientes datos del ERP.</DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        {contextInfoData?.sourceOrders && (
+                        {contextInfoData?.sourceOrders && Array.isArray(contextInfoData.sourceOrders) && contextInfoData.sourceOrders.length > 0 && (
                              <div>
                                 <h4 className="font-semibold mb-2">Pedidos de Origen</h4>
-                                <p className="text-sm text-muted-foreground">{Array.isArray(contextInfoData.sourceOrders) ? contextInfoData.sourceOrders.join(', ') : contextInfoData.sourceOrders}</p>
+                                <p className="text-sm text-muted-foreground">{contextInfoData.sourceOrders.join(', ')}</p>
                             </div>
                         )}
-                         {contextInfoData?.involvedClients && (
+                         {contextInfoData?.involvedClients && Array.isArray(contextInfoData.involvedClients) && contextInfoData.involvedClients.length > 0 && (
                              <div>
                                 <h4 className="font-semibold mb-2">Clientes Involucrados</h4>
                                 <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {Array.isArray(contextInfoData.involvedClients) ? contextInfoData.involvedClients.map((c: any) => <li key={c.id}>{c.name} ({c.id})</li>) : <li>{contextInfoData.involvedClients}</li>}
+                                    {contextInfoData.involvedClients.map((c: any) => <li key={c.id}>{c.name} ({c.id})</li>)}
                                 </ul>
+                            </div>
+                        )}
+                        {contextInfoData?.itemId && (
+                             <div>
+                                <h4 className="font-semibold mb-2">Tránsito OC (ERP)</h4>
+                                <p className="text-sm text-muted-foreground">{selectors.getInTransitStock(contextInfoData.itemId)}</p>
                             </div>
                         )}
                     </div>

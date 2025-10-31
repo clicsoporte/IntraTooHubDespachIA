@@ -833,7 +833,7 @@ export const useRequests = () => {
             updateState({ isSubmitting: true });
             try {
                 const payload = { ...state.notePayload, updatedBy: currentUser.name };
-                const rawUpdatedRequest = await addNoteServer(payload);
+                const rawUpdatedRequest = await addNoteToRequest(payload);
                 const updatedRequest = sanitizeRequest(rawUpdatedRequest);
                 toast({ title: "Nota Añadida" });
                 setState(prevState => ({
@@ -851,7 +851,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const rawUpdated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
+            const rawUpdated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             const updated = sanitizeRequest(rawUpdated);
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? updated : o),
