@@ -6,7 +6,7 @@
 import { connectDb, getImportQueries as getImportQueriesFromMain, getAllRoles as getAllRolesFromMain } from '../../core/lib/db';
 import { getAllUsers as getAllUsersFromMain } from '../../core/lib/auth';
 import { logInfo, logError, logWarn } from '../../core/lib/logger';
-import type { PurchaseRequest, RequestSettings, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, UpdatePurchaseRequestPayload, RejectCancellationPayload, PurchaseRequestStatus, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, PurchaseSuggestion, PurchaseRequestPriority } from '../../core/types';
+import type { PurchaseRequest, RequestSettings, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, UpdatePurchaseRequestPayload, RejectCancellationPayload, PurchaseRequestStatus, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader, ErpPurchaseOrderLine } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { executeQuery } from '@/modules/core/lib/sql-service';
@@ -444,8 +444,17 @@ export async function updateStatus(payload: UpdateRequestStatusPayload): Promise
         receivedDate = new Date().toISOString();
     }
     
-    const previousStatus = (status === 'canceled' || status === 'pending' || status === 'purchasing-review' || status === 'approved') ? currentRequest.status : null;
-
+    let previousStatus = currentRequest.previousStatus;
+    // Store the current status as 'previousStatus' if we're moving backwards in the flow
+    if (status === 'purchasing-review' && currentRequest.status === 'pending-approval') {
+        previousStatus = currentRequest.status;
+    } else if (status === 'pending' && currentRequest.status === 'purchasing-review') {
+        previousStatus = currentRequest.status;
+    } else if (status === 'approved' && currentRequest.status === 'ordered') { // Reverting from ordered
+        previousStatus = currentRequest.status;
+    } else {
+        previousStatus = null; // Clear it for forward movements
+    }
 
     const transaction = db.transaction(() => {
         const stmt = db.prepare(`
@@ -609,3 +618,5 @@ export async function addNote(payload: { requestId: number; notes: string; updat
 
     return db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as PurchaseRequest;
 }
+
+    
