@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -60,6 +59,7 @@ const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' |
     route: '',
     shippingMethod: '',
     inventory: 0,
+    inventoryErp: 0,
     priority: 'medium',
     purchaseType: 'single',
     arrivalDate: '',
@@ -164,14 +164,20 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
     } catch {
       sanitized.sourceOrders = [];
     }
+  } else if (!Array.isArray(sanitized.sourceOrders)) {
+      sanitized.sourceOrders = [];
   }
+  
   if (typeof sanitized.involvedClients === 'string') {
     try {
       sanitized.involvedClients = JSON.parse(sanitized.involvedClients);
     } catch {
       sanitized.involvedClients = [];
     }
+  } else if (!Array.isArray(sanitized.involvedClients)) {
+      sanitized.involvedClients = [];
   }
+
   return sanitized as PurchaseRequest;
 };
 
@@ -370,28 +376,14 @@ export const useRequests = () => {
 
             toast({ title: "Estado Actualizado" });
             
-            setState(prevState => {
-                const useWarehouse = prevState.requestSettings?.useWarehouseReception;
-                const useErpEntry = prevState.requestSettings?.useErpEntry;
-                const finalArchivedStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
-                const isArchived = updatedRequest.status === finalArchivedStatus || updatedRequest.status === 'canceled';
-
-                const newActiveRequests = isArchived
-                    ? prevState.activeRequests.filter(r => r.id !== updatedRequest.id)
-                    : prevState.activeRequests.map(r => r.id === updatedRequest.id ? updatedRequest : r);
-                
-                const newArchivedRequests = isArchived
-                    ? [updatedRequest, ...prevState.archivedRequests.filter(r => r.id !== updatedRequest.id)]
-                    : prevState.archivedRequests.filter(r => r.id !== updatedRequest.id);
-
-                return {
-                    ...prevState,
-                    isStatusDialogOpen: false,
-                    isActionDialogOpen: false,
-                    activeRequests: newActiveRequests,
-                    archivedRequests: newArchivedRequests,
-                };
+            updateState({
+                isStatusDialogOpen: false,
+                isActionDialogOpen: false,
+                activeRequests: state.activeRequests.map(r => r.id === updatedRequest.id ? updatedRequest : r),
+                archivedRequests: state.archivedRequests.map(r => r.id === updatedRequest.id ? updatedRequest : r),
             });
+            // Reload data to correctly move items between active/archived lists
+            await loadInitialData(true);
 
         } catch (error: any) {
             logError("Failed to update status", { context: 'useRequests.executeStatusUpdate', error: error.message });
@@ -438,13 +430,12 @@ export const useRequests = () => {
         handleCreateRequest: async () => {
             if (!currentUser) return;
             
-            // --- VALIDATION ---
             if (!state.newRequest.clientId || !state.newRequest.itemId || !state.newRequest.quantity || !state.newRequest.requiredDate) {
                 toast({ title: "Campos Requeridos", description: "Cliente, artículo, cantidad y fecha requerida son obligatorios.", variant: "destructive" });
                 return;
             }
             if (state.newRequest.requiresCurrency && (!state.newRequest.unitSalePrice || state.newRequest.unitSalePrice <= 0)) {
-                toast({ title: "Precio de Venta Requerido", description: "Debe ingresar un precio de venta mayor a cero o desmarcar la casilla.", variant: "destructive" });
+                toast({ title: "Precio de Venta Requerido", description: "Debe ingresar un precio de venta mayor a cero o desmarcar la casilla 'Registrar Precio de Venta'.", variant: "destructive" });
                 return;
             }
 
@@ -557,7 +548,11 @@ export const useRequests = () => {
             const product = state.products.find(p => p.id === value);
             if (product) {
                 const stock = authStockLevels.find(s => s.itemId === product.id)?.totalStock ?? 0;
-                const dataToUpdate = { itemId: product.id, itemDescription: product.description || '', inventory: stock };
+                const dataToUpdate = { 
+                    itemId: product.id, 
+                    itemDescription: product.description || '', 
+                    inventoryErp: stock 
+                };
                 if (state.requestToEdit) {
                      updateState({
                         requestToEdit: state.requestToEdit ? { ...state.requestToEdit, ...dataToUpdate } : null
@@ -855,7 +850,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const rawUpdated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
+            const rawUpdated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
             const updated = sanitizeRequest(rawUpdated);
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? updated : o),

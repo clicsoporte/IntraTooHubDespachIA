@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React from 'react';
@@ -28,6 +27,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { PurchaseRequest, PurchaseRequestHistoryEntry, RequestNotePayload } from '@/modules/core/types';
 import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
@@ -108,38 +108,57 @@ export default function PurchaseRequestPage() {
                             <CardTitle className="text-lg">{request.consecutive} - [{request.itemId}] {request.itemDescription}</CardTitle>
                             <CardDescription>Cliente: {request.clientName} {requestSettings?.showCustomerTaxId ? `(${request.clientTaxId})` : ''}</CardDescription>
                         </div>
-                        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                            {request.sourceOrders && request.sourceOrders.length > 0 && <Button variant="ghost" size="icon" onClick={() => actions.setContextInfoOpen(request)}><Info className="h-4 w-4 text-blue-600"/></Button>}
-                            {!!request.reopened && <Badge variant="destructive"><RefreshCcw className="mr-1 h-3 w-3" /> Reabierta</Badge>}
-                            {!!request.hasBeenModified && <Badge variant="destructive" className="animate-pulse"><AlertTriangle className="mr-1 h-3 w-3" /> Modificado</Badge>}
-                             <Button variant="ghost" size="icon" onClick={() => actions.handleOpenHistory(request)}><History className="h-4 w-4" /></Button>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {canEdit && <DropdownMenuItem onSelect={() => { actions.setRequestToEdit(request); actions.setEditRequestDialogOpen(true); }}><Pencil className="mr-2"/> Editar Solicitud</DropdownMenuItem>}
-                                    {canAddNote && <DropdownMenuItem onSelect={() => actions.openAddNoteDialog(request)}><Pencil className="mr-2"/> Añadir Nota</DropdownMenuItem>}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel>Cambio de Estado</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {canReopen && <DropdownMenuItem onSelect={() => { actions.setRequestToUpdate(request); actions.setReopenDialogOpen(true); }} className="text-orange-600"><Undo2 className="mr-2"/> Reabrir</DropdownMenuItem>}
-                                    {canSendToReview && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'purchasing-review')} className="text-cyan-600"><Send className="mr-2"/> Enviar a Revisión</DropdownMenuItem>}
-                                    {canSendToApproval && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'pending-approval')} className="text-orange-600"><ShoppingBag className="mr-2"/> Enviar a Aprobación</DropdownMenuItem>}
-                                    {canApprove && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'approved')} className="text-green-600"><Check className="mr-2"/> Aprobar</DropdownMenuItem>}
-                                    {canRevertToApproved && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'approved')} className="text-orange-600"><Undo2 className="mr-2"/> Revertir a Aprobada</DropdownMenuItem>}
-                                    {canOrder && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'ordered')} className="text-blue-600"><Truck className="mr-2"/> Marcar como Ordenada</DropdownMenuItem>}
-                                    {canReceiveInWarehouse && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'received-in-warehouse')} className="text-teal-600"><Home className="mr-2"/> Recibir en Bodega</DropdownMenuItem>}
-                                    {canEnterToErp && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'entered-erp')} className="text-indigo-600"><PackageCheck className="mr-2"/> Ingresar a ERP</DropdownMenuItem>}
-                                    <DropdownMenuSeparator />
-                                    {canRequestUnapproval && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(request, 'unapproval-request')} className="text-orange-600 font-bold"><AlertTriangle className="mr-2"/> Solicitar Desaprobación</DropdownMenuItem>}
-                                    {canCancelPending && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'canceled')} className="text-red-600"><XCircle className="mr-2"/> Cancelar Solicitud</DropdownMenuItem>}
-                                    {canRequestCancel && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(request, 'cancellation-request')} className="text-red-600"><XCircle className="mr-2"/> Solicitar Cancelación</DropdownMenuItem>}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                         <TooltipProvider>
+                            <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                                {request.erpOrderNumber && (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={() => actions.setContextInfoOpen(request)}><Info className="h-4 w-4 text-blue-600"/></Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>Ver Información de Contexto</p></TooltipContent>
+                                    </Tooltip>
+                                )}
+                                {!!request.reopened && <Badge variant="destructive"><RefreshCcw className="mr-1 h-3 w-3" /> Reabierta</Badge>}
+                                {!!request.hasBeenModified && <Badge variant="destructive" className="animate-pulse"><AlertTriangle className="mr-1 h-3 w-3" /> Modificado</Badge>}
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={() => actions.handleOpenHistory(request)}><History className="h-4 w-4" /></Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Ver Historial de Cambios</p></TooltipContent>
+                                </Tooltip>
+                                <DropdownMenu>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                            </DropdownMenuTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p>Más Acciones</p></TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {canEdit && <DropdownMenuItem onSelect={() => { actions.setRequestToEdit(request); actions.setEditRequestDialogOpen(true); }}><Pencil className="mr-2"/> Editar Solicitud</DropdownMenuItem>}
+                                        {canAddNote && <DropdownMenuItem onSelect={() => actions.openAddNoteDialog(request)}><Pencil className="mr-2"/> Añadir Nota</DropdownMenuItem>}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuLabel>Cambio de Estado</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {canReopen && <DropdownMenuItem onSelect={() => { actions.setRequestToUpdate(request); actions.setReopenDialogOpen(true); }} className="text-orange-600"><Undo2 className="mr-2"/> Reabrir</DropdownMenuItem>}
+                                        {canSendToReview && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'purchasing-review')} className="text-cyan-600"><Send className="mr-2"/> Enviar a Revisión</DropdownMenuItem>}
+                                        {canSendToApproval && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'pending-approval')} className="text-orange-600"><ShoppingBag className="mr-2"/> Enviar a Aprobación</DropdownMenuItem>}
+                                        {canApprove && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'approved')} className="text-green-600"><Check className="mr-2"/> Aprobar</DropdownMenuItem>}
+                                        {canRevertToApproved && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'approved')} className="text-orange-600"><Undo2 className="mr-2"/> Revertir a Aprobada</DropdownMenuItem>}
+                                        {canOrder && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'ordered')} className="text-blue-600"><Truck className="mr-2"/> Marcar como Ordenada</DropdownMenuItem>}
+                                        {canReceiveInWarehouse && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'received-in-warehouse')} className="text-teal-600"><Home className="mr-2"/> Recibir en Bodega</DropdownMenuItem>}
+                                        {canEnterToErp && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'entered-erp')} className="text-indigo-600"><PackageCheck className="mr-2"/> Ingresar a ERP</DropdownMenuItem>}
+                                        <DropdownMenuSeparator />
+                                        {canRequestUnapproval && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(request, 'unapproval-request')} className="text-orange-600 font-bold"><AlertTriangle className="mr-2"/> Solicitar Desaprobación</DropdownMenuItem>}
+                                        {canCancelPending && <DropdownMenuItem onSelect={() => actions.openStatusDialog(request, 'canceled')} className="text-red-600"><XCircle className="mr-2"/> Cancelar Solicitud</DropdownMenuItem>}
+                                        {canRequestCancel && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(request, 'cancellation-request')} className="text-red-600"><XCircle className="mr-2"/> Solicitar Cancelación</DropdownMenuItem>}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </TooltipProvider>
                     </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
@@ -153,7 +172,16 @@ export default function PurchaseRequestPage() {
                         </div>
                          <div className="space-y-1">
                             <p className="font-semibold text-muted-foreground">Prioridad</p>
-                            <span className={cn("font-medium", selectors.priorityConfig[request.priority]?.className)}>{selectors.priorityConfig[request.priority]?.label || request.priority}</span>
+                            <Select value={request.priority} onValueChange={(value: PurchaseRequestPriority) => actions.handleDetailUpdate(request.id, { priority: value })}>
+                                <SelectTrigger className={cn("h-8 w-32 border-0 focus:ring-0", selectors.priorityConfig[request.priority]?.className)}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(selectors.priorityConfig).map(([key, config]) => (
+                                        <SelectItem key={key} value={key} disabled={!hasPermission('requests:edit:pending')}>{config.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-1">
                             <p className="font-semibold text-muted-foreground">Fecha Requerida</p>
@@ -179,6 +207,12 @@ export default function PurchaseRequestPage() {
                         {request.route && <div className="space-y-1"><p className="font-semibold text-muted-foreground">Ruta de Entrega</p><p>{request.route}</p></div>}
                          {request.shippingMethod && <div className="space-y-1"><p className="font-semibold text-muted-foreground">Método de Envío</p><p>{request.shippingMethod}</p></div>}
                         <div className="space-y-1"><p className="font-semibold text-muted-foreground">Tipo de Compra</p><div className="flex items-center gap-2">{request.purchaseType === 'multiple' ? <Users className="h-4 w-4" /> : <UserIcon className="h-4 w-4" />}<span>{request.purchaseType === 'multiple' ? 'Múltiples Proveedores' : 'Proveedor Único'}</span></div></div>
+                        {request.inventory !== null && request.inventory !== undefined && (
+                            <div className="space-y-1"><p className="font-semibold text-muted-foreground">Inv. Manual (Creación)</p><p>{request.inventory.toLocaleString()}</p></div>
+                        )}
+                        {request.inventoryErp !== null && request.inventoryErp !== undefined && (
+                            <div className="space-y-1"><p className="font-semibold text-muted-foreground">Inv. ERP (Creación)</p><p>{request.inventoryErp.toLocaleString()}</p></div>
+                        )}
                     </div>
                     {request.pendingAction !== 'none' && (
                         <div className="mt-4">
@@ -414,14 +448,14 @@ export default function PurchaseRequestPage() {
                         {contextInfoData?.sourceOrders && (
                              <div>
                                 <h4 className="font-semibold mb-2">Pedidos de Origen</h4>
-                                <p className="text-sm text-muted-foreground">{contextInfoData.sourceOrders.join(', ')}</p>
+                                <p className="text-sm text-muted-foreground">{Array.isArray(contextInfoData.sourceOrders) ? contextInfoData.sourceOrders.join(', ') : contextInfoData.sourceOrders}</p>
                             </div>
                         )}
                          {contextInfoData?.involvedClients && (
                              <div>
                                 <h4 className="font-semibold mb-2">Clientes Involucrados</h4>
                                 <ul className="list-disc list-inside space-y-1 text-sm">
-                                    {contextInfoData.involvedClients.map((c: any) => <li key={c.id}>{c.name} ({c.id})</li>)}
+                                    {Array.isArray(contextInfoData.involvedClients) ? contextInfoData.involvedClients.map((c: any) => <li key={c.id}>{c.name} ({c.id})</li>) : <li>{contextInfoData.involvedClients}</li>}
                                 </ul>
                             </div>
                         )}
@@ -439,5 +473,3 @@ export default function PurchaseRequestPage() {
     );
 }
 
-
-    
