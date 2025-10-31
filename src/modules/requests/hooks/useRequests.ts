@@ -1,5 +1,3 @@
-
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -15,12 +13,12 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
 } from '@/modules/requests/lib/actions';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, PurchaseSuggestion 
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, PurchaseSuggestion, ErpPurchaseOrderHeader, ErpPurchaseOrderLine
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -154,6 +152,8 @@ type State = {
     notePayload: RequestNotePayload | null;
     products: Product[];
     customers: Customer[];
+    erpPoHeaders: ErpPurchaseOrderHeader[];
+    erpPoLines: ErpPurchaseOrderLine[];
 };
 
 // Helper function to ensure complex fields are in the correct format (array).
@@ -243,6 +243,8 @@ export const useRequests = () => {
         notePayload: null,
         products: [],
         customers: [],
+        erpPoHeaders: [],
+        erpPoLines: [],
     });
     
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, state.companyData?.searchDebounceTime ?? 500);
@@ -263,7 +265,7 @@ export const useRequests = () => {
         }
 
         try {
-             const [settingsData, requestsData, dbProducts, dbCustomers] = await Promise.all([
+             const [settingsData, requestsData, dbProducts, dbCustomers, poHeaders, poLines] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
                     page: state.viewingArchived ? state.archivedPage : undefined,
@@ -271,11 +273,19 @@ export const useRequests = () => {
                 }),
                 getAllProductsFromDB(),
                 getAllCustomersFromDB(),
+                getAllErpPurchaseOrderHeaders(),
+                getAllErpPurchaseOrderLines(),
             ]);
             
             if (!isMounted) return;
 
-            updateState({ requestSettings: settingsData, products: dbProducts, customers: dbCustomers });
+            updateState({ 
+                requestSettings: settingsData, 
+                products: dbProducts, 
+                customers: dbCustomers,
+                erpPoHeaders: poHeaders,
+                erpPoLines: poLines
+            });
             
             const useWarehouse = settingsData.useWarehouseReception;
             const useErpEntry = settingsData.useErpEntry;
@@ -963,6 +973,12 @@ export const useRequests = () => {
                 return needsBuying;
             });
         }, [state.erpOrderLines, state.showOnlyShortageItems]),
+        getInTransitStock: useCallback((itemId: string): number => {
+            const activePoNumbers = new Set(state.erpPoHeaders.filter(h => h.ESTADO === 'A').map(h => h.ORDEN_COMPRA));
+            return state.erpPoLines
+                .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
+                .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
+        }, [state.erpPoHeaders, state.erpPoLines]),
     };
 
     return {
@@ -971,4 +987,4 @@ export const useRequests = () => {
         selectors,
         isAuthorized
     };
-};
+}

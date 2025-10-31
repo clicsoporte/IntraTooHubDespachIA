@@ -4,7 +4,7 @@
  */
 'use client';
 
-import type { PurchaseRequest, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, RejectCancellationPayload, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority } from '../../core/types';
+import type { PurchaseRequest, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, RejectCancellationPayload, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader, ErpPurchaseOrderLine } from '../../core/types';
 import { logInfo, logError } from '@/modules/core/lib/logger';
 import { createNotificationForRole, createNotification } from '@/modules/core/lib/notifications-actions';
 import { 
@@ -24,9 +24,11 @@ import {
 } from './db';
 import {
     saveUserPreferences as saveUserPreferencesServer,
-    getUserPreferences as getUserPreferencesServer
+    getUserPreferences as getUserPreferencesServer,
+    getAllErpPurchaseOrderHeaders as getAllErpPurchaseOrderHeadersServer,
+    getAllErpPurchaseOrderLines as getAllErpPurchaseOrderLinesServer,
 } from '@/modules/core/lib/db';
-import { getAllProducts, getAllStock, getAllCustomers, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
+import { getAllProducts, getAllStock, getAllCustomers } from '@/modules/core/lib/db';
 
 
 /**
@@ -111,6 +113,9 @@ export async function updatePurchaseRequestStatus(payload: UpdateRequestStatusPa
                 userId: targetUser.id,
                 message: `La solicitud ${updatedRequest.consecutive} ha sido actualizada a: ${statusLabel}.`,
                 href: `/dashboard/requests?search=${updatedRequest.consecutive}`,
+                entityId: updatedRequest.id,
+                entityType: 'purchase-request',
+                entityStatus: payload.status,
             });
         }
     }
@@ -308,4 +313,13 @@ export async function getPurchaseSuggestionsPreferences(userId: number): Promise
  */
 export async function savePurchaseSuggestionsPreferences(userId: number, preferences: Partial<UserPreferences>): Promise<void> {
     return saveUserPreferencesServer(userId, 'purchaseSuggestionsPrefs', preferences);
+}
+
+
+export async function getAllErpPurchaseOrderHeaders(): Promise<ErpPurchaseOrderHeader[]> {
+    return getAllErpPurchaseOrderHeadersServer();
+}
+
+export async function getAllErpPurchaseOrderLines(): Promise<ErpPurchaseOrderLine[]> {
+    return getAllErpPurchaseOrderLinesServer();
 }
