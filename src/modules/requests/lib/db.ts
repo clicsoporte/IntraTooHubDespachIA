@@ -216,6 +216,33 @@ export async function saveSettings(settings: RequestSettings): Promise<void> {
     transaction(settings);
 }
 
+// Helper function to ensure complex fields are in the correct format (array).
+const sanitizeRequest = (request: any): PurchaseRequest => {
+  const sanitized = { ...request };
+  if (sanitized.sourceOrders && typeof sanitized.sourceOrders === 'string') {
+    try {
+      sanitized.sourceOrders = JSON.parse(sanitized.sourceOrders);
+    } catch {
+      sanitized.sourceOrders = [];
+    }
+  } else if (!Array.isArray(sanitized.sourceOrders)) {
+      sanitized.sourceOrders = [];
+  }
+  
+  if (sanitized.involvedClients && typeof sanitized.involvedClients === 'string') {
+    try {
+      sanitized.involvedClients = JSON.parse(sanitized.involvedClients);
+    } catch {
+      sanitized.involvedClients = [];
+    }
+  } else if (!Array.isArray(sanitized.involvedClients)) {
+      sanitized.involvedClients = [];
+  }
+
+  return sanitized as PurchaseRequest;
+};
+
+
 export async function getRequests(options: { 
     page?: number; 
     pageSize?: number;
@@ -225,23 +252,6 @@ export async function getRequests(options: {
     const settings = await getSettings();
     const finalStatus = settings.useErpEntry ? 'entered-erp' : (settings.useWarehouseReception ? 'received-in-warehouse' : 'ordered');
     const archivedStatuses = `'${finalStatus}', 'canceled'`;
-
-    // Function to parse JSON fields safely
-    const parseJsonFields = (req: any): PurchaseRequest => {
-        const sanitized = { ...req };
-        try {
-            sanitized.sourceOrders = sanitized.sourceOrders ? JSON.parse(sanitized.sourceOrders) : [];
-        } catch (e) {
-            sanitized.sourceOrders = [];
-        }
-        try {
-            sanitized.involvedClients = sanitized.involvedClients ? JSON.parse(sanitized.involvedClients) : [];
-        } catch (e) {
-            sanitized.involvedClients = [];
-        }
-        return sanitized as PurchaseRequest;
-    };
-
 
     if (options.page !== undefined && options.pageSize !== undefined) {
         const { page, pageSize } = options;
@@ -264,14 +274,14 @@ export async function getRequests(options: {
             WHERE status IN (${archivedStatuses})
         `).get() as { count: number }).count;
         
-        const activeRequests = activeRequestsRaw.map(parseJsonFields);
-        const archivedRequests = archivedRequestsRaw.map(parseJsonFields);
+        const activeRequests = activeRequestsRaw.map(sanitizeRequest);
+        const archivedRequests = archivedRequestsRaw.map(sanitizeRequest);
         
         return { requests: [...activeRequests, ...archivedRequests], totalArchivedCount };
     }
     
     const allRequestsRaw = db.prepare(`SELECT * FROM purchase_requests ORDER BY requestDate DESC`).all() as any[];
-    const allRequests = allRequestsRaw.map(parseJsonFields);
+    const allRequests = allRequestsRaw.map(sanitizeRequest);
     const totalArchivedCount = allRequests.filter(r => archivedStatuses.includes(`'${r.status}'`)).length;
 
     return { requests: allRequests, totalArchivedCount };
@@ -345,8 +355,8 @@ export async function addRequest(request: Omit<PurchaseRequest, 'id' | 'consecut
         });
 
         const newId = transaction();
-        const createdRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(newId) as PurchaseRequest;
-        return createdRequest;
+        const createdRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(newId) as any;
+        return sanitizeRequest(createdRequest);
     } catch (error: any) {
         logError("Failed to create request in DB", { context: 'addRequest DB transaction', error: error.message, details: preparedRequest });
         throw error;
@@ -416,8 +426,8 @@ export async function updateRequest(payload: UpdatePurchaseRequestPayload): Prom
     });
 
     transaction();
-    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as PurchaseRequest;
-    return updatedRequest;
+    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as any;
+    return sanitizeRequest(updatedRequest);
 }
 
 export async function updateStatus(payload: UpdateRequestStatusPayload): Promise<PurchaseRequest> {
@@ -498,8 +508,8 @@ export async function updateStatus(payload: UpdateRequestStatusPayload): Promise
     });
 
     transaction();
-    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as PurchaseRequest;
-    return updatedRequest;
+    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as any;
+    return sanitizeRequest(updatedRequest);
 }
 
 export async function getRequestHistory(requestId: number): Promise<PurchaseRequestHistoryEntry[]> {
@@ -530,7 +540,8 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
     });
     
     transaction();
-    return db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(entityId) as PurchaseRequest;
+    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(entityId) as any;
+    return sanitizeRequest(updatedRequest);
 }
 
 export async function getErpOrderData(identifier: string | DateRange): Promise<{headers: ErpOrderHeader[], lines: ErpOrderLine[], inventory: StockInfo[]}> {
@@ -591,7 +602,8 @@ export async function updateRequestDetails(payload: { requestId: number; priorit
     });
 
     transaction();
-    return db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as PurchaseRequest;
+    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as any;
+    return sanitizeRequest(updatedRequest);
 }
 
 export async function getUserByName(name: string): Promise<User | null> {
@@ -616,7 +628,6 @@ export async function addNote(payload: { requestId: number; notes: string; updat
     db.prepare('INSERT INTO purchase_request_history (requestId, timestamp, status, updatedBy, notes) VALUES (?, ?, ?, ?, ?)')
       .run(requestId, new Date().toISOString(), currentRequest.status, updatedBy, `Nota agregada: ${notes}`);
 
-    return db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as PurchaseRequest;
+    const updatedRequest = db.prepare('SELECT * FROM purchase_requests WHERE id = ?').get(requestId) as any;
+    return sanitizeRequest(updatedRequest);
 }
-
-    
