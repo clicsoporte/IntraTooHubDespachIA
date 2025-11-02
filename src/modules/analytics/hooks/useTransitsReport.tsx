@@ -10,28 +10,42 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getActiveTransitsReportData } from '@/modules/analytics/lib/actions';
-import type { DateRange, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, Supplier, Product } from '@/modules/core/types';
+import type { DateRange, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, Supplier, Product, StockInfo } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay, format, parseISO } from 'date-fns';
 import { useDebounce } from 'use-debounce';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
+import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 
 export interface TransitReportItem extends ErpPurchaseOrderLine {
     FECHA_HORA: string;
     ESTADO: string;
     PROVEEDOR: string;
+    CreatedBy?: string;
     proveedorName?: string;
     productDescription?: string;
+    currentStock?: number;
 }
 
-export type SortKey = 'ordenCompra' | 'proveedor' | 'fecha' | 'cantidad';
+export type SortKey = 'ordenCompra' | 'proveedor' | 'fecha' | 'cantidad' | 'articulo' | 'stock' | 'creadoPor';
 export type SortDirection = 'asc' | 'desc';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
     return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
+
+const availableColumns = [
+    { id: 'ordenCompra', label: 'Nº OC', sortable: true },
+    { id: 'proveedor', label: 'Proveedor', sortable: true },
+    { id: 'fecha', label: 'Fecha', sortable: true },
+    { id: 'estado', label: 'Estado', sortable: false },
+    { id: 'articulo', label: 'Artículo', sortable: true },
+    { id: 'cantidad', label: 'Cant. Pendiente', sortable: true, align: 'right' },
+    { id: 'stock', label: 'Inv. Actual (ERP)', sortable: true, align: 'right' },
+    { id: 'creadoPor', label: 'Creado por (ERP)', sortable: true },
+];
 
 interface State {
     isLoading: boolean;
@@ -41,13 +55,14 @@ interface State {
     supplierFilter: string[];
     sortKey: SortKey;
     sortDirection: SortDirection;
+    visibleColumns: string[];
 }
 
 export function useTransitsReport() {
     const { isAuthorized } = useAuthorization(['analytics:transits-report:read']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { companyData } = useAuth();
+    const { companyData, user } = useAuth();
     
     const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -62,6 +77,7 @@ export function useTransitsReport() {
         supplierFilter: [],
         sortKey: 'fecha',
         sortDirection: 'desc',
+        visibleColumns: availableColumns.map(c => c.id),
     });
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
@@ -91,10 +107,19 @@ export function useTransitsReport() {
     
     useEffect(() => {
         setTitle("Reporte de Tránsitos");
+        const loadPrefsAndData = async () => {
+             if(user) {
+                const prefs = await getUserPreferences(user.id, 'transitsReportPrefs');
+                if (prefs && prefs.visibleColumns) {
+                    updateState({ visibleColumns: prefs.visibleColumns });
+                }
+            }
+            await fetchData();
+        };
         if (isAuthorized) {
-            fetchData();
+            loadPrefsAndData();
         }
-    }, [setTitle, isAuthorized, fetchData]);
+    }, [setTitle, isAuthorized, fetchData, user]);
 
     const sortedData = useMemo(() => {
         let filtered = state.data;
@@ -105,7 +130,8 @@ export function useTransitsReport() {
                 normalizeText(item.ORDEN_COMPRA).includes(searchLower) ||
                 normalizeText(item.proveedorName).includes(searchLower) ||
                 normalizeText(item.ARTICULO).includes(searchLower) ||
-                normalizeText(item.productDescription).includes(searchLower)
+                normalizeText(item.productDescription).includes(searchLower) ||
+                normalizeText(item.CreatedBy).includes(searchLower)
             );
         }
 
@@ -116,10 +142,13 @@ export function useTransitsReport() {
         filtered.sort((a, b) => {
             const dir = state.sortDirection === 'asc' ? 1 : -1;
             switch(state.sortKey) {
-                case 'ordenCompra': return a.ORDEN_COMPRA.localeCompare(b.ORDEN_COMPRA) * dir;
+                case 'ordenCompra': return (a.ORDEN_COMPRA || '').localeCompare(b.ORDEN_COMPRA || '') * dir;
                 case 'proveedor': return (a.proveedorName || '').localeCompare(b.proveedorName || '') * dir;
                 case 'fecha': return (new Date(a.FECHA_HORA).getTime() - new Date(b.FECHA_HORA).getTime()) * dir;
                 case 'cantidad': return (a.CANTIDAD_ORDENADA - b.CANTIDAD_ORDENADA) * dir;
+                case 'articulo': return (a.productDescription || '').localeCompare(b.productDescription || '') * dir;
+                case 'stock': return (a.currentStock || 0) - (b.currentStock || 0) * dir;
+                case 'creadoPor': return (a.CreatedBy || '').localeCompare(b.CreatedBy || '') * dir;
                 default: return 0;
             }
         });
@@ -135,8 +164,27 @@ export function useTransitsReport() {
         updateState({ sortKey: key, sortDirection: direction });
     };
 
+    const handleColumnVisibilityChange = (columnId: string, checked: boolean) => {
+        updateState({
+            visibleColumns: checked
+                ? [...state.visibleColumns, columnId]
+                : state.visibleColumns.filter(id => id !== columnId)
+        });
+    };
+
+    const handleSaveColumnVisibility = async () => {
+        if (!user) return;
+        try {
+            await saveUserPreferences(user.id, 'transitsReportPrefs', { visibleColumns: state.visibleColumns });
+            toast({ title: "Preferencias Guardadas", description: "La visibilidad de las columnas ha sido guardada." });
+        } catch (error: any) {
+            logError("Failed to save transits report column visibility", { error: error.message });
+            toast({ title: "Error", description: "No se pudo guardar la configuración de columnas.", variant: "destructive" });
+        }
+    };
+
     const handleExportExcel = () => {
-        const headers = ["Nº OC", "Proveedor", "Fecha", "Estado", "Artículo", "Descripción", "Cant. Pendiente"];
+        const headers = ["Nº OC", "Proveedor", "Fecha", "Estado", "Artículo", "Descripción", "Cant. Pendiente", "Inv. Actual", "Creado Por"];
         const dataToExport = sortedData.map(item => [
             item.ORDEN_COMPRA,
             item.proveedorName,
@@ -144,14 +192,16 @@ export function useTransitsReport() {
             item.ESTADO,
             item.ARTICULO,
             item.productDescription,
-            item.CANTIDAD_ORDENADA
+            item.CANTIDAD_ORDENADA,
+            item.currentStock,
+            item.CreatedBy,
         ]);
         exportToExcel({
             fileName: 'reporte_transitos',
             sheetName: 'Tránsitos',
             headers,
             data: dataToExport,
-            columnWidths: [15, 30, 15, 10, 20, 40, 15],
+            columnWidths: [15, 30, 15, 10, 20, 40, 15, 15, 15],
         });
     };
 
@@ -197,7 +247,6 @@ export function useTransitsReport() {
     const actions = {
         setDateRange: (range: DateRange | undefined) => {
             updateState({ dateRange: range || { from: undefined, to: undefined } });
-            // Re-fetch data when date changes
             if (range?.from) {
                 fetchData();
             }
@@ -208,11 +257,17 @@ export function useTransitsReport() {
         handleSort,
         handleExportExcel,
         handleExportPDF,
+        handleColumnVisibilityChange,
+        handleSaveColumnVisibility,
     };
 
     const selectors = {
         sortedData,
         supplierOptions,
+        availableColumns,
+        visibleColumnsData: useMemo(() => {
+            return state.visibleColumns.map(id => availableColumns.find(col => col.id === id)).filter(Boolean) as (typeof availableColumns)[0][];
+        }, [state.visibleColumns]),
     };
 
     return {

@@ -4,9 +4,9 @@
 'use server';
 
 import { getCompletedOrdersByDateRange, getPlannerSettings } from '@/modules/planner/lib/db';
-import { getAllRoles, getAllSuppliers } from '@/modules/core/lib/db';
+import { getAllRoles, getAllSuppliers, getAllStock } from '@/modules/core/lib/db';
 import { getAllUsersForReport } from '@/modules/core/lib/auth';
-import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier } from '@/modules/core/types';
+import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
@@ -113,15 +113,17 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
     const toDate = dateRange.to || new Date();
     toDate.setHours(23, 59, 59, 999);
 
-    const [allHeaders, allLines, allSuppliers, allProducts] = await Promise.all([
+    const [allHeaders, allLines, allSuppliers, allProducts, allStock] = await Promise.all([
         getAllErpPurchaseOrderHeaders(),
         getAllErpPurchaseOrderLines(),
         getAllSuppliers(),
         getAllProducts(),
+        getAllStock(),
     ]);
 
     const supplierMap = new Map<string, string>(allSuppliers.map(s => [s.id, s.name]));
     const productMap = new Map<string, string>(allProducts.map(p => [p.id, p.description]));
+    const stockMap = new Map<string, number>(allStock.map(s => [s.itemId, s.totalStock]));
 
     const filteredHeaders = allHeaders.filter(h => {
         const orderDate = new Date(h.FECHA_HORA);
@@ -139,8 +141,10 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
                 FECHA_HORA: header.FECHA_HORA,
                 ESTADO: header.ESTADO,
                 PROVEEDOR: header.PROVEEDOR,
+                CreatedBy: header.CreatedBy,
                 proveedorName: supplierMap.get(header.PROVEEDOR) || header.PROVEEDOR,
                 productDescription: productMap.get(line.ARTICULO) || 'Artículo no encontrado',
+                currentStock: stockMap.get(line.ARTICULO) || 0,
             };
         });
 

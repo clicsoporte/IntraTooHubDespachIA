@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
-import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, ArrowUp, ArrowDown, Columns3 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Badge } from '@/components/ui/badge';
 import type { TransitReportItem } from '@/modules/analytics/hooks/useTransitsReport';
-
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 export default function TransitsReportPage() {
     const {
@@ -32,8 +32,8 @@ export default function TransitsReportPage() {
         isInitialLoading,
     } = useTransitsReport();
 
-    const { isLoading, dateRange, searchTerm, supplierFilter } = state;
-    const { sortedData } = selectors;
+    const { isLoading, dateRange, searchTerm, supplierFilter, visibleColumns } = state;
+    const { sortedData, availableColumns, visibleColumnsData } = selectors;
 
     if (isInitialLoading) {
         return (
@@ -57,6 +57,20 @@ export default function TransitsReportPage() {
         'A': { label: 'Activa', className: 'bg-green-100 text-green-800' },
         'N': { label: 'Anulada', className: 'bg-red-100 text-red-800' },
         'R': { label: 'Recibida', className: 'bg-blue-100 text-blue-800' }
+    };
+
+    const getColumnContent = (item: TransitReportItem, colId: string): React.ReactNode => {
+        switch (colId) {
+            case 'ordenCompra': return <span className="font-mono">{item.ORDEN_COMPRA}</span>;
+            case 'proveedor': return item.proveedorName;
+            case 'fecha': return format(new Date(item.FECHA_HORA), 'dd/MM/yyyy');
+            case 'estado': return <Badge className={cn(statusConfig[item.ESTADO]?.className)}>{statusConfig[item.ESTADO]?.label || item.ESTADO}</Badge>;
+            case 'articulo': return <><p className="font-medium">{item.productDescription}</p><p className="text-xs text-muted-foreground">{item.ARTICULO}</p></>;
+            case 'cantidad': return item.CANTIDAD_ORDENADA.toLocaleString();
+            case 'stock': return (item.currentStock ?? 0).toLocaleString();
+            case 'creadoPor': return item.CreatedBy;
+            default: return null;
+        }
     };
 
     return (
@@ -89,6 +103,12 @@ export default function TransitsReportPage() {
                     <div className="flex justify-between items-center">
                         <div><CardTitle>Detalle de Tránsitos ({sortedData.length})</CardTitle></div>
                         <div className="flex items-center gap-2">
+                             <DialogColumnSelector
+                                allColumns={availableColumns}
+                                visibleColumns={visibleColumns}
+                                onColumnChange={actions.handleColumnVisibilityChange}
+                                onSave={actions.handleSaveColumnVisibility}
+                            />
                             <Button onClick={actions.handleExportExcel} variant="outline" disabled={isLoading || sortedData.length === 0}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar a Excel</Button>
                             <Button onClick={actions.handleExportPDF} variant="outline" disabled={isLoading || sortedData.length === 0}><FileDown className="mr-2 h-4 w-4" />Exportar a PDF</Button>
                         </div>
@@ -99,32 +119,27 @@ export default function TransitsReportPage() {
                         <Table>
                             <TableHeader className="sticky top-0 bg-background z-10">
                                 <TableRow>
-                                    <TableHead className="cursor-pointer hover:bg-muted" onClick={() => actions.handleSort('ordenCompra')}>Nº OC {renderSortIcon('ordenCompra')}</TableHead>
-                                    <TableHead className="cursor-pointer hover:bg-muted" onClick={() => actions.handleSort('proveedor')}>Proveedor {renderSortIcon('proveedor')}</TableHead>
-                                    <TableHead className="cursor-pointer hover:bg-muted" onClick={() => actions.handleSort('fecha')}>Fecha {renderSortIcon('fecha')}</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead>Artículo</TableHead>
-                                    <TableHead className="text-right cursor-pointer hover:bg-muted" onClick={() => actions.handleSort('cantidad')}>Cantidad Pendiente {renderSortIcon('cantidad')}</TableHead>
+                                    {visibleColumnsData.map(col => (
+                                        <TableHead key={col.id} className={cn(col.align === 'right' && 'text-right', col.sortable && 'cursor-pointer hover:bg-muted')} onClick={() => col.sortable && actions.handleSort(col.id as SortKey)}>
+                                            <div className="flex items-center gap-2">
+                                                {col.label} {renderSortIcon(col.id as SortKey)}
+                                            </div>
+                                        </TableHead>
+                                    ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? Array.from({ length: 10 }).map((_, i) => (<TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)) : sortedData.length > 0 ? (
+                                {isLoading ? Array.from({ length: 10 }).map((_, i) => (<TableRow key={i}><TableCell colSpan={visibleColumns.length}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)) : sortedData.length > 0 ? (
                                     sortedData.map((item: TransitReportItem) => (
                                         <TableRow key={`${item.ORDEN_COMPRA}-${item.ARTICULO}`}>
-                                            <TableCell className="font-mono">{item.ORDEN_COMPRA}</TableCell>
-                                            <TableCell>{item.proveedorName}</TableCell>
-                                            <TableCell>{format(new Date(item.FECHA_HORA), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell>
-                                                <Badge className={cn(statusConfig[item.ESTADO]?.className)}>{statusConfig[item.ESTADO]?.label || item.ESTADO}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <p className="font-medium">{item.productDescription}</p>
-                                                <p className="text-xs text-muted-foreground">{item.ARTICULO}</p>
-                                            </TableCell>
-                                            <TableCell className="text-right font-bold">{item.CANTIDAD_ORDENADA.toLocaleString()}</TableCell>
+                                            {visibleColumns.map(colId => (
+                                                <TableCell key={colId} className={cn(availableColumns.find(c => c.id === colId)?.align === 'right' && 'text-right')}>
+                                                    {getColumnContent(item, colId)}
+                                                </TableCell>
+                                            ))}
                                         </TableRow>
                                     ))
-                                ) : (<TableRow><TableCell colSpan={6} className="h-32 text-center"><p className="text-muted-foreground">No se encontraron tránsitos para los filtros seleccionados.</p></TableCell></TableRow>)}
+                                ) : (<TableRow><TableCell colSpan={visibleColumns.length} className="h-32 text-center"><p className="text-muted-foreground">No se encontraron tránsitos para los filtros seleccionados.</p></TableCell></TableRow>)}
                             </TableBody>
                         </Table>
                     </ScrollArea>

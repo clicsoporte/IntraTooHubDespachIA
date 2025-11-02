@@ -89,7 +89,7 @@ async function initializeMainDatabase(db: import('better-sqlite3').Database) {
         CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT, alias TEXT, email TEXT, phone TEXT);
         CREATE TABLE IF NOT EXISTS erp_order_headers (PEDIDO TEXT PRIMARY KEY, ESTADO TEXT, CLIENTE TEXT, FECHA_PEDIDO TEXT, FECHA_PROMETIDA TEXT, ORDEN_COMPRA TEXT, TOTAL_UNIDADES REAL, MONEDA_PEDIDO TEXT, USUARIO TEXT);
         CREATE TABLE IF NOT EXISTS erp_order_lines (PEDIDO TEXT, PEDIDO_LINEA INTEGER, ARTICULO TEXT, CANTIDAD_PEDIDA REAL, PRECIO_UNITARIO REAL, PRIMARY KEY (PEDIDO, PEDIDO_LINEA));
-        CREATE TABLE IF NOT EXISTS erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT);
+        CREATE TABLE IF NOT EXISTS erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT, CreatedBy TEXT);
         CREATE TABLE IF NOT EXISTS erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY(ORDEN_COMPRA, ARTICULO));
     `;
     db.exec(schema);
@@ -140,7 +140,7 @@ const DB_MODULES: DatabaseModule[] = [
             'suppliers': ['id', 'name', 'alias', 'email', 'phone'],
             'erp_order_headers': ['PEDIDO', 'ESTADO', 'CLIENTE', 'FECHA_PEDIDO', 'FECHA_PROMETIDA', 'ORDEN_COMPRA', 'TOTAL_UNIDADES', 'MONEDA_PEDIDO', 'USUARIO'],
             'erp_order_lines': ['PEDIDO', 'PEDIDO_LINEA', 'ARTICULO', 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO'],
-            'erp_purchase_order_headers': ['ORDEN_COMPRA', 'PROVEEDOR', 'FECHA_HORA', 'ESTADO'],
+            'erp_purchase_order_headers': ['ORDEN_COMPRA', 'PROVEEDOR', 'FECHA_HORA', 'ESTADO', 'CreatedBy'],
             'erp_purchase_order_lines': ['ORDEN_COMPRA', 'ARTICULO', 'CANTIDAD_ORDENADA'],
         }
     },
@@ -399,9 +399,14 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
             db.exec(`CREATE TABLE erp_order_lines (PEDIDO TEXT, PEDIDO_LINEA INTEGER, ARTICULO TEXT, CANTIDAD_PEDIDA REAL, PRECIO_UNITARIO REAL, PRIMARY KEY (PEDIDO, PEDIDO_LINEA));`);
         }
         
-        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='erp_purchase_order_headers'`).get()) {
+        const erpPoHeadersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='erp_purchase_order_headers'`).get();
+        if (!erpPoHeadersTable) {
             console.log("MIGRATION: Creating erp_purchase_order_headers table.");
-            db.exec(`CREATE TABLE erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT);`);
+            db.exec(`CREATE TABLE erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT, CreatedBy TEXT);`);
+        } else {
+            const erpPoHeadersInfo = db.prepare(`PRAGMA table_info(erp_purchase_order_headers)`).all() as { name: string }[];
+            const erpPoHeadersColumns = new Set(erpPoHeadersInfo.map(c => c.name));
+             if (!erpPoHeadersColumns.has('CreatedBy')) db.exec(`ALTER TABLE erp_purchase_order_headers ADD COLUMN CreatedBy TEXT`);
         }
 
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='erp_purchase_order_lines'`).get()) {
@@ -833,7 +838,7 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'suppliers': return {'PROVEEDOR': 'id', 'NOMBRE': 'name', 'ALIAS': 'alias', 'E_MAIL': 'email', 'TELEFONO1': 'phone'};
         case 'erp_order_headers': return {'PEDIDO': 'PEDIDO', 'ESTADO': 'ESTADO', 'CLIENTE': 'CLIENTE', 'FECHA_PEDIDO': 'FECHA_PEDIDO', 'FECHA_PROMETIDA': 'FECHA_PROMETIDA', 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'TOTAL_UNIDADES': 'TOTAL_UNIDADES', 'MONEDA_PEDIDO': 'MONEDA_PEDIDO', 'USUARIO': 'USUARIO'};
         case 'erp_order_lines': return {'PEDIDO': 'PEDIDO', 'PEDIDO_LINEA': 'PEDIDO_LINEA', 'ARTICULO': 'ARTICULO', 'CANTIDAD_PEDIDA': 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO': 'PRECIO_UNITARIO'};
-        case 'erp_purchase_order_headers': return { 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'PROVEEDOR': 'PROVEEDOR', 'FECHA_HORA': 'FECHA_HORA', 'ESTADO': 'ESTADO' };
+        case 'erp_purchase_order_headers': return { 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'PROVEEDOR': 'PROVEEDOR', 'FECHA_HORA': 'FECHA_HORA', 'ESTADO': 'ESTADO', 'CREATEDBY': 'CreatedBy' };
         case 'erp_purchase_order_lines': return { 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'ARTICULO': 'ARTICULO', 'CANTIDAD_ORDENADA': 'CANTIDAD_ORDENADA' };
         default: return {};
     }
@@ -1366,11 +1371,11 @@ export async function saveAllErpOrderLines(lines: ErpOrderLine[]): Promise<void>
 
 export async function saveAllErpPurchaseOrderHeaders(headers: ErpPurchaseOrderHeader[]): Promise<void> {
     const db = await connectDb();
-    const insert = db.prepare('INSERT OR REPLACE INTO erp_purchase_order_headers (ORDEN_COMPRA, PROVEEDOR, FECHA_HORA, ESTADO) VALUES (?, ?, ?, ?)');
+    const insert = db.prepare('INSERT OR REPLACE INTO erp_purchase_order_headers (ORDEN_COMPRA, PROVEEDOR, FECHA_HORA, ESTADO, CreatedBy) VALUES (?, ?, ?, ?, ?)');
     const transaction = db.transaction((headersToSave: ErpPurchaseOrderHeader[]) => {
         db.prepare('DELETE FROM erp_purchase_order_headers').run();
         for(const header of headersToSave) {
-            insert.run(header.ORDEN_COMPRA, header.PROVEEDOR, header.FECHA_HORA instanceof Date ? header.FECHA_HORA.toISOString() : String(header.FECHA_HORA), header.ESTADO);
+            insert.run(header.ORDEN_COMPRA, header.PROVEEDOR, header.FECHA_HORA instanceof Date ? header.FECHA_HORA.toISOString() : String(header.FECHA_HORA), header.ESTADO, header.CreatedBy || null);
         }
     });
     try {
