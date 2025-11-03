@@ -69,6 +69,8 @@ export const initialCompany: Company = {
     locationFilePath: "",
     cabysFilePath: "",
     supplierFilePath: "",
+    erpPurchaseOrderHeaderFilePath: "",
+    erpPurchaseOrderLineFilePath: ""
 };
 
 /**

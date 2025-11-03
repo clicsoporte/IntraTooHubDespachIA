@@ -855,7 +855,7 @@ const parseData = (lines: string[], type: ImportQuery['type']) => {
         header.forEach((h, index) => {
             const key = headerMapping[h as keyof typeof headerMapping];
             if (key) {
-                const value = data[index]?.replace(/[\n\r]/g, '').trim() || '';
+                const value = data[index]?.replace(/[\\n\\r]/g, '').trim() || '';
                 if (['creditLimit', 'percentage', 'stock', 'rack', 'hPos', 'taxRate', 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO', 'TOTAL_UNIDADES', 'CANTIDAD_ORDENADA'].includes(key)) {
                     dataObject[key] = parseFloat(value.replace('%','')) || 0;
                     if(key === 'taxRate') dataObject[key] /= 100;
