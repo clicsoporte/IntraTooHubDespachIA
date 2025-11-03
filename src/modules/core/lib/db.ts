@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { initialCompany, initialRoles } from './data';
-import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, SqlConfig, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine } from '@/modules/core/types';
+import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
@@ -873,7 +873,6 @@ async function updateCabysCatalog(data: any[]): Promise<{ count: number }> {
         db.prepare('DELETE FROM cabys_catalog').run();
         const insertStmt = db.prepare('INSERT INTO cabys_catalog (code, description, taxRate) VALUES (?, ?, ?)');
         for (const row of rows) {
-            // Handle both CSV (PascalCase) and SQL (UPPERCASE) headers
             const code = row.code || row.Codigo || row.CODIGO;
             const description = row.description || row.Descripcion || row.DESCRIPCION;
             const taxRateValue = row.taxRate ?? (row.Impuesto !== undefined ? parseFloat(String(row.Impuesto).replace('%', '')) / 100 : (row.IMPUESTO !== undefined ? parseFloat(String(row.IMPUESTO).replace('%', '')) / 100 : undefined));
@@ -1547,7 +1546,7 @@ const defaultQueries: { [key in ImportQuery['type']]?: string } = {
     erp_order_lines: "SELECT T1.[PEDIDO], T1.[PEDIDO_LINEA], T1.[ARTICULO], T1.[CANTIDAD_PEDIDA], T1.[PRECIO_UNITARIO] FROM [GAREND].[PEDIDO_LINEA] AS T1 INNER JOIN [GAREND].[PEDIDO] AS T0 ON T1.PEDIDO = T0.PEDIDO WHERE T0.FECHA_PEDIDO >= DATEADD(day, -60, GETDATE()) AND T1.[ESTADO] NOT IN ('F', 'C')",
     erp_purchase_order_headers: "SELECT [ORDEN_COMPRA], [PROVEEDOR], [FECHA_HORA], [ESTADO], [CreatedBy] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA]",
     erp_purchase_order_lines: "SELECT [ORDEN_COMPRA], [ARTICULO], [CANTIDAD_ORDENADA] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA_LINEA]",
-    cabys: "SELECT [CODIGO], [DESCRIPCION], [IMPUESTO] FROM [SOFTLAND].[GAREND].[CODIGO_HACIENDA]",
+    cabys: "SELECT DISTINCT [CODIGO_HACIENDA] as CODIGO, [DESCRIPCION_HACIENDA] as DESCRIPCION, [IMPUESTO] FROM [GAREND].[ARTICULO] WHERE [CODIGO_HACIENDA] IS NOT NULL",
 };
 
     
