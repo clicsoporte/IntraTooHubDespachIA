@@ -834,7 +834,7 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'exemptions': return {'CODIGO': 'code', 'DESCRIPCION': 'description', 'CLIENTE': 'customer', 'NUM_AUTOR': 'authNumber', 'FECHA_RIGE': 'startDate', 'FECHA_VENCE': 'endDate', 'PORCENTAJE': 'percentage', 'TIPO_DOC': 'docType', 'NOMBRE_INSTITUCION': 'institutionName', 'CODIGO_INSTITUCION': 'institutionCode'};
         case 'stock': return {'ARTICULO': 'itemId', 'BODEGA': 'warehouseId', 'CANT_DISPONIBLE': 'stock'};
         case 'locations': return {'CODIGO': 'itemId', 'P. HORIZONTAL': 'hPos', 'P. VERTICAL': 'vPos', 'RACK': 'rack', 'CLIENTE': 'client', 'DESCRIPCION': 'description'};
-        case 'cabys': return {'Codigo': 'code', 'Descripcion': 'description', 'Impuesto': 'taxRate'};
+        case 'cabys': return {'CODIGO': 'code', 'DESCRIPCION': 'description', 'IMPUESTO': 'taxRate'};
         case 'suppliers': return {'PROVEEDOR': 'id', 'NOMBRE': 'name', 'ALIAS': 'alias', 'E_MAIL': 'email', 'TELEFONO1': 'phone'};
         case 'erp_order_headers': return {'PEDIDO': 'PEDIDO', 'ESTADO': 'ESTADO', 'CLIENTE': 'CLIENTE', 'FECHA_PEDIDO': 'FECHA_PEDIDO', 'FECHA_PROMETIDA': 'FECHA_PROMETIDA', 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'TOTAL_UNIDADES': 'TOTAL_UNIDADES', 'MONEDA_PEDIDO': 'MONEDA_PEDIDO', 'USUARIO': 'USUARIO'};
         case 'erp_order_lines': return {'PEDIDO': 'PEDIDO', 'PEDIDO_LINEA': 'PEDIDO_LINEA', 'ARTICULO': 'ARTICULO', 'CANTIDAD_PEDIDA': 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO': 'PRECIO_UNITARIO'};
@@ -873,10 +873,10 @@ async function updateCabysCatalog(data: any[]): Promise<{ count: number }> {
         db.prepare('DELETE FROM cabys_catalog').run();
         const insertStmt = db.prepare('INSERT INTO cabys_catalog (code, description, taxRate) VALUES (?, ?, ?)');
         for (const row of rows) {
-            // Correctly handle case-insensitivity from Papaparse
-            const code = row.code || row.Codigo;
-            const description = row.description || row.Descripcion;
-            const taxRateValue = row.taxRate ?? (row.Impuesto !== undefined ? parseFloat(String(row.Impuesto).replace('%', '')) / 100 : undefined);
+            // Handle both CSV (PascalCase) and SQL (UPPERCASE) headers
+            const code = row.code || row.Codigo || row.CODIGO;
+            const description = row.description || row.Descripcion || row.DESCRIPCION;
+            const taxRateValue = row.taxRate ?? (row.Impuesto !== undefined ? parseFloat(String(row.Impuesto).replace('%', '')) / 100 : (row.IMPUESTO !== undefined ? parseFloat(String(row.IMPUESTO).replace('%', '')) / 100 : undefined));
 
             if (code && description && taxRateValue !== undefined && !isNaN(taxRateValue)) {
                 insertStmt.run(code, description, taxRateValue);
@@ -913,9 +913,9 @@ export async function importDataFromFile(type: 'customers' | 'products' | 'exemp
             skipEmptyLines: true,
         });
         const mappedData = results.data.map((row: any) => ({
-            code: row.Codigo,
-            description: row.Descripcion,
-            taxRate: parseFloat(row.Impuesto) / 100
+            Codigo: row.Codigo,
+            Descripcion: row.Descripcion,
+            Impuesto: row.Impuesto,
         }));
         const { count } = await updateCabysCatalog(mappedData);
         return { count, source: filePath };
@@ -1536,5 +1536,20 @@ export async function runDatabaseAudit(userName: string): Promise<AuditResult[]>
 
 // --- Planner-specific functions moved from core ---
 export { confirmPlannerModification };
+const defaultQueries: { [key in ImportQuery['type']]?: string } = {
+    customers: "SELECT [CLIENTE], [NOMBRE], [DIRECCION], [TELEFONO1], [CONTRIBUYENTE], [MONEDA], [LIMITE_CREDITO], [CONDICION_PAGO], [VENDEDOR], [ACTIVO], [E_MAIL], [EMAIL_DOC_ELECTRONICO] FROM [GAREND].[CLIENTE]",
+    products: "SELECT [ARTICULO], [DESCRIPCION], [CLASIFICACION_2], [ULTIMO_INGRESO], [ACTIVO], [NOTAS], [UNIDAD_VENTA], [CANASTA_BASICA], [CODIGO_HACIENDA] FROM [GAREND].[ARTICULO]",
+    exemptions: "SELECT [CODIGO], [DESCRIPCION], [CLIENTE], [NUM_AUTOR], [FECHA_RIGE], [FECHA_VENCE], [PORCENTAJE], [TIPO_DOC], [NOMBRE_INSTITUCION], [CODIGO_INSTITUCION] FROM [GAREND].[EXENCION]",
+    stock: "SELECT [ARTICULO], [BODEGA], [CANT_DISPONIBLE] FROM [GAREND].[EXISTENCIA_BODEGA]",
+    locations: "SELECT [CODIGO], [P. HORIZONTAL], [P. VERTICAL], [RACK], [CLIENTE], [DESCRIPCION] FROM [GAREND].[UBICACION]",
+    suppliers: "SELECT [PROVEEDOR], [NOMBRE], [ALIAS], [E_MAIL], [TELEFONO1] FROM [GAREND].[PROVEEDOR]",
+    erp_order_headers: "SELECT T0.[PEDIDO], T0.[ESTADO], T0.[CLIENTE], T0.[FECHA_PEDIDO], T0.[FECHA_PROMETIDA], T0.[ORDEN_COMPRA], T0.[TOTAL_UNIDADES], T0.[MONEDA_PEDIDO], T0.[USUARIO] FROM [GAREND].[PEDIDO] AS T0 WHERE T0.[FECHA_PEDIDO] >= DATEADD(day, -60, GETDATE()) AND T0.[ESTADO] NOT IN ('F', 'C') ORDER BY T0.[FECHA_PEDIDO] DESC",
+    erp_order_lines: "SELECT T1.[PEDIDO], T1.[PEDIDO_LINEA], T1.[ARTICULO], T1.[CANTIDAD_PEDIDA], T1.[PRECIO_UNITARIO] FROM [GAREND].[PEDIDO_LINEA] AS T1 INNER JOIN [GAREND].[PEDIDO] AS T0 ON T1.PEDIDO = T0.PEDIDO WHERE T0.FECHA_PEDIDO >= DATEADD(day, -60, GETDATE()) AND T1.[ESTADO] NOT IN ('F', 'C')",
+    erp_purchase_order_headers: "SELECT [ORDEN_COMPRA], [PROVEEDOR], [FECHA_HORA], [ESTADO], [CreatedBy] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA]",
+    erp_purchase_order_lines: "SELECT [ORDEN_COMPRA], [ARTICULO], [CANTIDAD_ORDENADA] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA_LINEA]",
+    cabys: "SELECT [CODIGO], [DESCRIPCION], [IMPUESTO] FROM [SOFTLAND].[GAREND].[CODIGO_HACIENDA]",
+};
+
+    
 
     
