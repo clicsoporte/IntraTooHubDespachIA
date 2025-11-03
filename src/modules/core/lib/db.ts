@@ -873,9 +873,13 @@ async function updateCabysCatalog(data: any[]): Promise<{ count: number }> {
         db.prepare('DELETE FROM cabys_catalog').run();
         const insertStmt = db.prepare('INSERT INTO cabys_catalog (code, description, taxRate) VALUES (?, ?, ?)');
         for (const row of rows) {
-            const taxRate = row.taxRate ?? (row.Impuesto !== undefined ? parseFloat(String(row.Impuesto).replace('%', '')) / 100 : undefined);
-            if (row.code && row.description && taxRate !== undefined && !isNaN(taxRate)) {
-                insertStmt.run(row.code, row.description, taxRate);
+            // Correctly handle case-insensitivity from Papaparse
+            const code = row.code || row.Codigo;
+            const description = row.description || row.Descripcion;
+            const taxRateValue = row.taxRate ?? (row.Impuesto !== undefined ? parseFloat(String(row.Impuesto).replace('%', '')) / 100 : undefined);
+
+            if (code && description && taxRateValue !== undefined && !isNaN(taxRateValue)) {
+                insertStmt.run(code, description, taxRateValue);
             }
         }
     });
