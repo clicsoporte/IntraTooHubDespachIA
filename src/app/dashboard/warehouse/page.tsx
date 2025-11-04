@@ -25,6 +25,12 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { logError } from '@/modules/core/lib/logger';
 import { Separator } from '@/components/ui/separator';
 
+type SearchableItem = {
+  id: string;
+  type: 'product' | 'customer';
+  searchText: string;
+};
+
 type CombinedItem = {
     product: Product | null;
     physicalLocations: {
@@ -143,34 +149,50 @@ export default function WarehousePage() {
         );
     }, [locations]);
 
+    // Create a unified, lightweight search index once.
+    const searchIndex = useMemo(() => {
+        const productIndex: SearchableItem[] = products.map(p => ({
+            id: p.id,
+            type: 'product',
+            searchText: normalizeText(`${p.id} ${p.description}`)
+        }));
+        const customerIndex: SearchableItem[] = customers.map(c => ({
+            id: c.id,
+            type: 'customer',
+            searchText: normalizeText(`${c.id} ${c.name}`)
+        }));
+        return [...productIndex, ...customerIndex];
+    }, [products, customers]);
+
     const filteredItems = useMemo(() => {
         if (!debouncedSearchTerm) return [];
 
         const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
+        if (searchTerms.length === 0) return [];
         
-        const relevantProducts = products.filter(p => {
-            const targetText = normalizeText(`${p.id} ${p.description}`);
-            return searchTerms.every(term => targetText.includes(term));
-        });
+        // 1. Fast filter on the lightweight index
+        const matchedIndexItems = searchIndex.filter(item => 
+            searchTerms.every(term => item.searchText.includes(term))
+        );
 
-        const relevantCustomers = customers.filter(c => {
-            const targetText = normalizeText(`${c.id} ${c.name}`);
-            return searchTerms.every(term => targetText.includes(term));
-        });
-        const relevantCustomerIds = new Set(relevantCustomers.map(c => c.id));
+        const relevantProductIds = new Set(matchedIndexItems.filter(i => i.type === 'product').map(i => i.id));
+        const relevantCustomerIds = new Set(matchedIndexItems.filter(i => i.type === 'customer').map(i => i.id));
 
         const groupedByItem: { [key: string]: CombinedItem } = {};
-        
-        for (const product of relevantProducts) {
-            if (!groupedByItem[product.id]) {
-                groupedByItem[product.id] = {
-                    product: product,
+
+        // 2. Hydrate product results
+        relevantProductIds.forEach(productId => {
+            if (!groupedByItem[productId]) {
+                const product = products.find(p => p.id === productId);
+                groupedByItem[productId] = {
+                    product: product || null,
                     physicalLocations: [],
-                    erpStock: stock.find(s => s.itemId === product.id) || null,
+                    erpStock: stock.find(s => s.itemId === productId) || null,
                 };
             }
-        }
-
+        });
+        
+        // 3. Hydrate locations
         if (warehouseSettings?.enablePhysicalInventoryTracking) {
              inventory.forEach(item => {
                 if (groupedByItem[item.itemId]) {
@@ -182,8 +204,6 @@ export default function WarehousePage() {
             });
         } else {
             itemLocations.forEach(itemLoc => {
-                const product = products.find(p => p.id === itemLoc.itemId);
-                
                 if (groupedByItem[itemLoc.itemId]) {
                     groupedByItem[itemLoc.itemId].physicalLocations.push({
                         path: renderLocationPath(itemLoc.locationId),
@@ -192,6 +212,7 @@ export default function WarehousePage() {
                 } 
                 else if (itemLoc.clientId && relevantCustomerIds.has(itemLoc.clientId)) {
                     if (!groupedByItem[itemLoc.itemId]) {
+                         const product = products.find(p => p.id === itemLoc.itemId);
                          groupedByItem[itemLoc.itemId] = {
                             product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
                             physicalLocations: [],
@@ -209,7 +230,7 @@ export default function WarehousePage() {
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
-    }, [debouncedSearchTerm, products, customers, inventory, itemLocations, stock, warehouseSettings, renderLocationPath]);
+    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, renderLocationPath]);
 
     if (isLoading || !warehouseSettings) {
         return (
@@ -272,7 +293,7 @@ export default function WarehousePage() {
                         <div className="space-y-4">
                             {filteredItems.length > 0 ? (
                                 filteredItems.map(item => (
-                                    <Card key={item.product?.id} className="w-full">
+                                    <Card key={item.product?.id || item.client?.id} className="w-full">
                                         <CardHeader>
                                             <CardTitle className="text-xl flex items-center gap-2">
                                                 <Package className="h-6 w-6 text-primary" />
@@ -342,3 +363,4 @@ export default function WarehousePage() {
         </main>
     );
 }
+
