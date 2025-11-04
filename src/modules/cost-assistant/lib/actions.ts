@@ -277,61 +277,53 @@ export async function getNextDraftNumber(): Promise<number> {
 }
 
 export async function exportForERP(lines: CostAssistantLine[]): Promise<string> {
-    // This function now generates an Excel file that matches the user's ERP template.
-    
-    const headerRow1 = [
-        "CODIGOS (Requerido)", "NOMBRE (Requerido)", "UNIDAD DE MEDIDA (Requerido)", 
-        "PRECIO (Sin impuestos) (Requerido)", "MONEDA", "ACTIVIDAD ECONOMICA", 
-        "IMPUESTOS (Opcional)", "CÓDIGO CABYS", "ESTADO"
-    ];
-    const headerRow2 = [
-        "04", null, null, null, null, null, "IMP.01"
+    const headers = [
+        "Cabys", "Cód. Artículo", "Descripción", "Cant.", "Descuento", 
+        "Costo Unit. (s/IVA)", "Costo Unit. (c/IVA)", "Imp. %", "Margen", 
+        "P.V.P Unitario (s/IVA)", "P.V.P Unitario Sugerido", "Ganancia por Línea"
     ];
     
-    // Create the AoA (Array of Arrays) for the worksheet
-    const ws_data: (string|number|null)[][] = [headerRow1, headerRow2];
-    
-    // Map data to the correct structure for the ERP template
-    lines.forEach(line => {
-        const row: (string | number | null)[] = new Array(headerRow1.length).fill(null);
+    const dataToExport = lines.map(line => [
+        line.cabysCode,
+        line.supplierCode,
+        line.description,
+        line.quantity,
+        line.discountAmount,
+        line.unitCostWithoutTax,
+        line.unitCostWithTax,
+        line.taxRate * 100,
+        `${(line.margin * 100).toFixed(2)}%`,
+        line.sellPriceWithoutTax,
+        line.finalSellPrice,
+        line.profitPerLine,
+    ]);
 
-        row[0] = line.supplierCode; // CODIGOS 04
-        row[1] = line.description; // NOMBRE
-        row[2] = '78-Unid-Unidad'; // UNIDAD DE MEDIDA
-        row[3] = Number(line.sellPriceWithoutTax.toFixed(5)); // PRECIO
-        row[4] = 'CRC'; // MONEDA
-        row[5] = '4651.0'; // ACTIVIDAD ECONOMICA
-        row[6] = line.taxCode; // IMP.01
-        row[7] = line.cabysCode; // CÓDIGO CABYS
-        row[8] = 'A'; // ESTADO
-        
-        ws_data.push(row);
-    });
-
-    const worksheet = XLSX.utils.aoa_to_sheet(ws_data);
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...dataToExport]);
     
-    // Define column widths for better readability
     worksheet['!cols'] = [
-        { wch: 15 }, // CODIGOS 04
-        { wch: 60 }, // NOMBRE
-        { wch: 20 }, // UNIDAD DE MEDIDA
-        { wch: 20 }, // PRECIO
-        { wch: 10 }, // MONEDA
-        { wch: 20 }, // ACTIVIDAD ECONOMICA
-        { wch: 10 }, // IMP.01
-        { wch: 20 }, // CÓDIGO CABYS
-        { wch: 10 }, // ESTADO
+        { wch: 15 }, // Cabys
+        { wch: 15 }, // Cód. Artículo
+        { wch: 40 }, // Descripción
+        { wch: 10 }, // Cant.
+        { wch: 12 }, // Descuento
+        { wch: 20 }, // Costo Unit. (s/IVA)
+        { wch: 20 }, // Costo Unit. (c/IVA)
+        { wch: 10 }, // Imp. %
+        { wch: 10 }, // Margen
+        { wch: 22 }, // P.V.P Unitario (s/IVA)
+        { wch: 22 }, // P.V.P Unitario Sugerido
+        { wch: 20 }, // Ganancia por Línea
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Articulos');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'AnalisisDeCostos');
     
     const exportDir = path.join(process.cwd(), 'temp_files', 'exports');
     if (!fs.existsSync(exportDir)) {
         fs.mkdirSync(exportDir, { recursive: true });
     }
     
-    const fileName = `export_erp_${Date.now()}.xlsx`;
+    const fileName = `analisis_costos_${Date.now()}.xlsx`;
     const filePath = path.join(exportDir, fileName);
 
     try {

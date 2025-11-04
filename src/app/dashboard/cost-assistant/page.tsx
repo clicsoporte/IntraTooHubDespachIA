@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UploadCloud, Loader2, Percent, Calculator, Trash2, Settings2, FilePlus, Save, Briefcase, CheckCircle, XCircle, FolderClock, FileDown, Download } from 'lucide-react';
+import { UploadCloud, Loader2, Percent, Calculator, Trash2, Settings2, FilePlus, Save, Briefcase, CheckCircle, XCircle, FolderClock, FileDown, Download, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -265,8 +265,8 @@ export default function CostAssistantPage() {
                                 />
                                 {state.exportStatus === 'idle' && (
                                     <Button onClick={actions.handleExportToERP} disabled={state.lines.length === 0}>
-                                        <FileDown className="mr-2 h-4 w-4" />
-                                        Exportar para ERP (Excel)
+                                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                        Exportar a Excel
                                     </Button>
                                 )}
                                 {state.exportStatus === 'generating' && (
