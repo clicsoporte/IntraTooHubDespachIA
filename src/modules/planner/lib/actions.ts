@@ -55,14 +55,14 @@ export async function saveProductionOrder(order: Omit<ProductionOrder, 'id' | 'c
 
     const approverRoles = await getRolesWithPermission('planner:status:approve');
     for (const roleId of approverRoles) {
-        await createNotification({
-            userId: 0, // Placeholder, createNotificationForRole handles user lookup
-            message: `Nueva orden ${createdOrder.consecutive} para "${createdOrder.customerName}" requiere aprobación.`,
-            href: `/dashboard/planner?search=${createdOrder.consecutive}`,
-            entityId: createdOrder.id,
-            entityType: 'production-order',
-            taskType: 'approve', // Define the task type for potential actions
-        });
+        await createNotificationForRole(
+            roleId,
+            `Nueva orden ${createdOrder.consecutive} para "${createdOrder.customerName}" requiere aprobación.`,
+            `/dashboard/planner?search=${createdOrder.consecutive}`,
+            createdOrder.id,
+            'production-order',
+            'approve'
+        );
     }
 
     return createdOrder;
