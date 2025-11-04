@@ -19,16 +19,7 @@ import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Info } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useRouter } from 'next/navigation';
 
 
 export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
@@ -78,6 +69,7 @@ export function useRequestSuggestions() {
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user: currentUser, products } = useAuth();
+    const router = useRouter();
     
     const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -272,54 +264,48 @@ export function useRequestSuggestions() {
             toast({ title: "Error de autenticación", variant: "destructive" });
             return;
         }
-        
+
         const itemsToProcess = confirmedItems || selectedSuggestions;
 
         if (itemsToProcess.length === 0) {
             toast({ title: "No hay artículos seleccionados", variant: "destructive" });
             return;
         }
+
+        // Instead of creating directly, redirect to the new request page with pre-filled data
+        if (itemsToProcess.length > 1) {
+            toast({ title: "Función no disponible", description: "Por favor, crea solicitudes de una en una desde las sugerencias.", variant: "destructive" });
+            return;
+        }
         
+        const item = itemsToProcess[0];
+
+        // Check for duplicates before redirecting
         if (!confirmedItems) {
-            const hasDuplicates = itemsToProcess.some(item => item.existingActiveRequests.length > 0);
+            const hasDuplicates = item.existingActiveRequests.length > 0;
             if (hasDuplicates) {
                 updateState({ itemsToCreate: itemsToProcess, isDuplicateConfirmOpen: true });
                 return;
             }
         }
-
+        
         updateState({ isSubmitting: true, isDuplicateConfirmOpen: false });
-        try {
-            let createdCount = 0;
-            for (const item of itemsToProcess) {
-                 const requestPayload: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
-                    requiredDate: item.earliestDueDate || new Date().toISOString().split('T')[0],
-                    clientId: 'VAR-CLI', // Generic client
-                    clientName: 'VARIOS CLIENTES',
-                    clientTaxId: '',
-                    itemId: item.itemId,
-                    itemDescription: item.itemDescription,
-                    quantity: item.shortage,
-                    notes: `Sugerencia generada a partir de la demanda de los pedidos del ERP.`,
-                    priority: 'medium' as const,
-                    purchaseType: 'multiple' as const,
-                    pendingAction: 'none' as const,
-                    sourceOrders: item.sourceOrders,
-                    involvedClients: item.involvedClients,
-                    inventoryErp: item.currentStock,
-                };
-                await savePurchaseRequest(requestPayload, currentUser.name);
-                createdCount++;
-            }
-            toast({ title: "Solicitudes Creadas", description: `Se crearon ${createdCount} solicitudes de compra.` });
-            await handleAnalyze();
-        } catch (error: any) {
-            logError("Failed to create requests from suggestions", { error: error.message });
-            toast({ title: "Error al Crear", description: error.message, variant: "destructive" });
-        } finally {
-            updateState({ isSubmitting: false, itemsToCreate: [] });
-        }
+
+        const client = item.involvedClients[0] || { id: 'VAR-CLI', name: 'VARIOS CLIENTES' };
+
+        // Construct query parameters for the redirection
+        const queryParams = new URLSearchParams({
+            itemId: item.itemId,
+            quantity: String(item.shortage),
+            clientId: client.id,
+            purchaseOrder: item.sourceOrders.join(', '),
+            notes: `Sugerencia generada a partir de la demanda de los pedidos del ERP: ${item.sourceOrders.join(', ')}. Clientes: ${item.involvedClients.map(c => c.name).join(', ')}.`,
+            requiredDate: item.earliestDueDate ? new Date(item.earliestDueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        });
+
+        router.push(`/dashboard/requests?${queryParams.toString()}`);
     };
+
 
     const handleColumnVisibilityChange = (columnId: string, checked: boolean) => {
         updateState({
