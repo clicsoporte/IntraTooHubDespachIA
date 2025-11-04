@@ -933,7 +933,7 @@ export const useRequests = () => {
         // setters
         setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
             isNewRequestDialogOpen: isOpen, 
-            newRequest: { ...emptyRequest, requiredDate: '', requiresCurrency: true }, 
+            newRequest: { ...emptyRequest, requiredDate: new Date().toISOString().split('T')[0], requiresCurrency: true }, 
             clientSearchTerm: '', 
             itemSearchTerm: '' 
         }),
@@ -1044,3 +1044,5 @@ export const useRequests = () => {
         isAuthorized
     };
 }
+
+    
