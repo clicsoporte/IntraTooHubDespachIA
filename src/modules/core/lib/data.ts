@@ -83,7 +83,7 @@ export const mainTools: Tool[] = [
     description: "Crear y gestionar cotizaciones para clientes.",
     href: "/dashboard/quoter",
     icon: Sheet,
-    bgColor: "bg-green-500",
+    bgColor: "bg-emerald-600",
     textColor: "text-white",
   },
   {
@@ -92,7 +92,7 @@ export const mainTools: Tool[] = [
     description: "Crear y gestionar solicitudes de compra internas.",
     href: "/dashboard/requests",
     icon: ShoppingCart,
-    bgColor: "bg-yellow-500",
+    bgColor: "bg-amber-700",
     textColor: "text-white",
   },
   {
@@ -101,7 +101,7 @@ export const mainTools: Tool[] = [
     description: "Gestionar y visualizar la carga de producción.",
     href: "/dashboard/planner",
     icon: CalendarCheck,
-    bgColor: "bg-purple-500",
+    bgColor: "bg-purple-700",
     textColor: "text-white",
   },
   {
@@ -110,7 +110,7 @@ export const mainTools: Tool[] = [
     description: 'Calcular costos y precios a partir de facturas XML.',
     href: '/dashboard/cost-assistant',
     icon: Calculator,
-    bgColor: 'bg-orange-500',
+    bgColor: 'bg-orange-600',
     textColor: 'text-white',
   },
    {
@@ -128,18 +128,18 @@ export const mainTools: Tool[] = [
     description: "Mover inventario entre ubicaciones físicas.",
     href: "/dashboard/warehouse/assign",
     icon: PackagePlus,
-    bgColor: "bg-teal-600",
+    bgColor: "bg-teal-700",
     textColor: "text-white",
   },
-  {
-    id: "hacienda-query",
-    name: "Consultas Hacienda",
-    description: "Verificar situación tributaria y exoneraciones.",
-    href: "/dashboard/hacienda",
-    icon: Search,
-    bgColor: "bg-blue-600",
-    textColor: "text-white",
-  },
+     {
+      id: "hacienda-query",
+      name: "Consultas Hacienda",
+      description: "Verificar situación tributaria y exoneraciones.",
+      href: "/dashboard/hacienda",
+      icon: Search,
+      bgColor: "bg-indigo-700",
+      textColor: "text-white",
+    },
   {
     id: "help",
     name: "Centro de Ayuda",
@@ -369,7 +369,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar ajustes para el asistente de costos.",
         href: "/dashboard/admin/cost-assistant",
         icon: Calculator,
-        bgColor: "bg-orange-500",
+        bgColor: "bg-orange-600",
         textColor: "text-white",
       },
       {
@@ -423,7 +423,7 @@ export const adminTools: Tool[] = [
         description: "Definir niveles y estructura de ubicaciones físicas.",
         href: "/dashboard/admin/warehouse",
         icon: Map,
-        bgColor: "bg-teal-700",
+        bgColor: "bg-cyan-600",
         textColor: "text-white",
       },
       {

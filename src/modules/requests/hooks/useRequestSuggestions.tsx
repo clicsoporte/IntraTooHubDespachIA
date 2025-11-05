@@ -11,7 +11,7 @@ import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { getRequestSuggestions, savePurchaseRequest, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/requests/lib/actions';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
-import type { DateRange, PurchaseRequest, UserPreferences, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, PurchaseSuggestion } from '@/modules/core/types';
+import type { DateRange, UserPreferences, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, PurchaseSuggestion } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
@@ -271,39 +271,64 @@ export function useRequestSuggestions() {
             toast({ title: "No hay artículos seleccionados", variant: "destructive" });
             return;
         }
-
-        // Instead of creating directly, redirect to the new request page with pre-filled data
-        if (itemsToProcess.length > 1) {
-            toast({ title: "Función no disponible", description: "Por favor, crea solicitudes de una en una desde las sugerencias.", variant: "destructive" });
-            return;
-        }
         
-        const item = itemsToProcess[0];
-
-        // Check for duplicates before redirecting
         if (!confirmedItems) {
-            const hasDuplicates = item.existingActiveRequests.length > 0;
-            if (hasDuplicates) {
-                updateState({ itemsToCreate: itemsToProcess, isDuplicateConfirmOpen: true });
+            const itemsWithDuplicates = itemsToProcess.filter(item => item.existingActiveRequests.length > 0);
+            if (itemsWithDuplicates.length > 0) {
+                updateState({ itemsToCreate: itemsWithDuplicates, isDuplicateConfirmOpen: true });
                 return;
             }
         }
         
         updateState({ isSubmitting: true, isDuplicateConfirmOpen: false });
 
-        const client = item.involvedClients[0] || { id: 'VAR-CLI', name: 'VARIOS CLIENTES' };
+        let createdCount = 0;
+        let errorCount = 0;
 
-        // Construct query parameters for the redirection
-        const queryParams = new URLSearchParams({
-            itemId: item.itemId,
-            quantity: String(item.shortage),
-            clientId: client.id,
-            purchaseOrder: item.sourceOrders.join(', '),
-            notes: `Sugerencia generada a partir de la demanda de los pedidos del ERP: ${item.sourceOrders.join(', ')}. Clientes: ${item.involvedClients.map(c => c.name).join(', ')}.`,
-            requiredDate: item.earliestDueDate ? new Date(item.earliestDueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        });
+        for (const item of itemsToProcess) {
+             try {
+                const client = item.involvedClients[0] || { id: 'VAR-CLI', name: 'VARIOS CLIENTES' };
+                const requestPayload = {
+                    requiredDate: item.earliestDueDate ? new Date(item.earliestDueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                    clientId: client.id,
+                    clientName: client.name,
+                    clientTaxId: '', // Will be fetched from DB
+                    itemId: item.itemId,
+                    itemDescription: item.itemDescription,
+                    quantity: item.shortage,
+                    notes: `Sugerencia generada a partir de la demanda de los pedidos del ERP: ${item.sourceOrders.join(', ')}. Clientes: ${item.involvedClients.map(c => c.name).join(', ')}.`,
+                    erpOrderNumber: item.sourceOrders.join(', '),
+                    priority: 'medium' as PurchaseRequestPriority,
+                    purchaseType: 'single' as const,
+                    sourceOrders: item.sourceOrders,
+                    involvedClients: item.involvedClients,
+                };
+                await savePurchaseRequest(requestPayload as any, currentUser.name);
+                createdCount++;
+            } catch (error: any) {
+                logError(`Failed to create request for item ${item.itemId}`, { error: error.message });
+                errorCount++;
+            }
+        }
 
-        router.push(`/dashboard/requests?${queryParams.toString()}`);
+        updateState({ isSubmitting: false });
+        
+        if (createdCount > 0) {
+            toast({
+                title: "Solicitudes Creadas",
+                description: `Se crearon ${createdCount} solicitudes de compra.`,
+            });
+        }
+        if (errorCount > 0) {
+            toast({
+                title: "Error",
+                description: `No se pudieron crear ${errorCount} solicitudes. Revisa los registros para más detalles.`,
+                variant: 'destructive',
+            });
+        }
+        
+        // Deselect items and re-analyze to update the active requests status
+        await handleAnalyze();
     };
 
 
@@ -343,7 +368,7 @@ export function useRequestSuggestions() {
                             <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
                             <ul className="list-disc list-inside mt-1 text-xs">
                                 {item.existingActiveRequests.map(req => (
-                                    <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
+                                    <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity} - OC: {req.purchaseOrder} - Por: {req.requestedBy}</li>
                                 ))}
                                 <li className="font-semibold mt-1">Total activo: {totalRequestedInActive}</li>
                             </ul>

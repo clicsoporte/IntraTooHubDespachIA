@@ -6,10 +6,12 @@
 import { revalidatePath } from 'next/cache';
 import { getNotifications as dbGetNotifications, markNotificationsAsRead as dbMarkAsRead, createNotification as dbCreateNotification, getNotificationById, deleteNotificationById } from './db';
 import { getAllUsers as dbGetAllUsers } from './auth';
-import type { Notification, User } from '../types';
-import { updateStatus as updatePlannerStatus } from '@/modules/planner/lib/db';
-import { updateStatus as updateRequestStatus } from '@/modules/requests/lib/db';
+import type { Notification, User, ProductionOrderStatus, PurchaseRequestStatus } from '../types';
+import { updateStatus as updatePlannerStatus, confirmModification } from '@/modules/planner/lib/db';
+import { updateStatus as updateRequestStatus, updatePendingAction } from '@/modules/requests/lib/db';
 import { logError } from './logger';
+import { getRolesWithPermission as getRolesWithPermissionFromDb } from '@/modules/planner/lib/db';
+
 
 /**
  * Creates a new notification for a single user.
@@ -20,8 +22,8 @@ export async function createNotification(notificationData: Omit<Notification, 'i
 }
 
 /**
- * Creates a notification for all users who have a specific role.
- * @param roleId - The ID of the role to target.
+ * Creates a notification for all users who have a specific role or permission.
+ * @param roleOrPermissionId - The ID of the role or permission to target.
  * @param message - The notification message.
  * @param href - An optional URL for the notification to link to.
  * @param entityId - The ID of the entity this notification relates to (e.g., order ID).
@@ -29,7 +31,7 @@ export async function createNotification(notificationData: Omit<Notification, 'i
  * @param taskType - A specific identifier for the task (e.g., 'approve').
  */
 export async function createNotificationForRole(
-    roleId: string, 
+    roleOrPermissionId: string, 
     message: string, 
     href: string,
     entityId: number,
@@ -37,7 +39,13 @@ export async function createNotificationForRole(
     taskType: string
 ): Promise<void> {
     const allUsers = await dbGetAllUsers();
-    const targetUsers = allUsers.filter((user: User) => user.role === roleId || user.role === 'admin');
+    // Get roles that have this permission. Admin is a special case.
+    const relevantRoleIds = await getRolesWithPermissionFromDb(roleOrPermissionId);
+    
+    // Find all users who either have the role or are admins.
+    const targetUsers = allUsers.filter((user: User) => 
+        user.role === 'admin' || relevantRoleIds.includes(user.role)
+    );
 
     for (const user of targetUsers) {
         await dbCreateNotification({ 
@@ -103,28 +111,45 @@ export async function executeNotificationAction(notificationId: number, actionTy
     }
 
     try {
+        let originalRequester: User | null = null;
+        let targetStatus: ProductionOrderStatus | PurchaseRequestStatus;
+
         if (notification.entityType === 'production-order') {
+            const currentOrder = await confirmModification(notification.entityId, updatedBy); // Dummy call to get order, should be a get function
+            originalRequester = await getUserByName(currentOrder.requestedBy);
+
             if (notification.taskType === 'cancellation-request') {
-                const targetStatus = actionType === 'approve' ? 'canceled' : 'approved'; // Revert to approved if rejected
+                targetStatus = actionType === 'approve' ? 'canceled' : currentOrder.previousStatus || 'approved';
                 await updatePlannerStatus({
                     orderId: notification.entityId,
                     status: targetStatus,
-                    notes: `Solicitud de cancelación ${actionType === 'approve' ? 'aprobada' : 'rechazada'} por ${updatedBy} desde notificaciones.`,
+                    notes: `Solicitud de cancelación ${actionType === 'approve' ? 'aprobada' : 'rechazada'} por ${updatedBy}.`,
                     updatedBy,
                     reopen: false
                 });
             }
         } else if (notification.entityType === 'purchase-request') {
+            const currentRequest = await updatePendingAction({ entityId: notification.entityId, action: 'none', notes: '', updatedBy }); // Dummy call
+            originalRequester = await getUserByName(currentRequest.requestedBy);
+
              if (notification.taskType === 'cancellation-request') {
-                const targetStatus = actionType === 'approve' ? 'canceled' : 'approved';
+                targetStatus = actionType === 'approve' ? 'canceled' : currentRequest.previousStatus || 'approved';
                 await updateRequestStatus({
                     requestId: notification.entityId,
                     status: targetStatus,
-                    notes: `Solicitud de cancelación ${actionType === 'approve' ? 'aprobada' : 'rechazada'} por ${updatedBy} desde notificaciones.`,
+                    notes: `Solicitud de cancelación ${actionType === 'approve' ? 'aprobada' : 'rechazada'} por ${updatedBy}.`,
                     updatedBy,
                     reopen: false
                 });
             }
+        }
+
+        if (actionType === 'reject' && originalRequester && originalRequester.id !== userId) {
+            await createNotification({
+                userId: originalRequester.id,
+                message: `Tu solicitud para la entidad #${notification.entityId} fue rechazada por ${updatedBy}.`,
+                href: notification.href,
+            });
         }
 
         // Action was successful, delete the notification as it's been handled.
@@ -136,4 +161,10 @@ export async function executeNotificationAction(notificationId: number, actionTy
         logError('Error executing notification action', { error: error.message, notificationId, actionType });
         return { success: false, message: 'Error al procesar la acción.' };
     }
+}
+
+
+async function getUserByName(name: string): Promise<User | null> {
+    const allUsers = await dbGetAllUsers();
+    return allUsers.find(u => u.name === name) || null;
 }
