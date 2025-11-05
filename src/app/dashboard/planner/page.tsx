@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { FilePlus, Loader2, FilterX, CalendarIcon, ChevronLeft, ChevronRight, RefreshCcw, MoreVertical, History, Undo2, Check, PackageCheck, XCircle, Pencil, AlertTriangle, User as UserIcon, MessageSquarePlus, FileDown, Play, Pause, Wrench, Hourglass, FileSpreadsheet } from 'lucide-react';
+import { FilePlus, Loader2, FilterX, CalendarIcon, ChevronLeft, ChevronRight, RefreshCcw, MoreVertical, History, Undo2, Check, PackageCheck, XCircle, Pencil, AlertTriangle, User as UserIcon, MessageSquarePlus, FileDown, Play, Pause, Wrench, Hourglass, FileSpreadsheet, Send, ShoppingBag } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -71,13 +71,33 @@ export default function PlannerPage() {
         const {
             canEdit, canApprove, canConfirmModification, canQueue, canStart, canHold, canMaintain,
             canResumeFromHold, canComplete, canRequestUnapproval,
-            canCancelPending, canRequestCancel, canReceive, canReopen
+            canCancelPending, canRequestCancel, canReceive, canReopen,
+            canSendToReview, canSendToApproval,
         } = selectors.getOrderPermissions(order);
 
         const daysRemaining = selectors.getDaysRemaining(order.deliveryDate);
         const scheduledDaysRemaining = selectors.getScheduledDaysRemaining(order);
         const netDifference = (order.deliveredQuantity ?? 0) - (order.defectiveQuantity ?? 0) - order.quantity;
         
+        const changeStatusActions = [
+            { condition: canSendToReview, action: () => actions.openStatusDialog(order, 'pending-review'), label: 'Enviar a Revisión', icon: <Send className="mr-2"/>, className: 'text-cyan-600' },
+            { condition: canSendToApproval, action: () => actions.openStatusDialog(order, 'pending-approval'), label: 'Enviar a Aprobación', icon: <ShoppingBag className="mr-2"/>, className: 'text-orange-600' },
+            { condition: canConfirmModification, action: () => actions.setOrderToConfirmModification(order), label: 'Confirmar Modificación', icon: <Check className="mr-2"/>, className: 'text-green-600 font-bold' },
+            { condition: canApprove, action: () => actions.openStatusDialog(order, 'approved'), label: 'Aprobar', icon: <Check className="mr-2"/>, className: 'text-green-600' },
+            { condition: canQueue, action: () => actions.openStatusDialog(order, 'in-queue'), label: 'Poner en Cola', icon: <Hourglass className="mr-2"/>, className: 'text-cyan-600' },
+            { condition: canStart, action: () => actions.openStatusDialog(order, 'in-progress'), label: 'Iniciar Progreso', icon: <Play className="mr-2"/>, className: 'text-blue-600' },
+            { condition: canResumeFromHold, action: () => actions.openStatusDialog(order, 'in-progress'), label: 'Reanudar Progreso', icon: <Play className="mr-2"/>, className: 'text-blue-600' },
+            { condition: canHold, action: () => actions.openStatusDialog(order, 'on-hold'), label: 'Poner en Espera', icon: <Pause className="mr-2"/>, className: 'text-gray-600' },
+            { condition: canMaintain, action: () => actions.openStatusDialog(order, 'in-maintenance'), label: 'Poner en Mantenimiento', icon: <Wrench className="mr-2"/>, className: 'text-gray-600' },
+            { condition: canComplete, action: () => actions.openStatusDialog(order, 'completed'), label: 'Marcar como Completada', icon: <PackageCheck className="mr-2"/>, className: 'text-indigo-600' },
+            { condition: canReceive, action: () => actions.openStatusDialog(order, 'received-in-warehouse'), label: 'Recibir en Bodega', icon: <PackageCheck className="mr-2"/>, className: 'text-gray-700' },
+            { condition: canRequestUnapproval, action: () => actions.openAdminActionDialog(order, 'unapproval-request'), label: 'Solicitar Desaprobación', icon: <AlertTriangle className="mr-2"/>, className: 'text-orange-600' },
+            { condition: canCancelPending, action: () => actions.openStatusDialog(order, 'canceled'), label: 'Cancelar Orden', icon: <XCircle className="mr-2"/>, className: 'text-red-600' },
+            { condition: canRequestCancel, action: () => actions.openAdminActionDialog(order, 'cancellation-request'), label: 'Solicitar Cancelación', icon: <XCircle className="mr-2"/>, className: 'text-red-600 font-bold' },
+            { condition: canReopen, action: () => { actions.setOrderToUpdate(order); actions.setReopenDialogOpen(true); }, label: 'Reabrir', icon: <Undo2 className="mr-2"/>, className: 'text-orange-600' }
+        ].filter(item => item.condition);
+
+
         return (
             <Card key={order.id} className="w-full flex flex-col">
                 <CardHeader className="p-4">
@@ -103,24 +123,15 @@ export default function PlannerPage() {
                                     <DropdownMenuSeparator/>
                                     <DropdownMenuLabel>Cambio de Estado</DropdownMenuLabel>
                                     <DropdownMenuSeparator/>
-                                    {canConfirmModification && <DropdownMenuItem onSelect={() => actions.setOrderToConfirmModification(order)} className="text-green-600 font-bold"><Check className="mr-2"/> Confirmar Modificación</DropdownMenuItem>}
-                                    {canApprove && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'approved')} className="text-green-600"><Check className="mr-2"/> Aprobar</DropdownMenuItem>}
-                                    
-                                    {canQueue && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'in-queue')} className="text-cyan-600"><Hourglass className="mr-2"/> Poner en Cola</DropdownMenuItem>}
-                                    {canStart && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'in-progress')} className="text-blue-600"><Play className="mr-2"/> Iniciar Progreso</DropdownMenuItem>}
-                                    {canResumeFromHold && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'in-progress')} className="text-blue-600"><Play className="mr-2"/> Reanudar Progreso</DropdownMenuItem>}
-                                    
-                                    {canHold && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'on-hold')} className="text-gray-600"><Pause className="mr-2"/> Poner en Espera</DropdownMenuItem>}
-                                    {canMaintain && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'in-maintenance')} className="text-gray-600"><Wrench className="mr-2"/> Poner en Mantenimiento</DropdownMenuItem>}
-                                    
-                                    {canComplete && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'completed')} className="text-indigo-600"><PackageCheck className="mr-2"/> Marcar como Completada</DropdownMenuItem>}
-                                    {canReceive && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'received-in-warehouse')} className="text-gray-700"><PackageCheck className="mr-2"/> Recibir en Bodega</DropdownMenuItem>}
-                                    <DropdownMenuSeparator/>
-                                    {canRequestUnapproval && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(order, 'unapproval-request')} className="text-orange-600"><AlertTriangle className="mr-2"/> Solicitar Desaprobación</DropdownMenuItem>}
-                                    <DropdownMenuSeparator/>
-                                    {canCancelPending && <DropdownMenuItem onSelect={() => actions.openStatusDialog(order, 'canceled')} className="text-red-600"><XCircle className="mr-2"/> Cancelar Orden</DropdownMenuItem>}
-                                    {canRequestCancel && <DropdownMenuItem onSelect={() => actions.openAdminActionDialog(order, 'cancellation-request')} className="text-red-600 font-bold"><XCircle className="mr-2"/> Solicitar Cancelación</DropdownMenuItem>}
-                                    {canReopen && <DropdownMenuItem onSelect={() => { actions.setOrderToUpdate(order); actions.setReopenDialogOpen(true); }} className="text-orange-600"><Undo2 className="mr-2"/> Reabrir</DropdownMenuItem>}
+                                    {changeStatusActions.length > 0 ? (
+                                        changeStatusActions.map(action => (
+                                            <DropdownMenuItem key={action.label} onSelect={action.action} className={action.className}>
+                                                {action.icon} {action.label}
+                                            </DropdownMenuItem>
+                                        ))
+                                    ) : (
+                                        <DropdownMenuItem disabled>No hay acciones disponibles</DropdownMenuItem>
+                                    )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -264,7 +275,7 @@ export default function PlannerPage() {
     }
     
     return (
-        <main className="flex-1 p-4 md:p-6 lg:p-8 flex flex-col">
+        <main className="flex-1 flex flex-col p-4 md:p-6">
             <div className="sticky top-0 z-10 bg-muted/40 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-4 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 md:pb-6 space-y-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <h1 className="text-lg font-semibold md:text-2xl">Órdenes de Producción</h1>
@@ -414,7 +425,7 @@ export default function PlannerPage() {
                 </Card>
             </div>
             
-            <div className="space-y-4 pt-2">
+            <div className="flex-1 overflow-auto space-y-4 pt-2">
                 {(state.isLoading && !state.isRefreshing) ? (
                     Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-56 w-full" />)
                 ) : selectors.filteredOrders.length > 0 ? (
