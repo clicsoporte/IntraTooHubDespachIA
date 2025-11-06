@@ -5,6 +5,7 @@
 
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo, FormEvent } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
@@ -13,7 +14,7 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails as updateRequestDetailsServer, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
 } from '@/modules/requests/lib/actions';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
@@ -32,6 +33,7 @@ import type { RowInput } from 'jspdf-autotable';
 import { getAllProducts as getAllProductsFromDB } from '@/modules/core/lib/db';
 import { getAllCustomers as getAllCustomersFromDB } from '@/modules/core/lib/db';
 import type { Product, Customer } from '../../core/types';
+import { useSearchParams } from 'next/navigation';
 
 
 const normalizeText = (text: string | null | undefined): string => {
@@ -40,7 +42,7 @@ const normalizeText = (text: string | null | undefined): string => {
 };
 
 const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
-    requiredDate: '',
+    requiredDate: new Date().toISOString().split('T')[0],
     clientId: '',
     clientName: '',
     clientTaxId: '',
@@ -190,6 +192,7 @@ export const useRequests = () => {
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady } = useAuth();
+    const searchParams = useSearchParams();
     
     const [state, setState] = useState<State>({
         isLoading: true,
@@ -291,17 +294,14 @@ export const useRequests = () => {
                 erpPoLines: poLines
             });
             
-            const useWarehouse = settingsData.useWarehouseReception;
-            const useErpEntry = settingsData.useErpEntry;
-
-            const finalStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
-            const archivedStatuses = `'${finalStatus}', 'canceled'`;
+            const finalStatus = settingsData.useErpEntry ? 'entered-erp' : (settingsData.useWarehouseReception ? 'received-in-warehouse' : 'ordered');
+            const archivedStatuses = [finalStatus, 'canceled'];
 
             const allRequests = requestsData.requests.map(sanitizeRequest);
             
             updateState({
-                activeRequests: allRequests.filter(req => !archivedStatuses.includes(`'${req.status}'`)),
-                archivedRequests: allRequests.filter(req => archivedStatuses.includes(`'${req.status}'`)),
+                activeRequests: allRequests.filter(req => !archivedStatuses.includes(req.status)),
+                archivedRequests: allRequests.filter(req => archivedStatuses.includes(req.status)),
                 totalArchived: requestsData.totalArchivedCount,
             });
 
@@ -331,6 +331,34 @@ export const useRequests = () => {
         loadInitialData(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.viewingArchived, state.archivedPage, state.pageSize, isAuthReady]);
+
+    // Effect to pre-fill form from URL parameters
+    useEffect(() => {
+        if (isAuthReady && state.customers.length > 0 && state.products.length > 0) {
+            const itemId = searchParams.get('itemId');
+            if (itemId) {
+                const product = state.products.find(p => p.id === itemId);
+                const customer = state.customers.find(c => c.id === searchParams.get('clientId'));
+
+                if (product) {
+                    const newRequestData: Partial<typeof emptyRequest> = {
+                        itemId: product.id,
+                        itemDescription: product.description,
+                        quantity: Number(searchParams.get('quantity')) || 1,
+                        clientId: customer?.id || '',
+                        clientName: customer?.name || '',
+                        clientTaxId: customer?.taxId || '',
+                        purchaseOrder: searchParams.get('purchaseOrder') || '',
+                        notes: searchParams.get('notes') || '',
+                        requiredDate: searchParams.get('requiredDate') || new Date().toISOString().split('T')[0],
+                    };
+                    updateState({ newRequest: { ...emptyRequest, ...newRequestData }, isNewRequestDialogOpen: true });
+                    // Clean URL
+                    window.history.replaceState({}, '', '/dashboard/requests');
+                }
+            }
+        }
+    }, [isAuthReady, searchParams, state.customers, state.products, updateState]);
 
     useEffect(() => {
         updateState({ companyData: authCompanyData });
@@ -863,7 +891,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const rawUpdated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
+            const rawUpdated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
             const updated = sanitizeRequest(rawUpdated);
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? updated : o),
@@ -902,7 +930,7 @@ export const useRequests = () => {
         // setters
         setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
             isNewRequestDialogOpen: isOpen, 
-            newRequest: { ...emptyRequest, requiredDate: '', requiresCurrency: true }, 
+            newRequest: { ...emptyRequest, requiredDate: new Date().toISOString().split('T')[0], requiresCurrency: true }, 
             clientSearchTerm: '', 
             itemSearchTerm: '' 
         }),

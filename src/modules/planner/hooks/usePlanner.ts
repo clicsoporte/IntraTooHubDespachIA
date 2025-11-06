@@ -172,17 +172,17 @@ export const usePlanner = () => {
             if (!isMounted) return;
 
             const newDynamicConfig = getStatusConfig(settingsData);
-
-            const finalStatus = settingsData?.useWarehouseReception ? 'received-in-warehouse' : 'completed';
-            const archivedStatuses = `'${finalStatus}', 'canceled'`;
+            
+            const finalArchivedStatus = settingsData.useWarehouseReception ? 'received-in-warehouse' : 'completed';
+            const archivedStatuses = [finalArchivedStatus, 'canceled'];
 
             const allOrders = [...ordersData.activeOrders, ...ordersData.archivedOrders];
-
+            
             updateState({
                 plannerSettings: settingsData,
                 dynamicStatusConfig: newDynamicConfig,
-                activeOrders: allOrders.filter(o => o.status !== finalStatus && o.status !== 'canceled'),
-                archivedOrders: allOrders.filter(o => o.status === finalStatus || o.status === 'canceled'),
+                activeOrders: allOrders.filter(o => !archivedStatuses.includes(o.status)),
+                archivedOrders: allOrders.filter(o => archivedStatuses.includes(o.status)),
                 totalArchived: ordersData.totalArchivedCount,
             });
 
