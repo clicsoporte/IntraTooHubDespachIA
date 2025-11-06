@@ -6,7 +6,7 @@
 
 import type { ProductionOrder, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, PlannerSettings, UpdateProductionOrderPayload, DateRange, PlannerNotePayload, AdministrativeActionPayload, User } from '../../core/types';
 import { logInfo, logError } from '@/modules/core/lib/logger';
-import { createNotificationForRole, createNotification } from '@/modules/core/lib/notifications-actions';
+import { createNotificationForPermission, createNotification } from '@/modules/core/lib/notifications-actions';
 import { 
     getOrders, 
     addOrder, 
@@ -53,17 +53,14 @@ export async function saveProductionOrder(order: Omit<ProductionOrder, 'id' | 'c
     const createdOrder = await addOrder(order, requestedBy);
     await logInfo(`Production order ${createdOrder.consecutive} created by ${requestedBy}`, { customer: createdOrder.customerName, product: createdOrder.productDescription, quantity: createdOrder.quantity });
 
-    const approverRoles = await getRolesWithPermission('planner:status:review');
-    for (const roleId of approverRoles) {
-        await createNotificationForRole(
-            roleId,
-            `Nueva orden ${createdOrder.consecutive} para "${createdOrder.customerName}" requiere revisión.`,
-            `/dashboard/planner?search=${createdOrder.consecutive}`,
-            createdOrder.id,
-            'production-order',
-            'review'
-        );
-    }
+    await createNotificationForPermission(
+        'planner:status:review',
+        `Nueva orden ${createdOrder.consecutive} para "${createdOrder.customerName}" requiere revisión.`,
+        `/dashboard/planner?search=${createdOrder.consecutive}`,
+        createdOrder.id,
+        'production-order',
+        'review'
+    );
 
     return createdOrder;
 }
@@ -113,6 +110,9 @@ export async function updateProductionOrderStatus(payload: UpdateStatusPayload):
                 userId: targetUser.id,
                 message: `La orden ${updatedOrder.consecutive} ha sido actualizada a: ${statusLabel}.`,
                 href: `/dashboard/planner?search=${updatedOrder.consecutive}`,
+                entityId: updatedOrder.id,
+                entityType: 'production-order',
+                entityStatus: payload.status,
             });
         }
     }
@@ -179,17 +179,14 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
 
     // --- Create Notification for Admin Action ---
     if (payload.action.includes('request')) {
-         const adminRoles = await getRolesWithPermission('admin:maintenance:reset'); // A proxy for any admin permission
-         for (const roleId of adminRoles) {
-             await createNotificationForRole(
-                roleId,
-                `El usuario ${payload.updatedBy} solicita cancelar la orden ${updatedOrder.consecutive}.`,
-                `/dashboard/planner?search=${updatedOrder.consecutive}`,
-                updatedOrder.id,
-                'production-order',
-                'cancellation-request'
-            );
-         }
+         await createNotificationForPermission(
+            'planner:status:unapprove-request:approve', // A suitable admin-level permission
+            `El usuario ${payload.updatedBy} solicita cancelar/desaprobar la orden ${updatedOrder.consecutive}.`,
+            `/dashboard/planner?search=${updatedOrder.consecutive}`,
+            updatedOrder.id,
+            'production-order',
+            'cancellation-request'
+        );
     }
 
     return updatedOrder;

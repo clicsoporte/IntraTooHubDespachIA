@@ -6,7 +6,7 @@
 
 import type { PurchaseRequest, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, RejectCancellationPayload, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader, ErpPurchaseOrderLine } from '../../core/types';
 import { logInfo, logError } from '@/modules/core/lib/logger';
-import { createNotificationForRole, createNotification } from '@/modules/core/lib/notifications-actions';
+import { createNotificationForPermission, createNotification } from '@/modules/core/lib/notifications-actions';
 import { 
     getRequests, 
     addRequest,
@@ -59,17 +59,14 @@ export async function savePurchaseRequest(request: Omit<PurchaseRequest, 'id' | 
     const createdRequest = await addRequest(request, requestedBy);
     await logInfo(`Purchase request ${createdRequest.consecutive} created by ${requestedBy}`, { item: createdRequest.itemDescription, quantity: createdRequest.quantity });
     
-    const reviewRoles = await getRolesWithPermission('requests:status:review');
-    for (const roleId of reviewRoles) {
-        await createNotificationForRole(
-            roleId,
-            `Nueva solicitud ${createdRequest.consecutive} para "${createdRequest.clientName}" requiere revisión.`,
-            `/dashboard/requests?search=${createdRequest.consecutive}`,
-            createdRequest.id,
-            'purchase-request',
-            'review'
-        );
-    }
+    await createNotificationForPermission(
+        'requests:status:review',
+        `Nueva solicitud ${createdRequest.consecutive} para "${createdRequest.clientName}" requiere revisión.`,
+        `/dashboard/requests?search=${createdRequest.consecutive}`,
+        createdRequest.id,
+        'purchase-request',
+        'review'
+    );
     
     return createdRequest;
 }
@@ -171,17 +168,14 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
     await logInfo(`Administrative action '${payload.action}' initiated for request ${updatedRequest.consecutive} by ${payload.updatedBy}.`);
     
     if (payload.action.includes('request')) {
-        const adminRoles = await getRolesWithPermission('admin:maintenance:reset'); // A proxy for any admin permission
-         for (const roleId of adminRoles) {
-             await createNotificationForRole(
-                roleId,
-                `El usuario ${payload.updatedBy} solicita cancelar la solicitud ${updatedRequest.consecutive}.`,
-                `/dashboard/requests?search=${updatedRequest.consecutive}`,
-                updatedRequest.id,
-                'purchase-request',
-                'cancellation-request'
-            );
-         }
+         await createNotificationForPermission(
+            'requests:status:approve', // A suitable admin-level permission
+            `El usuario ${payload.updatedBy} solicita cancelar la solicitud ${updatedRequest.consecutive}.`,
+            `/dashboard/requests?search=${updatedRequest.consecutive}`,
+            updatedRequest.id,
+            'purchase-request',
+            'cancellation-request'
+        );
     }
     
     return updatedRequest;
