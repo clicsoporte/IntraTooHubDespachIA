@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -407,7 +408,7 @@ export const useRequests = () => {
         if (!state.requestToUpdate || !finalStatus || !currentUser) return;
         updateState({ isSubmitting: true });
         try {
-            const updatedRequest = await updatePurchaseRequestStatus({ 
+            const rawUpdatedRequest = await updatePurchaseRequestStatus({ 
                 requestId: state.requestToUpdate.id, 
                 status: finalStatus, 
                 notes: state.statusUpdateNotes, 
@@ -418,6 +419,8 @@ export const useRequests = () => {
                 erpEntryNumber: finalStatus === 'entered-erp' ? state.erpEntryNumber : undefined,
             });
             
+            const updatedRequest = sanitizeRequest(rawUpdatedRequest);
+
             toast({ title: "Estado Actualizado" });
             
             updateState({
@@ -444,15 +447,16 @@ export const useRequests = () => {
                 const targetStatus = state.requestToUpdate.pendingAction === 'unapproval-request' ? 'pending' : 'canceled';
                 await executeStatusUpdate(targetStatus);
             } else {
-                 const updated = await updatePendingAction({
+                 const rawUpdated = await updatePendingAction({
                     entityId: state.requestToUpdate.id,
                     action: 'none',
                     notes: state.statusUpdateNotes,
                     updatedBy: currentUser.name,
                 });
+                const updated = sanitizeRequest(rawUpdated);
                 toast({ title: 'Solicitud Rechazada' });
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r)
+                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r)
                 });
             }
             updateState({ isActionDialogOpen: false });
@@ -487,14 +491,15 @@ export const useRequests = () => {
 
             updateState({ isSubmitting: true });
             try {
-                const createdRequest = await savePurchaseRequest(requestWithFormattedDate, currentUser.name);
+                const rawCreatedRequest = await savePurchaseRequest(requestWithFormattedDate, currentUser.name);
+                const createdRequest = sanitizeRequest(rawCreatedRequest);
                 toast({ title: "Solicitud Creada" });
                 updateState({
                     isNewRequestDialogOpen: false,
                     newRequest: { ...emptyRequest, requiredDate: '', requiresCurrency: true },
                     clientSearchTerm: '',
                     itemSearchTerm: '',
-                    activeRequests: [sanitizeRequest(createdRequest), ...state.activeRequests]
+                    activeRequests: [createdRequest, ...state.activeRequests]
                 });
             } catch (error: any) {
                 logError("Failed to create request", { context: 'useRequests.handleCreateRequest', error: error.message });
@@ -508,10 +513,11 @@ export const useRequests = () => {
             if (!state.requestToEdit || !currentUser) return;
             updateState({ isSubmitting: true });
             try {
-                const updated = await updatePurchaseRequest({ requestId: state.requestToEdit.id, updatedBy: currentUser.name, ...state.requestToEdit });
+                const rawUpdated = await updatePurchaseRequest({ requestId: state.requestToEdit.id, updatedBy: currentUser.name, ...state.requestToEdit });
+                const updated = sanitizeRequest(rawUpdated);
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
+                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r),
+                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? updated : r),
                     isEditRequestDialogOpen: false
                 });
                 toast({ title: "Solicitud Actualizada" });
@@ -537,15 +543,16 @@ export const useRequests = () => {
             if (!currentUser) return;
             updateState({ isSubmitting: true });
             try {
-                const updated = await updatePendingAction({
+                const rawUpdated = await updatePendingAction({
                     entityId: request.id,
                     action,
                     notes: `Solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} iniciada.`,
                     updatedBy: currentUser.name,
                 });
+                const updated = sanitizeRequest(rawUpdated);
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r)
+                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r),
+                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? updated : r)
                 });
                 toast({ title: "Solicitud Enviada", description: `Tu solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} ha sido enviada para revisión.` });
             } catch (error: any) {
@@ -887,7 +894,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
@@ -1036,3 +1043,5 @@ export const useRequests = () => {
         isAuthorized
     };
 }
+
+    
