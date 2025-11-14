@@ -1,4 +1,5 @@
 
+
 /**
  * @fileoverview Custom hook `useQuoter` for managing the state and logic of the QuoterPage component.
  * This hook encapsulates the entire business logic of the quoting tool, including state management for
@@ -97,17 +98,6 @@ const normalizeNumber = (value: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-const availableColumns = [
-  { id: "code", label: "Código", className: "min-w-[100px]" },
-  { id: "description", label: "Descripción", className: "min-w-[300px]" },
-  { id: "quantity", label: "Cant.", className: "min-w-[100px]" },
-  { id: "unit", label: "Unidad", className: "min-w-[100px]" },
-  { id: "cabys", label: "Cabys", className: "min-w-[120px]" },
-  { id: "price", label: "Precio", className: "min-w-[120px]" },
-  { id: "tax", label: "Impuesto", className: "min-w-[150px]" },
-  { id: "total", label: "Total", className: "text-right min-w-[120px]" },
-];
-
 const defaultColumnVisibility = {
   code: true,
   description: true,
@@ -119,7 +109,7 @@ const defaultColumnVisibility = {
   total: true,
 };
 
-type ColumnVisibility = typeof defaultColumnVisibility;
+export type ColumnVisibility = typeof defaultColumnVisibility;
 
 /**
  * Main hook for the Quoter component.
@@ -947,7 +937,8 @@ export const useQuoter = () => {
     displayValue: string
   ) => {
     const numericValue = normalizeNumber(displayValue);
-    const finalValue = numericValue === 0 && field === "quantity" ? 1 : numericValue;
+    const finalValue =
+      numericValue === 0 && field === "quantity" ? 1 : numericValue;
     updateLine(lineId, {
       [field]: finalValue,
       [field === "quantity" ? "displayQuantity" : "displayPrice"]:
