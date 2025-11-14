@@ -21,6 +21,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { ToastAction } from "@/components/ui/toast";
+
 
 export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
 export type SortDirection = 'asc' | 'desc';
@@ -145,6 +147,7 @@ export function usePurchaseSuggestionsLogic() {
         if(isAuthorized) {
             loadPrefsAndData();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthorized, currentUser?.id]);
 
     const filteredSuggestions = useMemo(() => {
@@ -175,6 +178,7 @@ export function usePurchaseSuggestionsLogic() {
             filtered = filtered.filter(item => state.classificationFilter.includes(item.itemClassification));
         }
 
+        // Sorting logic
         filtered.sort((a, b) => {
             const dir = state.sortDirection === 'asc' ? 1 : -1;
             const valA = a[state.sortKey];
@@ -303,7 +307,11 @@ export function usePurchaseSuggestionsLogic() {
             toast({
                 title: "Solicitudes Creadas",
                 description: `Se crearon ${createdCount} solicitudes de compra.`,
-                action: <Button onClick={() => router.push('/dashboard/requests')}>Ver Solicitudes</Button>
+                action: (
+                    <ToastAction altText="Ver Solicitudes" onClick={() => router.push('/dashboard/requests')}>
+                        Ver Solicitudes
+                    </ToastAction>
+                ),
             });
         }
         if (errorCount > 0) {
@@ -332,7 +340,7 @@ export function usePurchaseSuggestionsLogic() {
         const baseClassName = isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '';
 
         switch (colId) {
-            case 'item': {
+            case 'item':
                 return { 
                     content: (
                         <div>
@@ -342,8 +350,7 @@ export function usePurchaseSuggestionsLogic() {
                     ), 
                     className: baseClassName 
                 };
-            }
-            case 'activeRequests': {
+            case 'activeRequests':
                 if (!isDuplicate) return { content: <p className="text-xs text-muted-foreground">Ninguna</p>, className: baseClassName };
                 return { 
                     content: (
@@ -358,7 +365,7 @@ export function usePurchaseSuggestionsLogic() {
                                 <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
                                 <ul className="list-disc list-inside mt-1 text-xs">
                                     {item.existingActiveRequests.map(req => (
-                                        <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
+                                        <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity} - OC: {req.purchaseOrder} - Por: {req.requestedBy}</li>
                                     ))}
                                     <li className="font-semibold mt-1">Total activo: {totalRequestedInActive}</li>
                                 </ul>
@@ -367,8 +374,7 @@ export function usePurchaseSuggestionsLogic() {
                     ), 
                     className: baseClassName 
                 };
-            }
-             case 'sourceOrders': {
+            case 'sourceOrders':
                 return { 
                     content: (
                         <div className="text-xs text-muted-foreground space-y-0.5">
@@ -377,8 +383,7 @@ export function usePurchaseSuggestionsLogic() {
                     ), 
                     className: baseClassName 
                 };
-            }
-            case 'clients': {
+            case 'clients':
                 return { 
                     content: (
                         <div className="text-xs text-muted-foreground space-y-0.5">
@@ -387,7 +392,6 @@ export function usePurchaseSuggestionsLogic() {
                     ), 
                     className: baseClassName 
                 };
-            }
             case 'erpUsers': return { content: <p className="text-xs text-muted-foreground">{item.erpUsers.join(', ')}</p>, className: baseClassName };
             case 'creationDate': return { content: item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A', className: baseClassName };
             case 'dueDate': return { content: item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A', className: baseClassName };
@@ -411,7 +415,7 @@ export function usePurchaseSuggestionsLogic() {
                     case 'item': return `${item.itemDescription} (${item.itemId})`;
                     case 'activeRequests': return item.existingActiveRequests.map(r => r.consecutive).join(', ');
                     case 'sourceOrders': return item.sourceOrders.join(', ');
-                    case 'clients': return item.involvedClients.map(c => c.name).join(', ');
+                    case 'clients': return item.involvedClients.map((c: any) => c.name).join(', ');
                     case 'erpUsers': return item.erpUsers.join(', ');
                     case 'creationDate': return item.earliestCreationDate ? new Date(item.earliestCreationDate).toLocaleDateString('es-CR') : 'N/A';
                     case 'dueDate': return item.earliestDueDate ? new Date(item.earliestDueDate).toLocaleDateString('es-CR') : 'N/A';
