@@ -268,12 +268,14 @@ export default function QuoterPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-3 pt-0 grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
-                      <div>
-                        Cédula:{" "}
-                        <span className="font-medium text-foreground">
-                          {state.selectedCustomer.taxId}
-                        </span>
-                      </div>
+                      {state.companyData?.quoterShowTaxId && (
+                        <div>
+                            Cédula:{" "}
+                            <span className="font-medium text-foreground">
+                            {state.selectedCustomer.taxId}
+                            </span>
+                        </div>
+                      )}
                       <div>
                         Límite Crédito:{" "}
                         <span className="font-medium text-foreground">
@@ -460,7 +462,7 @@ export default function QuoterPage() {
                                     <Checkbox
                                         id={`col-${column.id}`}
                                         checked={state.columnVisibility[column.id as keyof ColumnVisibility]}
-                                        onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id as keyof ColumnVisibility, !!checked)}
+                                        onCheckedChange={(checked) => actions.handleColumnVisibilityChange(column.id, !!checked)}
                                     />
                                     <Label htmlFor={`col-${column.id}`} className="font-normal flex-1 cursor-pointer">{column.label}</Label>
                                 </div>

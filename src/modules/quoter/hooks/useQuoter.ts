@@ -111,6 +111,17 @@ const defaultColumnVisibility = {
 
 export type ColumnVisibility = typeof defaultColumnVisibility;
 
+const availableColumns: { id: keyof ColumnVisibility; label: string; className?: string }[] = [
+    { id: 'code', label: 'Código', className: 'w-[150px]' },
+    { id: 'description', label: 'Descripción', className: 'w-[400px]' },
+    { id: 'quantity', label: 'Cantidad', className: 'w-[120px]' },
+    { id: 'unit', label: 'Unidad', className: 'w-[100px]' },
+    { id: 'cabys', label: 'CABYS', className: 'w-[150px]' },
+    { id: 'price', label: 'Precio', className: 'w-[150px]' },
+    { id: 'tax', label: 'Impuesto', className: 'w-[180px]' },
+    { id: 'total', label: 'Total', className: 'w-[180px]' },
+];
+
 /**
  * Main hook for the Quoter component.
  * @returns An object containing the quoter's state, actions, refs, and memoized selectors.
@@ -634,7 +645,7 @@ export const useQuoter = () => {
         .padStart(4, "0")}`
     );
   };
-
+  
   const handleSaveDecimalPlaces = async () => {
     if (!companyData) return;
     const newCompanyData = { ...companyData, decimalPlaces };
@@ -648,124 +659,106 @@ export const useQuoter = () => {
       newPrecision: decimalPlaces,
     });
   };
-
+  
   const generatePDF = async () => {
     if (!isReady || !companyData) {
-      toast({
-        title: "Por favor espere",
-        description:
-          "Los datos de configuración de la empresa aún se están cargando.",
-        variant: "destructive",
-      });
-      return;
+        toast({
+            title: "Por favor espere",
+            description:
+            "Los datos de configuración de la empresa aún se están cargando.",
+            variant: "destructive",
+        });
+        return;
     }
     setIsProcessing(true);
-
+    
     let logoDataUrl: string | null = null;
     if (companyData.logoUrl) {
-      try {
-        const response = await fetch(companyData.logoUrl);
-        const blob = await response.blob();
-        logoDataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-      } catch (e) {
-        console.error("Error fetching and processing logo:", e);
-      }
+        try {
+            const response = await fetch(companyData.logoUrl);
+            const blob = await response.blob();
+            logoDataUrl = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error("Error fetching and processing logo:", e);
+        }
     }
 
-    const tableRows: RowInput[] = lines.map((line) => [
-      line.product.id,
-      line.product.description,
-      {
-        content: `${line.quantity.toLocaleString("es-CR")}\n${
-          line.product.unit
-        }`,
-        styles: { halign: "center" } as any,
-      },
-      line.product.cabys,
-      {
-        content: formatCurrency(line.price),
-        styles: { halign: "right" } as any,
-      },
-      {
-        content: `${(line.tax * 100).toFixed(0)}%`,
-        styles: { halign: "center" } as any,
-      },
-      {
-        content: formatCurrency(line.quantity * line.price * (1 + line.tax)),
-        styles: { halign: "right" } as any,
-      },
+    const tableRows: RowInput[] = lines.map(line => [
+        line.product.id,
+        line.product.description,
+        { content: `${line.quantity.toLocaleString('es-CR')}\n${line.product.unit}`, styles: { halign: 'center' } as any },
+        line.product.cabys,
+        { content: formatCurrency(line.price), styles: { halign: 'right' } as any },
+        { content: `${(line.tax * 100).toFixed(0)}%`, styles: { halign: 'center' } as any },
+        { content: formatCurrency(line.quantity * line.price * (1 + line.tax)), styles: { halign: 'right' } as any },
     ]);
-
+    
     const doc = generateDocument({
-      docTitle: "COTIZACIÓN",
-      docId: quoteNumber,
-      meta: [
-        { label: "Fecha", value: format(parseISO(quoteDate), "dd/MM/yyyy") },
-        {
-          label: "Válida hasta",
-          value: format(parseISO(validUntilDate), "dd/MM/yyyy"),
-        },
-        ...(purchaseOrderNumber
-          ? [{ label: "Nº OC", value: purchaseOrderNumber }]
-          : []),
-      ],
-      companyData: companyData,
-      logoDataUrl,
-      sellerInfo: {
-        name: sellerName,
-        email: sellerType === "user" ? currentUser?.email : undefined,
-        phone: sellerType === "user" ? currentUser?.phone : undefined,
-        whatsapp: sellerType === "user" ? currentUser?.whatsapp : undefined,
-      },
-      blocks: [
-        { title: "Cliente", content: customerDetails },
-        {
-          title: "Entrega",
-          content: `Dirección: ${deliveryAddress}\nFecha Entrega: ${
-            deliveryDate
-              ? format(parseISO(deliveryDate), "dd/MM/yyyy HH:mm")
-              : "N/A"
-          }`,
-        },
-      ],
-      table: {
-        columns: [
-          "Código",
-          "Descripción",
-          { content: "Cant. / Und.", styles: { halign: "center" } },
-          "Cabys",
-          "Precio",
-          { content: "Imp. %", styles: { halign: "center" } },
-          "Total",
+        docTitle: "COTIZACIÓN",
+        docId: quoteNumber,
+        meta: [
+            { label: 'Fecha', value: format(parseISO(quoteDate), "dd/MM/yyyy") },
+            { label: 'Válida hasta', value: format(parseISO(validUntilDate), "dd/MM/yyyy") },
+            ...(purchaseOrderNumber ? [{ label: 'Nº OC', value: purchaseOrderNumber }] : [])
         ],
-        rows: tableRows,
-        columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: "auto" },
-          2: { cellWidth: 45, halign: "center" },
-          3: { cellWidth: 70 },
-          4: { cellWidth: 60, halign: "right" },
-          5: { cellWidth: 30, halign: "center" },
-          6: { cellWidth: 70, halign: "right" },
+        companyData: companyData,
+        logoDataUrl,
+        sellerInfo: {
+            name: sellerName,
+            email: sellerType === 'user' ? currentUser?.email : undefined,
+            phone: sellerType === 'user' ? currentUser?.phone : undefined,
+            whatsapp: sellerType === 'user' ? currentUser?.whatsapp : undefined
         },
-      },
-      notes: notes,
-      paymentInfo: selectedCustomer
-        ? paymentTerms === "credito"
-          ? `Crédito ${creditDays} días`
-          : "Contado"
-        : undefined,
-      totals: [
-        { label: "Subtotal:", value: formatCurrency(totals.subtotal) },
-        { label: "Impuestos:", value: formatCurrency(totals.totalTaxes) },
-        { label: "Total:", value: formatCurrency(totals.total) },
-      ],
+        blocks: [
+            { title: 'Cliente', content: customerDetails },
+            {
+                title: 'Entrega',
+                content: `Dirección: ${deliveryAddress}\nFecha Entrega: ${
+                    deliveryDate
+                    ? format(parseISO(deliveryDate), "dd/MM/yyyy HH:mm")
+                    : 'N/A'
+                }`,
+            },
+        ],
+        table: {
+            columns: [
+                "Código", 
+                "Descripción", 
+                { content: "Cant. / Und.", styles: { halign: 'center' } }, 
+                "Cabys", 
+                "Precio", 
+                { content: "Imp. %", styles: { halign: 'center' } }, 
+                "Total"
+            ],
+            rows: tableRows,
+            columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 45, halign: 'center' },
+                3: { cellWidth: 70 },
+                4: { cellWidth: 60, halign: 'right' },
+                5: { cellWidth: 30, halign: 'center' },
+                6: { cellWidth: 70, halign: 'right' },
+            }
+        },
+        notes: notes,
+        paymentInfo:
+        selectedCustomer && paymentTerms
+            ? paymentTerms === "credito"
+            ? `Crédito ${creditDays} días`
+            : "Contado"
+            : undefined,
+        totals: [
+            { label: 'Subtotal:', value: formatCurrency(totals.subtotal) },
+            { label: 'Impuestos:', value: formatCurrency(totals.totalTaxes) },
+            { label: `Total ${currency}:`, value: formatCurrency(totals.total) },
+        ]
     });
-
+    
     doc.save(`${quoteNumber}.pdf`);
     toast({
       title: "Cotización Generada",
@@ -930,7 +923,7 @@ export const useQuoter = () => {
       variant: "destructive",
     });
   };
-
+  
   const handleNumericInputBlur = (
     lineId: string,
     field: "quantity" | "price",
@@ -963,10 +956,10 @@ export const useQuoter = () => {
   };
 
   const handleColumnVisibilityChange = (
-    column: keyof ColumnVisibility,
+    columnId: keyof ColumnVisibility,
     checked: boolean
   ) => {
-    setColumnVisibility((prev) => ({ ...prev, [column]: checked }));
+    setColumnVisibility((prev) => ({ ...prev, [columnId]: checked }));
   };
 
   const handleSaveColumnVisibility = async () => {
