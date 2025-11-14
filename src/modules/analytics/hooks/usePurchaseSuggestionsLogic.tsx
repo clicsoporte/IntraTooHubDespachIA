@@ -20,15 +20,11 @@ import { useDebounce } from 'use-debounce';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { useRouter } from 'next/navigation';
 import { ToastAction } from "@/components/ui/toast";
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { Info } from 'lucide-react';
-
 
 export type SortKey = keyof Pick<PurchaseSuggestion, 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | 'erpUsers' | 'sourceOrders' | 'involvedClients'> | 'item';
 export type SortDirection = 'asc' | 'desc';
 
-const availableColumns = [
+export const availableColumns = [
     { id: 'item', label: 'Artículo', tooltip: 'Código y descripción del artículo con faltante de inventario.', sortable: true },
     { id: 'activeRequests', label: 'Solicitudes Activas (SC)', tooltip: 'Muestra si ya existen solicitudes de compra activas en Clic-Tools para este artículo.' },
     { id: 'sourceOrders', label: 'Pedidos Origen', tooltip: 'Números de pedido del ERP que requieren este artículo.', sortable: true, sortKey: 'sourceOrders' as SortKey },
@@ -341,78 +337,6 @@ export function usePurchaseSuggestionsLogic() {
         });
     };
     
-    // Returns data, not JSX
-    const getColumnContent = (item: PurchaseSuggestion, colId: string): { type: string, data: any, className?: string } => {
-        const isDuplicate = item.existingActiveRequests.length > 0;
-        const totalRequestedInActive = item.existingActiveRequests.reduce((sum, req) => sum + req.quantity, 0);
-
-        const baseClassName = isDuplicate ? 'bg-amber-50 dark:bg-amber-900/20' : '';
-
-        switch (colId) {
-            case 'item':
-                return { type: 'item', data: { id: item.itemId, description: item.itemDescription }, className: baseClassName };
-            case 'activeRequests': {
-                if (!isDuplicate) return { type: 'string', data: 'Ninguna', className: baseClassName };
-                const tooltipContent = (
-                    <div>
-                        <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
-                        <ul className="list-disc list-inside mt-1 text-xs">
-                            {item.existingActiveRequests.map(req => (
-                                <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity} - OC: {req.purchaseOrder} - Por: {req.requestedBy}</li>
-                            ))}
-                            <li className="font-semibold mt-1">Total activo: {totalRequestedInActive}</li>
-                        </ul>
-                    </div>
-                );
-                return { type: 'reactNode', data: (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800">
-                                <Info className="h-3 w-3" />
-                                {totalRequestedInActive.toLocaleString()}
-                            </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {tooltipContent}
-                        </TooltipContent>
-                    </Tooltip>
-                ), className: baseClassName };
-            }
-            case 'sourceOrders': {
-                const content = (
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                        {item.sourceOrders.map(order => <div key={order}>{order}</div>)}
-                    </div>
-                );
-                return { type: 'reactNode', data: content, className: baseClassName };
-            }
-            case 'clients': {
-                const content = (
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                        {item.involvedClients.map(client => <div key={client.id} className="truncate" title={`${client.name} (${client.id})`}>{client.name}</div>)}
-                    </div>
-                );
-                return { type: 'reactNode', data: content, className: baseClassName };
-            }
-            case 'erpUsers':
-                return { type: 'string', data: item.erpUsers.join(', '), className: `text-xs text-muted-foreground ${baseClassName}` };
-            case 'creationDate':
-                return { type: 'date', data: item.earliestCreationDate, className: baseClassName };
-            case 'dueDate':
-                return { type: 'date', data: item.earliestDueDate, className: baseClassName };
-            case 'required':
-                return { type: 'number', data: item.totalRequired, className: `text-right ${baseClassName}` };
-            case 'stock':
-                return { type: 'number', data: item.currentStock, className: `text-right ${baseClassName}` };
-            case 'inTransit':
-                return { type: 'number', data: item.inTransitStock, className: `text-right font-semibold text-blue-600 ${baseClassName}` };
-            case 'shortage':
-                return { type: 'number', data: item.shortage, className: `text-right font-bold text-red-600 ${baseClassName}` };
-            default:
-                return { type: 'string', data: '', className: baseClassName };
-        }
-    };
-    
     const visibleColumnsData = useMemo(() => {
         return state.visibleColumns.map(id => availableColumns.find(col => col.id === id)).filter(Boolean) as (typeof availableColumns)[0][];
     }, [state.visibleColumns]);
@@ -510,7 +434,6 @@ export function usePurchaseSuggestionsLogic() {
         , [products]),
         availableColumns,
         visibleColumnsData,
-        getColumnContent,
         getInTransitStock,
     };
 

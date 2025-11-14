@@ -6,7 +6,7 @@
 'use client';
 
 import React from 'react';
-import { usePurchaseSuggestionsLogic, type SortKey } from '@/modules/analytics/hooks/usePurchaseSuggestionsLogic';
+import { usePurchaseSuggestionsLogic, type SortKey, availableColumns } from '@/modules/analytics/hooks/usePurchaseSuggestionsLogic';
 import type { PurchaseSuggestion } from '@/modules/core/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -28,6 +28,55 @@ import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
+
+
+// This component is now responsible for rendering the complex cell content.
+const CellContent: React.FC<{ item: PurchaseSuggestion; colId: string; selectors: ReturnType<typeof usePurchaseSuggestionsLogic>['selectors'] }> = ({ item, colId, selectors }) => {
+    const data = selectors.getColumnContent(item, colId);
+    
+    switch (data.type) {
+        case 'item':
+            return (
+                <div>
+                    <p className="font-medium">{data.data.description}</p>
+                    <p className="text-sm text-muted-foreground">{data.data.id}</p>
+                </div>
+            );
+        case 'activeRequests':
+            if (!data.data) return <p className="text-xs text-muted-foreground">Ninguna</p>;
+            return (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800">
+                            <Info className="h-3 w-3" />
+                            {data.data.total.toLocaleString()}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
+                        <ul className="list-disc list-inside mt-1 text-xs">
+                            {data.data.requests.map((req: any) => (
+                                <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity} - Por: {req.requestedBy}</li>
+                            ))}
+                            <li className="font-semibold mt-1">Total activo: {data.data.total}</li>
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            );
+        case 'array':
+            return (
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                    {data.data.map((val: string, i: number) => <div key={i}>{val}</div>)}
+                </div>
+            );
+        case 'date':
+            return data.data ? new Date(data.data).toLocaleDateString('es-CR') : 'N/A';
+        case 'number':
+            return data.data.toLocaleString();
+        default:
+            return data.data;
+    }
+};
 
 
 export default function PurchaseSuggestionsPage() {
@@ -62,6 +111,11 @@ export default function PurchaseSuggestionsPage() {
     if (isAuthorized === false) {
         return null;
     }
+
+    const renderSortIcon = (key: SortKey) => {
+        if (sortKey !== key) return null;
+        return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+    };
 
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
@@ -174,7 +228,7 @@ export default function PurchaseSuggestionsPage() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <DialogColumnSelector
-                                    allColumns={selectors.availableColumns}
+                                    allColumns={availableColumns}
                                     visibleColumns={visibleColumns}
                                     onColumnChange={actions.handleColumnVisibilityChange}
                                     onSave={actions.savePreferences}
@@ -227,25 +281,16 @@ export default function PurchaseSuggestionsPage() {
                                                     />
                                                 </TableCell>
                                                 {visibleColumns.map((colId: string) => {
-                                                    const colData = selectors.getColumnContent(item, colId);
+                                                    const { className } = selectors.getColumnContent(item, colId);
                                                     return (
-                                                        <TableCell key={colId} className={cn(colData.className)}>
-                                                            {colData.content}
+                                                        <TableCell key={colId} className={cn(className)}>
+                                                          <CellContent item={item} colId={colId} selectors={selectors} />
                                                         </TableCell>
                                                     )
                                                 })}
                                             </TableRow>
                                         ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={selectors.visibleColumnsData.length + 1} className="h-32 text-center">
-                                                <div className="flex flex-col items-center justify-center gap-2">
-                                                    <AlertCircle className="h-8 w-8 text-muted-foreground" />
-                                                    <p className="text-muted-foreground">No se encontraron faltantes para los filtros seleccionados.</p>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
+                                    ) : (<TableRow><TableCell colSpan={selectors.visibleColumnsData.length + 1} className="h-32 text-center"><div className="flex flex-col items-center justify-center gap-2"><AlertCircle className="h-8 w-8 text-muted-foreground" /><p className="text-muted-foreground">No se encontraron faltantes para los filtros seleccionados.</p></div></TableCell></TableRow>)}
                                 </TableBody>
                             </Table>
                         </ScrollArea>

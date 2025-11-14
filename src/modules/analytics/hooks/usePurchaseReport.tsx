@@ -14,9 +14,5 @@ export function usePurchaseReport() {
 
     // Here, we could override or omit certain actions if this report needed
     // to have a strictly read-only behavior, but for now, we pass everything through.
-    // For example, if we wanted to disable saving preferences from this view:
-    // const { savePreferences, ...safeActions } = suggestionsLogic.actions;
-    // return { ...suggestionsLogic, actions: safeActions };
-
     return suggestionsLogic;
 }

@@ -512,11 +512,10 @@ export const useRequests = () => {
             if (!state.requestToEdit || !currentUser) return;
             updateState({ isSubmitting: true });
             try {
-                const rawUpdated = await updatePurchaseRequest({ requestId: state.requestToEdit.id, updatedBy: currentUser.name, ...state.requestToEdit });
-                const updated = sanitizeRequest(rawUpdated);
+                const updated = await updatePurchaseRequest({ requestId: state.requestToEdit.id, updatedBy: currentUser.name, ...state.requestToEdit });
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? updated : r),
+                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
+                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
                     isEditRequestDialogOpen: false
                 });
                 toast({ title: "Solicitud Actualizada" });
@@ -542,16 +541,15 @@ export const useRequests = () => {
             if (!currentUser) return;
             updateState({ isSubmitting: true });
             try {
-                const rawUpdated = await updatePendingAction({
+                const updated = await updatePendingAction({
                     entityId: request.id,
                     action,
                     notes: `Solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} iniciada.`,
                     updatedBy: currentUser.name,
                 });
-                const updated = sanitizeRequest(rawUpdated);
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? updated : r)
+                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
+                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r)
                 });
                 toast({ title: "Solicitud Enviada", description: `Tu solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} ha sido enviada para revisión.` });
             } catch (error: any) {
