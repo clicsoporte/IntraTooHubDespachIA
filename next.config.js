@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Trivial change to invalidate cache and force a clean rebuild.
   swcMinify: true,
   images: {
     remotePatterns: [

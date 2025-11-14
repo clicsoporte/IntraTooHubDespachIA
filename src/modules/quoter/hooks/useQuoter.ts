@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Custom hook `useQuoter` for managing the state and logic of the QuoterPage component.
  * This hook encapsulates the entire business logic of the quoting tool, including state management for
@@ -138,8 +139,8 @@ export const useQuoter = () => {
   const [creditDays, setCreditDays] = useState(initialQuoteState.creditDays);
   const [validUntilDate, setValidUntilDate] = useState(initialQuoteState.validUntilDate);
   const [notes, setNotes] = useState(initialQuoteState.notes);
-  const [showInactiveCustomers, setShowInactiveCustomers] = useState(false);
-  const [showInactiveProducts, setShowInactiveProducts] = useState(false);
+  const [showInactiveCustomers, setShowInactiveCustomers] = useState(showInactiveCustomers);
+  const [showInactiveProducts, setShowInactiveProducts] = useState(showInactiveProducts);
   const [selectedLineForInfo, setSelectedLineForInfo] = useState<QuoteLine | null>(null);
   const [savedDrafts, setSavedDrafts] = useState<(QuoteDraft & { customer: Customer | null})[]>([]);
   const [decimalPlaces, setDecimalPlaces] = useState(initialQuoteState.decimalPlaces);
@@ -593,7 +594,7 @@ export const useQuoter = () => {
     setExchangeRate(apiExchangeRate);
     setSellerType("user");
     setPaymentTerms(initialQuoteState.paymentTerms);
-    setCreditDays(initialQuoteState.creditDays);
+    setCreditDays(initialQuoteDays);
     const validDate = new Date();
     validDate.setDate(today.getDate() + 8);
     setValidUntilDate(validDate.toISOString().substring(0, 10));
@@ -782,3 +783,6 @@ export const useQuoter = () => {
     selectors,
   };
 };
+
+
+    
