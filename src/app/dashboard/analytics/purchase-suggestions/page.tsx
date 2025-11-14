@@ -6,14 +6,14 @@
 'use client';
 
 import React from 'react';
-import { useRequestSuggestions, type SortKey } from '@/modules/requests/hooks/useRequestSuggestions';
+import { usePurchaseSuggestionsLogic, type SortKey } from '@/modules/analytics/hooks/usePurchaseSuggestionsLogic';
 import type { PurchaseSuggestion } from '@/modules/core/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from '@/components/ui/input';
 import { Loader2, CalendarIcon, FilePlus, Layers, AlertCircle, ShoppingCart, FilterX, Search, FileSpreadsheet, Columns3, ArrowUp, ArrowDown, Info, ChevronLeft, ChevronRight, Save } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +37,7 @@ export default function PurchaseSuggestionsPage() {
         selectors,
         isAuthorized,
         isInitialLoading,
-    } = useRequestSuggestions();
+    } = usePurchaseSuggestionsLogic();
 
     const { isLoading, dateRange, selectedItems, isSubmitting, searchTerm, classificationFilter, visibleColumns, showOnlyMyOrders, sortKey, sortDirection, itemsToCreate, isDuplicateConfirmOpen, currentPage, rowsPerPage } = state;
     const { paginatedSuggestions } = selectors;
@@ -287,7 +287,7 @@ export default function PurchaseSuggestionsPage() {
                         <AlertDialogDescription>
                             <p>Uno o más artículos que seleccionaste ya tienen solicitudes de compra activas. ¿Estás seguro de que quieres crear solicitudes adicionales?</p>
                             <div className="mt-4 max-h-40 overflow-y-auto space-y-2 border p-2 rounded-md">
-                                {itemsToCreate.filter(item => item.existingActiveRequests.length > 0).map(item => (
+                                {itemsToCreate.map(item => (
                                     <div key={item.itemId}>
                                         <p className="font-semibold">{item.itemDescription}</p>
                                         <ul className="list-disc list-inside text-xs text-muted-foreground">
@@ -309,3 +309,5 @@ export default function PurchaseSuggestionsPage() {
         </main>
     );
 }
+
+    

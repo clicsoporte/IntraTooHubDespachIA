@@ -14,12 +14,12 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails as updateRequestDetailsServer, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
 } from '@/modules/requests/lib/actions';
-import type { 
+import { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, PurchaseSuggestion, ErpPurchaseOrderHeader, ErpPurchaseOrderLine
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, ErpPurchaseOrderLine,
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -294,7 +294,10 @@ export const useRequests = () => {
                 erpPoLines: poLines
             });
             
-            const finalStatus = settingsData.useErpEntry ? 'entered-erp' : (settingsData.useWarehouseReception ? 'received-in-warehouse' : 'ordered');
+            const useWarehouse = settingsData.useWarehouseReception;
+            const useErpEntry = settingsData.useErpEntry;
+
+            const finalStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
             const archivedStatuses = [finalStatus, 'canceled'];
 
             const allRequests = requestsData.requests.map(sanitizeRequest);
@@ -423,7 +426,6 @@ export const useRequests = () => {
                 isStatusDialogOpen: false,
                 isActionDialogOpen: false,
             });
-            // Reload data to correctly move items between active/archived lists
             await loadInitialData(true);
 
         } catch (error: any) {
@@ -844,8 +846,8 @@ export const useRequests = () => {
                     rows: tableRows,
                     columnStyles: selectedColumnIds.reduce((acc, id, index) => {
                         const col = allPossibleColumns.find(c => c.id === id);
-                        if (col?.width) { acc[index] = { cellWidth: col.width }; }
-                        if (id === 'quantity') { acc[index] = { ...acc[index], halign: 'right' }; }
+                        if (col?.width) { (acc as any)[index] = { cellWidth: col.width }; }
+                        if (id === 'quantity') { (acc as any)[index] = { ...(acc as any)[index], halign: 'right' }; }
                         return acc;
                     }, {} as { [key: number]: any })
                 },
@@ -891,8 +893,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const rawUpdated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
-            const updated = sanitizeRequest(rawUpdated);
+            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? updated : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? updated : o)
@@ -1041,3 +1042,5 @@ export const useRequests = () => {
         isAuthorized
     };
 }
+
+    
