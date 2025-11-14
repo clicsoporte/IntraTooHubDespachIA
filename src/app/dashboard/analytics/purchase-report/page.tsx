@@ -28,31 +28,31 @@ import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 import type { PurchaseSuggestion } from '@/modules/core/types';
 
 // New internal component to render cell content based on type
-const CellRenderer: React.FC<{ item: PurchaseSuggestion, colId: string, selectors: ReturnType<typeof usePurchaseReport>['selectors'] }> = ({ item, colId, selectors }) => {
-    const cell = selectors.getColumnContent(item, colId);
+const CellContent: React.FC<{ item: PurchaseSuggestion, colId: string, selectors: ReturnType<typeof usePurchaseReport>['selectors'] }> = ({ item, colId, selectors }) => {
+    const { data, type, className } = selectors.getColumnContent(item, colId);
 
-    if (cell.type === 'reactNode') {
-        return <>{cell.data}</>;
+    if (type === 'reactNode') {
+        return <div className={className}>{data}</div>;
     }
     
-    if (cell.type === 'item') {
+    if (type === 'item') {
         return (
-            <div>
-                <p className="font-medium">{cell.data.description}</p>
-                <p className="text-sm text-muted-foreground">{cell.data.id}</p>
+            <div className={className}>
+                <p className="font-medium">{data.description}</p>
+                <p className="text-sm text-muted-foreground">{data.id}</p>
             </div>
         );
     }
     
-    if (cell.type === 'date') {
-        return <>{cell.data ? new Date(cell.data).toLocaleDateString('es-CR') : 'N/A'}</>;
+    if (type === 'date') {
+        return <div className={className}>{data ? new Date(data).toLocaleDateString('es-CR') : 'N/A'}</div>;
     }
     
-    if (cell.type === 'number') {
-        return <>{(cell.data ?? 0).toLocaleString()}</>;
+    if (type === 'number') {
+        return <div className={className}>{(data ?? 0).toLocaleString()}</div>;
     }
     
-    return <>{cell.data}</>;
+    return <div className={className}>{data}</div>;
 };
 
 export default function PurchaseReportPage() {
@@ -168,10 +168,11 @@ export default function PurchaseReportPage() {
                                     {isLoading ? Array.from({ length: 5 }).map((_, i) => (<TableRow key={i}><TableCell colSpan={selectors.visibleColumnsData.length + 1}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)) : paginatedSuggestions.length > 0 ? (
                                         paginatedSuggestions.map((item: PurchaseSuggestion) => (
                                             <TableRow key={item.itemId}>
-                                                {state.visibleColumns.map((colId: string) => {
-                                                    const cellData = selectors.getColumnContent(item, colId);
-                                                    return <TableCell key={colId} className={cn(cellData.className)}><CellRenderer item={item} colId={colId} selectors={selectors} /></TableCell>;
-                                                })}
+                                                {state.visibleColumns.map((colId: string) => (
+                                                    <TableCell key={colId}>
+                                                        <CellContent item={item} colId={colId} selectors={selectors} />
+                                                    </TableCell>
+                                                ))}
                                             </TableRow>
                                         ))
                                     ) : (<TableRow><TableCell colSpan={selectors.visibleColumnsData.length + 1} className="h-32 text-center"><p className="text-muted-foreground">No se encontraron resultados para los filtros seleccionados.</p></TableCell></TableRow>)}

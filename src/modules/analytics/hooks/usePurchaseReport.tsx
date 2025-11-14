@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Hook to manage the logic for the purchase report page.
  * This hook now delegates its logic to the centralized `usePurchaseSuggestionsLogic`
@@ -16,3 +17,5 @@ export function usePurchaseReport() {
     // to have a strictly read-only behavior, but for now, we pass everything through.
     return suggestionsLogic;
 }
+
+    

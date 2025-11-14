@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Page for proactive purchase suggestions.
  * This component now correctly uses the centralized `usePurchaseSuggestionsLogic` hook
@@ -29,53 +30,53 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
-
 // This component is now responsible for rendering the complex cell content.
 const CellContent: React.FC<{ item: PurchaseSuggestion; colId: string; selectors: ReturnType<typeof usePurchaseSuggestionsLogic>['selectors'] }> = ({ item, colId, selectors }) => {
-    const data = selectors.getColumnContent(item, colId);
-    
-    switch (data.type) {
-        case 'item':
+    const { data, type, className } = selectors.getColumnContent(item, colId);
+
+    if (type === 'reactNode') {
+        if (colId === 'activeRequests' && data) {
             return (
-                <div>
-                    <p className="font-medium">{data.data.description}</p>
-                    <p className="text-sm text-muted-foreground">{data.data.id}</p>
-                </div>
-            );
-        case 'activeRequests':
-            if (!data.data) return <p className="text-xs text-muted-foreground">Ninguna</p>;
-            return (
-                <Tooltip>
+                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800">
+                        <span className={cn("inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800", className)}>
                             <Info className="h-3 w-3" />
-                            {data.data.total.toLocaleString()}
+                            {data.total.toLocaleString()}
                         </span>
                     </TooltipTrigger>
                     <TooltipContent>
                         <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
                         <ul className="list-disc list-inside mt-1 text-xs">
-                            {data.data.requests.map((req: any) => (
-                                <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity} - Por: {req.requestedBy}</li>
+                            {data.requests.map((req: any) => (
+                                <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
                             ))}
-                            <li className="font-semibold mt-1">Total activo: {data.data.total}</li>
+                            <li className="font-semibold mt-1">Total activo: {data.total}</li>
                         </ul>
                     </TooltipContent>
                 </Tooltip>
             );
-        case 'array':
-            return (
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                    {data.data.map((val: string, i: number) => <div key={i}>{val}</div>)}
-                </div>
-            );
-        case 'date':
-            return data.data ? new Date(data.data).toLocaleDateString('es-CR') : 'N/A';
-        case 'number':
-            return data.data.toLocaleString();
-        default:
-            return data.data;
+        }
+        return <div className={className}>{data}</div>;
     }
+
+    if (type === 'item') {
+        return (
+            <div className={className}>
+                <p className="font-medium">{data.description}</p>
+                <p className="text-sm text-muted-foreground">{data.id}</p>
+            </div>
+        );
+    }
+    
+    if (type === 'date') {
+        return <div className={className}>{data ? new Date(data).toLocaleDateString('es-CR') : 'N/A'}</div>;
+    }
+    
+    if (type === 'number') {
+        return <div className={className}>{(data ?? 0).toLocaleString()}</div>;
+    }
+    
+    return <div className={className}>{data}</div>;
 };
 
 
@@ -280,14 +281,11 @@ export default function PurchaseSuggestionsPage() {
                                                         onCheckedChange={() => actions.toggleItemSelection(item.itemId)}
                                                     />
                                                 </TableCell>
-                                                {visibleColumns.map((colId: string) => {
-                                                    const { className } = selectors.getColumnContent(item, colId);
-                                                    return (
-                                                        <TableCell key={colId} className={cn(className)}>
-                                                          <CellContent item={item} colId={colId} selectors={selectors} />
-                                                        </TableCell>
-                                                    )
-                                                })}
+                                                {visibleColumns.map((colId: string) => (
+                                                    <TableCell key={colId}>
+                                                        <CellContent item={item} colId={colId} selectors={selectors} />
+                                                    </TableCell>
+                                                ))}
                                             </TableRow>
                                         ))
                                     ) : (<TableRow><TableCell colSpan={selectors.visibleColumnsData.length + 1} className="h-32 text-center"><div className="flex flex-col items-center justify-center gap-2"><AlertCircle className="h-8 w-8 text-muted-foreground" /><p className="text-muted-foreground">No se encontraron faltantes para los filtros seleccionados.</p></div></TableCell></TableRow>)}
@@ -354,3 +352,5 @@ export default function PurchaseSuggestionsPage() {
         </main>
     );
 }
+
+    
