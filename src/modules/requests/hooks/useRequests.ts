@@ -14,7 +14,9 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, saveCostAnalysis as saveCostAnalysisServer
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, 
+    getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines,
+    saveCostAnalysis as saveCostAnalysisServer
 } from '@/modules/requests/lib/actions';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
@@ -187,6 +189,16 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
       sanitized.involvedClients = [];
   }
 
+  try {
+      if (sanitized.analysis && typeof sanitized.analysis === 'string') {
+          sanitized.analysis = JSON.parse(sanitized.analysis);
+      } else if (typeof sanitized.analysis !== 'object' || sanitized.analysis === null) {
+          sanitized.analysis = null;
+      }
+  } catch {
+      sanitized.analysis = null;
+  }
+
   return sanitized as PurchaseRequest;
 };
 
@@ -311,8 +323,8 @@ export const useRequests = () => {
             const allRequests = requestsData.requests.map(sanitizeRequest);
             
             updateState({
-                activeRequests: allRequests.filter(req => !archivedStatuses.includes(req.status)),
-                archivedRequests: allRequests.filter(req => archivedStatuses.includes(req.status)),
+                activeRequests: allRequests.filter((req: PurchaseRequest) => !archivedStatuses.includes(req.status)),
+                archivedRequests: allRequests.filter((req: PurchaseRequest) => archivedStatuses.includes(req.status)),
                 totalArchived: requestsData.totalArchivedCount,
             });
 
@@ -515,6 +527,7 @@ export const useRequests = () => {
         loadInitialData,
         handleStatusUpdate: executeStatusUpdate,
         handleAdminAction,
+        handleSaveCostAnalysis,
         handleCreateRequest: async () => {
             if (!currentUser) return;
             
@@ -978,7 +991,7 @@ export const useRequests = () => {
                 isCostAnalysisDialogOpen: true,
             });
         },
-        handleSaveCostAnalysis,
+        
         // setters
         setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
             isNewRequestDialogOpen: isOpen, 

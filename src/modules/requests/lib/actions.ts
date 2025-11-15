@@ -29,8 +29,8 @@ import {
     getAllProducts, 
     getAllStock, 
     getAllCustomers,
-    getAllErpPurchaseOrderHeaders,
-    getAllErpPurchaseOrderLines,
+    getAllErpPurchaseOrderHeaders as getAllErpPurchaseOrderHeadersDb,
+    getAllErpPurchaseOrderLines as getAllErpPurchaseOrderLinesDb,
 } from '@/modules/core/lib/db';
 
 
@@ -204,8 +204,8 @@ export async function getRequestSuggestions(dateRange: DateRange): Promise<Purch
         getAllStock(),
         getAllProducts(),
         getAllCustomers(),
-        getAllErpPurchaseOrderHeaders(),
-        getAllErpPurchaseOrderLines(),
+        getAllErpPurchaseOrderHeadersDb(),
+        getAllErpPurchaseOrderLinesDb(),
     ]);
     const allActiveRequests = await getRequests({}).then(res => res.requests.filter(r => ['pending', 'approved', 'ordered', 'purchasing-review', 'pending-approval'].includes(r.status)));
 
@@ -315,3 +315,6 @@ export async function savePurchaseSuggestionsPreferences(userId: number, prefere
 export async function saveCostAnalysis(requestId: number, cost: number, salePrice: number): Promise<PurchaseRequest> {
     return saveCostAnalysisServer(requestId, cost, salePrice);
 }
+
+export const getAllErpPurchaseOrderHeaders = async (): Promise<ErpPurchaseOrderHeader[]> => getAllErpPurchaseOrderHeadersDb();
+export const getAllErpPurchaseOrderLines = async (): Promise<ErpPurchaseOrderLine[]> => getAllErpPurchaseOrderLinesDb();
