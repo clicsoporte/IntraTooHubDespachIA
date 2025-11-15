@@ -14,7 +14,7 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, saveCostAnalysis as saveCostAnalysisServer
 } from '@/modules/requests/lib/actions';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
@@ -158,6 +158,10 @@ type State = {
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
+    isCostAnalysisDialogOpen: boolean;
+    analysisCost: string;
+    analysisSalePrice: string;
+    analysisMargin: number;
 };
 
 // Helper function to ensure complex fields are in the correct format (array).
@@ -252,6 +256,10 @@ export const useRequests = () => {
         erpPoLines: [],
         isTransitsDialogOpen: false,
         activeTransits: null,
+        isCostAnalysisDialogOpen: false,
+        analysisCost: '',
+        analysisSalePrice: '',
+        analysisMargin: 0,
     });
     
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, state.companyData?.searchDebounceTime ?? 500);
@@ -466,6 +474,42 @@ export const useRequests = () => {
             updateState({ isSubmitting: false });
         }
     };
+
+    const handleSaveCostAnalysis = async () => {
+        if (!state.requestToUpdate) return;
+        updateState({ isSubmitting: true });
+        try {
+            const cost = parseFloat(state.analysisCost);
+            const salePrice = parseFloat(state.analysisSalePrice);
+
+            if (isNaN(cost) || isNaN(salePrice)) {
+                throw new Error("El costo y el precio de venta deben ser números válidos.");
+            }
+
+            const updatedRequest = await saveCostAnalysisServer(state.requestToUpdate.id, cost, salePrice);
+            updateState({
+                activeRequests: state.activeRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
+                isCostAnalysisDialogOpen: false,
+            });
+            toast({ title: "Análisis Guardado" });
+        } catch (error: any) {
+            logError("Failed to save cost analysis", { error: error.message });
+            toast({ title: "Error", description: error.message, variant: "destructive" });
+        } finally {
+            updateState({ isSubmitting: false });
+        }
+    };
+
+    useEffect(() => {
+        const cost = parseFloat(state.analysisCost);
+        const salePrice = parseFloat(state.analysisSalePrice);
+        if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
+            const margin = (salePrice - cost) / cost;
+            updateState({ analysisMargin: margin });
+        } else {
+            updateState({ analysisMargin: 0 });
+        }
+    }, [state.analysisCost, state.analysisSalePrice, updateState]);
     
     const actions = {
         loadInitialData,
@@ -926,6 +970,15 @@ export const useRequests = () => {
                 isTransitsDialogOpen: true 
             });
         },
+        openCostAnalysisDialog: (request: PurchaseRequest) => {
+            updateState({
+                requestToUpdate: request,
+                analysisCost: request.analysis?.cost?.toString() || '',
+                analysisSalePrice: request.unitSalePrice?.toString() || '',
+                isCostAnalysisDialogOpen: true,
+            });
+        },
+        handleSaveCostAnalysis,
         // setters
         setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
             isNewRequestDialogOpen: isOpen, 
@@ -973,6 +1026,9 @@ export const useRequests = () => {
         setAddNoteDialogOpen: (isOpen: boolean) => updateState({ isAddNoteDialogOpen: isOpen }),
         setNotePayload: (payload: RequestNotePayload | null) => updateState({ notePayload: payload }),
         setTransitsDialogOpen: (isOpen: boolean) => updateState({ isTransitsDialogOpen: isOpen }),
+        setCostAnalysisDialogOpen: (isOpen: boolean) => updateState({ isCostAnalysisDialogOpen: isOpen }),
+        setAnalysisCost: (cost: string) => updateState({ analysisCost: cost }),
+        setAnalysisSalePrice: (price: string) => updateState({ analysisSalePrice: price }),
     };
 
     const selectors = {

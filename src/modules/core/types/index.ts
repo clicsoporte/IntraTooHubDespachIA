@@ -398,6 +398,11 @@ export type PurchaseRequest = {
   hasBeenModified?: boolean;
   sourceOrders?: string[];
   involvedClients?: { id: string; name: string }[];
+  analysis?: {
+      cost: number;
+      salePrice: number;
+      margin: number;
+  };
 };
 
 export type UpdatePurchaseRequestPayload = Partial<Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>> & {

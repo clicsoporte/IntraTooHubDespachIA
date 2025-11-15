@@ -179,8 +179,14 @@ export function usePurchaseSuggestionsLogic() {
         // Sorting logic
         filtered.sort((a, b) => {
             const dir = state.sortDirection === 'asc' ? 1 : -1;
-            const valA = a[state.sortKey as keyof PurchaseSuggestion];
-            const valB = b[state.sortKey as keyof PurchaseSuggestion];
+            const key = state.sortKey;
+
+            if (key === 'item') {
+                return a.itemDescription.localeCompare(b.itemDescription, 'es') * dir;
+            }
+
+            const valA = a[key as keyof PurchaseSuggestion];
+            const valB = b[key as keyof PurchaseSuggestion];
             
             if (valA === null || valA === undefined) return 1 * dir;
             if (valB === null || valB === undefined) return -1 * dir;
@@ -312,6 +318,11 @@ export function usePurchaseSuggestionsLogic() {
             toast({
                 title: "Solicitudes Creadas",
                 description: `Se crearon ${createdCount} solicitudes de compra.`,
+                action: (
+                    <ToastAction altText="Ver Solicitudes" onClick={() => router.push('/dashboard/requests')}>
+                        Ver Solicitudes
+                    </ToastAction>
+                ),
             });
         }
         if (errorCount > 0) {
