@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -43,7 +42,7 @@ const normalizeText = (text: string | null | undefined): string => {
     return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
-const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes' | 'analysis'> = {
+const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
     requiredDate: new Date().toISOString().split('T')[0],
     clientId: '',
     clientName: '',
@@ -67,6 +66,7 @@ const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' |
     purchaseType: 'single',
     arrivalDate: '',
     pendingAction: 'none',
+    analysis: null,
 };
 
 type UIErpOrderLine = {
@@ -116,7 +116,7 @@ type State = {
     totalArchived: number;
     requestSettings: RequestSettings | null;
     companyData: Company | null;
-    newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes' | 'analysis'>;
+    newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>;
     requestToEdit: PurchaseRequest | null;
     searchTerm: string;
     statusFilter: string;
@@ -215,7 +215,7 @@ export const useRequests = () => {
         isLoading: true,
         isRefreshing: false,
         isSubmitting: false,
-        isNewRequestDialogOpen: boolean,
+        isNewRequestDialogOpen: false,
         isEditRequestDialogOpen: false,
         activeRequests: [],
         archivedRequests: [],
@@ -805,6 +805,7 @@ export const useRequests = () => {
                         manualSupplier: '',
                         arrivalDate: '',
                         pendingAction: 'none' as const,
+                        analysis: null,
                     };
                     await savePurchaseRequest(requestPayload, currentUser.name);
                 }
@@ -1111,5 +1112,3 @@ export const useRequests = () => {
         isAuthorized
     };
 }
-
-    
