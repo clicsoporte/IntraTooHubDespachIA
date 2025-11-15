@@ -312,7 +312,7 @@ export function usePurchaseSuggestionsLogic() {
         if (createdCount > 0) {
             toast({
                 title: "Solicitudes Creadas",
-                description: `Se crearon ${createdCount} solicitudes de compra.`
+                description: `Se crearon ${createdCount} solicitudes de compra.`,
             });
         }
         if (errorCount > 0) {
@@ -353,9 +353,9 @@ export function usePurchaseSuggestionsLogic() {
                     className: baseClassName 
                 };
             case 'sourceOrders':
-                 return { type: 'array', data: item.sourceOrders, className: baseClassName };
+                return { type: 'array', data: item.sourceOrders, className: baseClassName };
             case 'clients':
-                 return { type: 'array', data: item.involvedClients.map(c => c.name), className: baseClassName };
+                return { type: 'array', data: item.involvedClients.map(c => c.name), className: baseClassName };
             case 'erpUsers':
                 return { type: 'string', data: item.erpUsers.join(', '), className: `text-xs text-muted-foreground ${baseClassName}` };
             case 'creationDate':
