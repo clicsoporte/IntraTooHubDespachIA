@@ -17,6 +17,8 @@ import {
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
     updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, 
     saveCostAnalysis as saveCostAnalysisServer,
+    getAllErpPurchaseOrderHeaders,
+    getAllErpPurchaseOrderLines,
 } from '@/modules/requests/lib/actions';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
@@ -32,7 +34,7 @@ import { getDaysRemaining as getSimpleDaysRemaining } from '@/modules/core/lib/t
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertCircle, Undo2, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import type { RowInput } from 'jspdf-autotable';
-import { getAllProducts as getAllProductsFromDB, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
+import { getAllProducts as getAllProductsFromDB } from '@/modules/core/lib/db';
 import { getAllCustomers as getAllCustomersFromDB } from '@/modules/core/lib/db';
 import type { Product, Customer } from '../../core/types';
 import { useSearchParams } from 'next/navigation';
@@ -43,7 +45,7 @@ const normalizeText = (text: string | null | undefined): string => {
     return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
 
-const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
+const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes' | 'analysis'> = {
     requiredDate: new Date().toISOString().split('T')[0],
     clientId: '',
     clientName: '',
@@ -116,7 +118,7 @@ type State = {
     totalArchived: number;
     requestSettings: RequestSettings | null;
     companyData: Company | null;
-    newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>;
+    newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes' | 'analysis'>;
     requestToEdit: PurchaseRequest | null;
     searchTerm: string;
     statusFilter: string;
@@ -192,12 +194,13 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
   try {
       if (sanitized.analysis && typeof sanitized.analysis === 'string') {
           sanitized.analysis = JSON.parse(sanitized.analysis);
-      } else if (typeof sanitized.analysis !== 'object' || sanitized.analysis === null) {
+      } else if (typeof sanitized.analysis !== 'object') {
           sanitized.analysis = null;
       }
   } catch {
       sanitized.analysis = null;
   }
+
 
   return sanitized as PurchaseRequest;
 };
@@ -948,7 +951,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
