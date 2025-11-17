@@ -10,7 +10,7 @@ import type { PurchaseRequest, RequestSettings, UpdateRequestStatusPayload, Purc
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { executeQuery } from '@/modules/core/lib/sql-service';
-import { getAllProducts, getAllStock, getAllCustomers, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
+import { getAllProducts, getAllStock, getAllCustomers } from '@/modules/core/lib/db';
 
 const REQUESTS_DB_FILE = 'requests.db';
 
@@ -217,44 +217,6 @@ export async function saveSettings(settings: RequestSettings): Promise<void> {
 
     transaction(settings);
 }
-
-// Helper function to ensure complex fields are in the correct format (array).
-const sanitizeRequest = (request: any): PurchaseRequest => {
-    const sanitized = { ...request };
-
-    try {
-        if (sanitized.sourceOrders && typeof sanitized.sourceOrders === 'string') {
-            sanitized.sourceOrders = JSON.parse(sanitized.sourceOrders);
-        } else if (!Array.isArray(sanitized.sourceOrders)) {
-            sanitized.sourceOrders = [];
-        }
-    } catch {
-        sanitized.sourceOrders = [];
-    }
-
-    try {
-        if (sanitized.involvedClients && typeof sanitized.involvedClients === 'string') {
-            sanitized.involvedClients = JSON.parse(sanitized.involvedClients);
-        } else if (!Array.isArray(sanitized.involvedClients)) {
-            sanitized.involvedClients = [];
-        }
-    } catch {
-        sanitized.involvedClients = [];
-    }
-    
-    try {
-        if (sanitized.analysis && typeof sanitized.analysis === 'string') {
-            sanitized.analysis = JSON.parse(sanitized.analysis);
-        } else if (typeof sanitized.analysis !== 'object' || sanitized.analysis === null) {
-            sanitized.analysis = undefined;
-        }
-    } catch {
-        sanitized.analysis = undefined;
-    }
-
-
-  return sanitized as PurchaseRequest;
-};
 
 
 export async function getRequests(options: { 
