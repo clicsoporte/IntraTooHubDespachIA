@@ -457,9 +457,15 @@ export async function getCompanySettings(): Promise<Company | null> {
 
 export async function saveCompanySettings(settings: Company): Promise<void> {
     const db = await connectDb();
-    try {
-        const settingsToSave = { ...settings, quoterShowTaxId: settings.quoterShowTaxId ? 1 : 0 };
-        db.prepare(`
+
+    const transaction = db.transaction((settingsToSave) => {
+        const currentSettings = db.prepare('SELECT * FROM company_settings WHERE id = 1').get();
+        const finalSettings = { ...currentSettings, ...settingsToSave };
+
+        // Ensure boolean is saved as number
+        finalSettings.quoterShowTaxId = finalSettings.quoterShowTaxId ? 1 : 0;
+        
+        const stmt = db.prepare(`
             UPDATE company_settings SET 
                 name = @name, taxId = @taxId, address = @address, phone = @phone, email = @email,
                 logoUrl = @logoUrl, systemName = @systemName, quotePrefix = @quotePrefix, nextQuoteNumber = @nextQuoteNumber, 
@@ -470,9 +476,15 @@ export async function saveCompanySettings(settings: Company): Promise<void> {
                 erpPurchaseOrderLineFilePath = @erpPurchaseOrderLineFilePath,
                 importMode = @importMode, lastSyncTimestamp = @lastSyncTimestamp, quoterShowTaxId = @quoterShowTaxId, syncWarningHours = @syncWarningHours
             WHERE id = 1
-        `).run(settingsToSave);
+        `);
+        stmt.run(finalSettings);
+    });
+
+    try {
+        transaction(settings);
     } catch (error) {
         console.error("Failed to save company settings:", error);
+        throw new Error("Database transaction failed to save company settings.");
     }
 }
 
@@ -802,15 +814,27 @@ export async function getAllQuoteDrafts(userId: number): Promise<QuoteDraft[]> {
 
 export async function saveQuoteDraft(draft: QuoteDraft): Promise<void> {
     const db = await connectDb();
-    const stmt = db.prepare('INSERT OR REPLACE INTO quote_drafts (id, createdAt, userId, customerId, customerDetails, lines, totals, notes, currency, exchangeRate, purchaseOrderNumber, deliveryAddress, deliveryDate, sellerName, sellerType, quoteDate, validUntilDate, paymentTerms, creditDays) VALUES (@id, @createdAt, @userId, @customerId, @customerDetails, @lines, @totals, @notes, @currency, @exchangeRate, @purchaseOrderNumber, @deliveryAddress, @deliveryDate, @sellerName, @sellerType, @quoteDate, @validUntilDate, @paymentTerms, @creditDays)');
-    try {
+    
+    const transaction = db.transaction((draftToSave) => {
+        const stmt = db.prepare('INSERT OR REPLACE INTO quote_drafts (id, createdAt, userId, customerId, customerDetails, lines, totals, notes, currency, exchangeRate, purchaseOrderNumber, deliveryAddress, deliveryDate, sellerName, sellerType, quoteDate, validUntilDate, paymentTerms, creditDays) VALUES (@id, @createdAt, @userId, @customerId, @customerDetails, @lines, @totals, @notes, @currency, @exchangeRate, @purchaseOrderNumber, @deliveryAddress, @deliveryDate, @sellerName, @sellerType, @quoteDate, @validUntilDate, @paymentTerms, @creditDays)');
+        
         stmt.run({
-            ...draft,
-            lines: JSON.stringify(draft.lines),
-            totals: JSON.stringify(draft.totals),
+            ...draftToSave,
+            lines: JSON.stringify(draftToSave.lines),
+            totals: JSON.stringify(draftToSave.totals),
         });
+
+        // Increment the next quote number atomically
+        const settings = db.prepare('SELECT nextQuoteNumber FROM company_settings WHERE id = 1').get() as { nextQuoteNumber: number };
+        const nextNumber = (settings.nextQuoteNumber || 0) + 1;
+        db.prepare('UPDATE company_settings SET nextQuoteNumber = ? WHERE id = 1').run(nextNumber);
+    });
+
+    try {
+        transaction(draft);
     } catch (error) {
         console.error("Failed to save quote draft:", error);
+        throw error;
     }
 }
 
@@ -1552,3 +1576,4 @@ const defaultQueries: { [key in ImportQuery['type']]?: string } = {
     
 
     
+

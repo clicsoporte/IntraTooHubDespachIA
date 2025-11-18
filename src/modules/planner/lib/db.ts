@@ -7,6 +7,7 @@ import { connectDb, getAllRoles as getAllRolesFromMain } from '../../core/lib/db
 import { getAllUsers as getAllUsersFromMain } from '../../core/lib/auth';
 import type { ProductionOrder, PlannerSettings, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, RejectCancellationPayload, ProductionOrderStatus, UpdateProductionOrderPayload, CustomStatus, DateRange, PlannerNotePayload, AdministrativeActionPayload, User, PlannerShift } from '../../core/types';
 import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const PLANNER_DB_FILE = 'planner.db';
 
@@ -309,60 +310,71 @@ export async function getOrders(options: {
 export async function addOrder(order: Omit<ProductionOrder, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'erpPackageNumber' | 'erpTicketNumber' | 'machineId' | 'previousStatus' | 'scheduledStartDate' | 'scheduledEndDate' | 'requestedBy' | 'hasBeenModified' | 'lastModifiedBy' | 'lastModifiedAt' | 'shiftId'>, requestedBy: string): Promise<ProductionOrder> {
     const db = await connectDb(PLANNER_DB_FILE);
     
-    const settings = await getPlannerSettings();
-    const nextNumber = settings.nextOrderNumber || 1;
-    const prefix = settings.orderPrefix || 'OP-';
+    const transaction = db.transaction(() => {
+        // --- ATOMIC OPERATION START ---
+        const settings = db.prepare('SELECT value FROM planner_settings WHERE key = ?').get('nextOrderNumber') as { value: string };
+        const prefix = (db.prepare('SELECT value FROM planner_settings WHERE key = ?').get('orderPrefix') as { value: string }).value;
+        const nextNumber = parseInt(settings.value, 10);
+        
+        db.prepare('UPDATE planner_settings SET value = ? WHERE key = ?').run(String(nextNumber + 1), 'nextOrderNumber');
+        // --- ATOMIC OPERATION END ---
 
-    const newOrder: Omit<ProductionOrder, 'id'> = {
-        ...order,
-        requestedBy: requestedBy,
-        consecutive: `${prefix}${nextNumber.toString().padStart(5, '0')}`,
-        requestDate: new Date().toISOString(),
-        status: 'pending',
-        pendingAction: 'none',
-        reopened: false,
-        machineId: null,
-        shiftId: null,
-        previousStatus: null,
-        scheduledStartDate: null,
-        scheduledEndDate: null,
-        hasBeenModified: false,
-    };
+        const newOrder: Omit<ProductionOrder, 'id'> = {
+            ...order,
+            requestedBy: requestedBy,
+            consecutive: `${prefix}${nextNumber.toString().padStart(5, '0')}`,
+            requestDate: new Date().toISOString(),
+            status: 'pending',
+            pendingAction: 'none',
+            reopened: false,
+            machineId: null,
+            shiftId: null,
+            previousStatus: null,
+            scheduledStartDate: null,
+            scheduledEndDate: null,
+            hasBeenModified: false,
+        };
 
-    const stmt = db.prepare(`
-        INSERT INTO production_orders (
-            consecutive, purchaseOrder, requestDate, deliveryDate, scheduledStartDate, scheduledEndDate,
-            customerId, customerName, customerTaxId, productId, productDescription, quantity, inventory, inventoryErp, priority,
-            status, pendingAction, notes, requestedBy, reopened, machineId, shiftId, previousStatus, hasBeenModified, erpOrderNumber
-        ) VALUES (
-            @consecutive, @purchaseOrder, @requestDate, @deliveryDate, @scheduledStartDate, @scheduledEndDate,
-            @customerId, @customerName, @customerTaxId, @productId, @productDescription, @quantity, @inventory, @inventoryErp, @priority,
-            @status, @pendingAction, @notes, @requestedBy, @reopened, @machineId, @shiftId, @previousStatus, @hasBeenModified, @erpOrderNumber
-        )
-    `);
+        const stmt = db.prepare(`
+            INSERT INTO production_orders (
+                consecutive, purchaseOrder, requestDate, deliveryDate, scheduledStartDate, scheduledEndDate,
+                customerId, customerName, customerTaxId, productId, productDescription, quantity, inventory, inventoryErp, priority,
+                status, pendingAction, notes, requestedBy, reopened, machineId, shiftId, previousStatus, hasBeenModified, erpOrderNumber
+            ) VALUES (
+                @consecutive, @purchaseOrder, @requestDate, @deliveryDate, @scheduledStartDate, @scheduledEndDate,
+                @customerId, @customerName, @customerTaxId, @productId, @productDescription, @quantity, @inventory, @inventoryErp, @priority,
+                @status, @pendingAction, @notes, @requestedBy, @reopened, @machineId, @shiftId, @previousStatus, @hasBeenModified, @erpOrderNumber
+            )
+        `);
 
-    const preparedOrder = {
-        ...newOrder,
-        purchaseOrder: newOrder.purchaseOrder || null,
-        inventory: newOrder.inventory ?? null,
-        inventoryErp: newOrder.inventoryErp ?? null,
-        notes: newOrder.notes || null,
-        reopened: newOrder.reopened ? 1 : 0,
-        hasBeenModified: newOrder.hasBeenModified ? 1 : 0,
-        shiftId: newOrder.shiftId || null,
-        erpOrderNumber: newOrder.erpOrderNumber || null,
-    };
+        const preparedOrder = {
+            ...newOrder,
+            purchaseOrder: newOrder.purchaseOrder || null,
+            inventory: newOrder.inventory ?? null,
+            inventoryErp: newOrder.inventoryErp ?? null,
+            notes: newOrder.notes || null,
+            reopened: newOrder.reopened ? 1 : 0,
+            hasBeenModified: newOrder.hasBeenModified ? 1 : 0,
+            shiftId: newOrder.shiftId || null,
+            erpOrderNumber: newOrder.erpOrderNumber || null,
+        };
 
-    const info = stmt.run(preparedOrder);
-    const newOrderId = info.lastInsertRowid as number;
+        const info = stmt.run(preparedOrder);
+        const newOrderId = info.lastInsertRowid as number;
 
-    await saveSettings({ ...settings, nextOrderNumber: nextNumber + 1 });
-    
-    const historyStmt = db.prepare('INSERT INTO production_order_history (orderId, timestamp, status, updatedBy, notes) VALUES (?, ?, ?, ?, ?)');
-    historyStmt.run(newOrderId, new Date().toISOString(), 'pending', newOrder.requestedBy, 'Orden creada');
+        const historyStmt = db.prepare('INSERT INTO production_order_history (orderId, timestamp, status, updatedBy, notes) VALUES (?, ?, ?, ?, ?)');
+        historyStmt.run(newOrderId, new Date().toISOString(), 'pending', newOrder.requestedBy, 'Orden creada');
 
-    const createdOrder = db.prepare('SELECT * FROM production_orders WHERE id = ?').get(newOrderId) as ProductionOrder;
-    return createdOrder;
+        return db.prepare('SELECT * FROM production_orders WHERE id = ?').get(newOrderId) as ProductionOrder;
+    });
+
+    try {
+        const createdOrder = transaction();
+        return createdOrder;
+    } catch (error) {
+        logError("Failed to create order in DB transaction", { error: (error as Error).message });
+        throw error;
+    }
 }
 
 export async function updateOrder(payload: UpdateProductionOrderPayload): Promise<ProductionOrder> {
@@ -669,3 +681,4 @@ export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promi
 
     return filteredOrders;
 }
+
