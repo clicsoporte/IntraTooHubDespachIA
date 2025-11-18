@@ -1031,6 +1031,17 @@ export const useRequests = () => {
         setAnalysisSalePrice: (price: string) => updateState({ analysisSalePrice: price }),
     };
 
+    const costAnalysis = useMemo(() => {
+        const cost = parseFloat(state.analysisCost);
+        const salePrice = parseFloat(state.analysisSalePrice);
+        let margin = 0;
+        if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
+            margin = ((salePrice - cost) / cost) * 100;
+        }
+        return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
+    }, [state.analysisCost, state.analysisSalePrice]);
+
+
     const selectors = {
         hasPermission,
         priorityConfig,
@@ -1087,15 +1098,7 @@ export const useRequests = () => {
                 .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
                 .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
         }, [state.erpPoHeaders, state.erpPoLines]),
-        costAnalysis: useMemo(() => {
-            const cost = parseFloat(state.analysisCost);
-            const salePrice = parseFloat(state.analysisSalePrice);
-            let margin = 0;
-            if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
-                margin = ((salePrice - cost) / cost) * 100;
-            }
-            return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
-        }, [state.analysisCost, state.analysisSalePrice]),
+        costAnalysis,
     };
 
     return {
