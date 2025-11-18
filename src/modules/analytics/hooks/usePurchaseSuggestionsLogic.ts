@@ -12,8 +12,8 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getRequestSuggestions, savePurchaseRequest, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/requests/lib/actions';
-import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
+import { getRequestSuggestions, savePurchaseRequest } from '@/modules/requests/lib/actions';
+import { getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
 import type { DateRange, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader, ErpPurchaseOrderLine } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { subDays, startOfDay } from 'date-fns';
@@ -302,9 +302,9 @@ export function usePurchaseSuggestionsLogic() {
                     purchaseType: 'single' as const,
                     sourceOrders: item.sourceOrders,
                     involvedClients: item.involvedClients,
-                    pendingAction: 'none'
+                    pendingAction: 'none' as const,
                 };
-                await savePurchaseRequest(requestPayload as any, currentUser.name);
+                await savePurchaseRequest(requestPayload, currentUser.name);
                 createdCount++;
             } catch (error: any) {
                 logError(`Failed to create request for item ${item.itemId}`, { error: error.message });
@@ -318,6 +318,7 @@ export function usePurchaseSuggestionsLogic() {
             toast({
                 title: "Solicitudes Creadas",
                 description: `Se crearon ${createdCount} solicitudes de compra.`,
+                action: <ToastAction altText="Ir a Compras" onClick={() => router.push('/dashboard/requests')}>Ir a Compras</ToastAction>
             });
         }
         if (errorCount > 0) {
