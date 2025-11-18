@@ -20,7 +20,7 @@ import {
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, ErpPurchaseOrderLine
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader as ErpPOHeader, ErpPurchaseOrderLine as ErpPOLine
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -156,8 +156,8 @@ type State = {
     notePayload: RequestNotePayload | null;
     products: Product[];
     customers: Customer[];
-    erpPoHeaders: ErpPurchaseOrderHeader[];
-    erpPoLines: ErpPurchaseOrderLine[];
+    erpPoHeaders: ErpPOHeader[];
+    erpPoLines: ErpPOLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
     isCostAnalysisDialogOpen: boolean;
@@ -198,7 +198,6 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
   } catch {
       sanitized.analysis = undefined;
   }
-
 
   return sanitized as PurchaseRequest;
 };
@@ -324,8 +323,8 @@ export const useRequests = () => {
             const allRequests = requestsData.requests.map(sanitizeRequest);
             
             updateState({
-                activeRequests: allRequests.filter(req => !archivedStatuses.includes(req.status)),
-                archivedRequests: allRequests.filter(req => archivedStatuses.includes(req.status)),
+                activeRequests: allRequests.filter((req) => !archivedStatuses.includes(req.status)),
+                archivedRequests: allRequests.filter((req) => archivedStatuses.includes(req.status)),
                 totalArchived: requestsData.totalArchivedCount,
             });
 
