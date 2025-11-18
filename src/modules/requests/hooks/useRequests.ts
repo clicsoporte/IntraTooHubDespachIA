@@ -165,6 +165,7 @@ type State = {
     isCostAnalysisDialogOpen: boolean;
     analysisCost: string;
     analysisSalePrice: string;
+    analysisMargin: number;
 };
 
 // Helper function to ensure complex fields are in the correct format (array).
@@ -211,7 +212,7 @@ export const useRequests = () => {
     const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady } = useAuth();
     const searchParams = useSearchParams();
     
-    const [state, setState] = useState<State>({
+    const [state, setState] = useState<Omit<State, 'analysisMargin'>>({
         isLoading: true,
         isRefreshing: false,
         isSubmitting: false,
@@ -278,7 +279,7 @@ export const useRequests = () => {
     const [debouncedClientSearch] = useDebounce(state.clientSearchTerm, state.companyData?.searchDebounceTime ?? 500);
     const [debouncedItemSearch] = useDebounce(state.itemSearchTerm, state.companyData?.searchDebounceTime ?? 500);
     
-    const updateState = useCallback((newState: Partial<State>) => {
+    const updateState = useCallback((newState: Partial<Omit<State, 'analysisMargin'>>) => {
         setState(prevState => ({ ...prevState, ...newState }));
     }, []);
 
@@ -288,7 +289,7 @@ export const useRequests = () => {
         if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
             return ((salePrice - cost) / cost) * 100;
         }
-        return 0;
+        return 0; // Return a number, not undefined
     }, [state.analysisCost, state.analysisSalePrice]);
 
     const loadInitialData = useCallback(async (isRefresh = false) => {
@@ -802,7 +803,6 @@ export const useRequests = () => {
                         manualSupplier: '',
                         arrivalDate: '',
                         pendingAction: 'none' as const,
-                        analysis: undefined,
                     };
                     await savePurchaseRequest(requestPayload, currentUser.name);
                 }
@@ -947,7 +947,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
@@ -1108,5 +1108,3 @@ export const useRequests = () => {
         isAuthorized
     };
 }
-
-    
