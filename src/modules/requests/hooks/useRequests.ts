@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -16,7 +15,7 @@ import {
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
     updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, 
-    saveCostAnalysis
+    saveCostAnalysis as saveCostAnalysisAction
 } from '@/modules/requests/lib/actions';
 import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
 import type { 
@@ -165,7 +164,6 @@ type State = {
     isCostAnalysisDialogOpen: boolean;
     analysisCost: string;
     analysisSalePrice: string;
-    analysisMargin: number;
 };
 
 // Helper function to ensure complex fields are in the correct format (array).
@@ -212,7 +210,7 @@ export const useRequests = () => {
     const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady } = useAuth();
     const searchParams = useSearchParams();
     
-    const [state, setState] = useState<Omit<State, 'analysisMargin'>>({
+    const [state, setState] = useState<State>({
         isLoading: true,
         isRefreshing: false,
         isSubmitting: false,
@@ -279,18 +277,9 @@ export const useRequests = () => {
     const [debouncedClientSearch] = useDebounce(state.clientSearchTerm, state.companyData?.searchDebounceTime ?? 500);
     const [debouncedItemSearch] = useDebounce(state.itemSearchTerm, state.companyData?.searchDebounceTime ?? 500);
     
-    const updateState = useCallback((newState: Partial<Omit<State, 'analysisMargin'>>) => {
+    const updateState = useCallback((newState: Partial<State>) => {
         setState(prevState => ({ ...prevState, ...newState }));
     }, []);
-
-    const analysisMargin = useMemo(() => {
-        const cost = parseFloat(state.analysisCost);
-        const salePrice = parseFloat(state.analysisSalePrice);
-        if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
-            return ((salePrice - cost) / cost) * 100;
-        }
-        return 0; // Return a number, not undefined
-    }, [state.analysisCost, state.analysisSalePrice]);
 
     const loadInitialData = useCallback(async (isRefresh = false) => {
         let isMounted = true;
@@ -496,37 +485,35 @@ export const useRequests = () => {
             updateState({ isSubmitting: false });
         }
     };
-
-    const handleSaveCostAnalysis = async () => {
-        if (!state.requestToUpdate) return;
-        updateState({ isSubmitting: true });
-        try {
-            const cost = parseFloat(state.analysisCost);
-            const salePrice = parseFloat(state.analysisSalePrice);
-
-            if (isNaN(cost) || isNaN(salePrice)) {
-                throw new Error("El costo y el precio de venta deben ser números válidos.");
-            }
-
-            const updatedRequest = await saveCostAnalysis(state.requestToUpdate.id, cost, salePrice);
-            updateState({
-                activeRequests: state.activeRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
-                isCostAnalysisDialogOpen: false,
-            });
-            toast({ title: "Análisis Guardado" });
-        } catch (error: any) {
-            logError("Failed to save cost analysis", { error: error.message });
-            toast({ title: "Error", description: error.message, variant: "destructive" });
-        } finally {
-            updateState({ isSubmitting: false });
-        }
-    };
     
     const actions = {
         loadInitialData,
         handleStatusUpdate: executeStatusUpdate,
         handleAdminAction,
-        handleSaveCostAnalysis,
+        handleSaveCostAnalysis: async () => {
+            if (!state.requestToUpdate) return;
+            updateState({ isSubmitting: true });
+            try {
+                const cost = parseFloat(state.analysisCost);
+                const salePrice = parseFloat(state.analysisSalePrice);
+
+                if (isNaN(cost) || isNaN(salePrice)) {
+                    throw new Error("El costo y el precio de venta deben ser números válidos.");
+                }
+
+                const updatedRequest = await saveCostAnalysisAction(state.requestToUpdate.id, cost, salePrice);
+                updateState({
+                    activeRequests: state.activeRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
+                    isCostAnalysisDialogOpen: false,
+                });
+                toast({ title: "Análisis Guardado" });
+            } catch (error: any) {
+                logError("Failed to save cost analysis", { error: error.message });
+                toast({ title: "Error", description: error.message, variant: "destructive" });
+            } finally {
+                updateState({ isSubmitting: false });
+            }
+        },
         handleCreateRequest: async () => {
             if (!currentUser) return;
             
@@ -803,6 +790,7 @@ export const useRequests = () => {
                         manualSupplier: '',
                         arrivalDate: '',
                         pendingAction: 'none' as const,
+                        analysis: undefined,
                     };
                     await savePurchaseRequest(requestPayload, currentUser.name);
                 }
@@ -1099,10 +1087,19 @@ export const useRequests = () => {
                 .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
                 .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
         }, [state.erpPoHeaders, state.erpPoLines]),
+        costAnalysis: useMemo(() => {
+            const cost = parseFloat(state.analysisCost);
+            const salePrice = parseFloat(state.analysisSalePrice);
+            let margin = 0;
+            if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
+                margin = ((salePrice - cost) / cost) * 100;
+            }
+            return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
+        }, [state.analysisCost, state.analysisSalePrice]),
     };
 
     return {
-        state: { ...state, analysisMargin },
+        state,
         actions,
         selectors,
         isAuthorized
