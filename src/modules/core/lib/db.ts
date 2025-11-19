@@ -460,10 +460,12 @@ export async function saveCompanySettings(settings: Company): Promise<void> {
 
     const transaction = db.transaction((settingsToSave) => {
         const currentSettings = db.prepare('SELECT * FROM company_settings WHERE id = 1').get() as Company | undefined;
-        const finalSettings = { ...currentSettings, ...settingsToSave };
+        // The spread order ensures settingsToSave overwrites currentSettings.
+        // It's safe even if currentSettings is null or undefined.
+        const finalSettings = { ...(currentSettings || {}), ...settingsToSave };
 
         // Ensure boolean is saved as number
-        finalSettings.quoterShowTaxId = finalSettings.quoterShowTaxId ? 1 : 0;
+        (finalSettings as any).quoterShowTaxId = finalSettings.quoterShowTaxId ? 1 : 0;
         
         const stmt = db.prepare(`
             UPDATE company_settings SET 
@@ -816,18 +818,20 @@ export async function saveQuoteDraft(draft: QuoteDraft): Promise<void> {
     const db = await connectDb();
     
     const transaction = db.transaction(() => {
-        const stmt = db.prepare('INSERT OR REPLACE INTO quote_drafts (id, createdAt, userId, customerId, customerDetails, lines, totals, notes, currency, exchangeRate, purchaseOrderNumber, deliveryAddress, deliveryDate, sellerName, sellerType, quoteDate, validUntilDate, paymentTerms, creditDays) VALUES (@id, @createdAt, @userId, @customerId, @customerDetails, @lines, @totals, @notes, @currency, @exchangeRate, @purchaseOrderNumber, @deliveryAddress, @deliveryDate, @sellerName, @sellerType, @quoteDate, @validUntilDate, @paymentTerms, @creditDays)');
+        const insertStmt = db.prepare('INSERT OR REPLACE INTO quote_drafts (id, createdAt, userId, customerId, customerDetails, lines, totals, notes, currency, exchangeRate, purchaseOrderNumber, deliveryAddress, deliveryDate, sellerName, sellerType, quoteDate, validUntilDate, paymentTerms, creditDays) VALUES (@id, @createdAt, @userId, @customerId, @customerDetails, @lines, @totals, @notes, @currency, @exchangeRate, @purchaseOrderNumber, @deliveryAddress, @deliveryDate, @sellerName, @sellerType, @quoteDate, @validUntilDate, @paymentTerms, @creditDays)');
         
-        stmt.run({
+        insertStmt.run({
             ...draft,
             lines: JSON.stringify(draft.lines),
             totals: JSON.stringify(draft.totals),
         });
 
-        // Increment the next quote number atomically
+        // This operation must be atomic with the draft saving
+        const nextQuoteNumber = parseInt(draft.id.split('-')[1]) || 0;
         const settings = db.prepare('SELECT nextQuoteNumber FROM company_settings WHERE id = 1').get() as { nextQuoteNumber: number };
-        const nextNumber = (settings.nextQuoteNumber || 0) + 1;
-        db.prepare('UPDATE company_settings SET nextQuoteNumber = ? WHERE id = 1').run(nextNumber);
+        if (nextQuoteNumber >= (settings.nextQuoteNumber || 0)) {
+            db.prepare('UPDATE company_settings SET nextQuoteNumber = ? WHERE id = 1').run(nextQuoteNumber + 1);
+        }
     });
 
     try {

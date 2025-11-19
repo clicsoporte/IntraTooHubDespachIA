@@ -20,7 +20,7 @@ import {
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader as ErpPOHeader
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, ErpPurchaseOrderLine
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -33,7 +33,6 @@ import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag } 
 import type { RowInput } from 'jspdf-autotable';
 import type { Product, Customer } from '../../core/types';
 import { useSearchParams } from 'next/navigation';
-import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
 
 
 const normalizeText = (text: string | null | undefined): string => {
@@ -153,7 +152,7 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    erpPoHeaders: ErpPOHeader[];
+    erpPoHeaders: ErpPurchaseOrderHeader[];
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
@@ -203,7 +202,7 @@ export const useRequests = () => {
     const { isAuthorized, hasPermission } = useAuthorization(['requests:read']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, products, customers, isReady: isAuthReady } = useAuth();
+    const { user: currentUser, products, customers, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady } = useAuth();
     const searchParams = useSearchParams();
     
     const [state, setState] = useState<State>({
@@ -1029,26 +1028,26 @@ export const useRequests = () => {
         clientOptions: useMemo(() => {
             if (debouncedClientSearch.length < 2) return [];
             const searchTerms = normalizeText(debouncedClientSearch).split(' ').filter(Boolean);
-            return state.customers.filter(c => {
+            return customers.filter(c => {
                 const targetText = normalizeText(`${c.id} ${c.name} ${c.taxId}`);
                 return searchTerms.every(term => targetText.includes(term));
             }).map(c => ({ value: c.id, label: `[${c.id}] ${c.name} (${c.taxId})` }));
-        }, [state.customers, debouncedClientSearch]),
+        }, [customers, debouncedClientSearch]),
         itemOptions: useMemo(() => {
             if (debouncedItemSearch.length < 2) return [];
             const searchTerms = normalizeText(debouncedItemSearch).split(' ').filter(Boolean);
-            return state.products.filter(p => {
+            return products.filter(p => {
                 const targetText = normalizeText(`${p.id} ${p.description}`);
                 return searchTerms.every(term => targetText.includes(term));
             }).map(p => ({ value: p.id, label: `[${p.id}] - ${p.description}` }));
-        }, [state.products, debouncedItemSearch]),
-        classifications: useMemo(() => Array.from(new Set(state.products.map(p => p.classification).filter(Boolean))), [state.products]),
+        }, [products, debouncedItemSearch]),
+        classifications: useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]),
         filteredRequests: useMemo(() => {
             let requestsToFilter = state.viewingArchived ? state.archivedRequests : state.activeRequests;
             
             const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
             return requestsToFilter.filter(request => {
-                const product = state.products.find(p => p.id === request.itemId);
+                const product = products.find(p => p.id === request.itemId);
                 const targetText = normalizeText(`${request.consecutive} ${request.clientName} ${request.itemDescription} ${request.purchaseOrder || ''} ${request.erpOrderNumber || ''}`);
                 
                 const searchMatch = debouncedSearchTerm ? searchTerms.every(term => targetText.includes(term)) : true;
@@ -1059,7 +1058,7 @@ export const useRequests = () => {
 
                 return searchMatch && statusMatch && classificationMatch && dateMatch && myRequestsMatch;
             });
-        }, [state.viewingArchived, state.activeRequests, state.archivedRequests, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.products, state.dateFilter, state.showOnlyMyRequests, currentUser?.name, currentUser?.erpAlias]),
+        }, [state.viewingArchived, state.activeRequests, state.archivedRequests, debouncedSearchTerm, state.statusFilter, state.classificationFilter, products, state.dateFilter, state.showOnlyMyRequests, currentUser?.name, currentUser?.erpAlias]),
         stockLevels: authStockLevels,
         visibleErpOrderLines: useMemo(() => {
             if (!state.showOnlyShortageItems) {
