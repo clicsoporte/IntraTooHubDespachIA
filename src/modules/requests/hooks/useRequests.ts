@@ -188,7 +188,7 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
   try {
       if (sanitized.analysis && typeof sanitized.analysis === 'string') {
           sanitized.analysis = JSON.parse(sanitized.analysis);
-      } else if (typeof sanitized.analysis !== 'object' || sanitized.analysis === null) {
+      } else if (typeof sanitized.analysis !== 'object') { // Allow null, but not other non-object types
           sanitized.analysis = undefined;
       }
   } catch {
@@ -780,7 +780,6 @@ export const useRequests = () => {
                         manualSupplier: '',
                         arrivalDate: '',
                         pendingAction: 'none' as const,
-                        analysis: undefined,
                     };
                     await savePurchaseRequest(requestPayload, currentUser.name);
                 }
@@ -925,7 +924,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
@@ -1021,17 +1020,6 @@ export const useRequests = () => {
         setAnalysisSalePrice: (price: string) => updateState({ analysisSalePrice: price }),
     };
 
-    const costAnalysis = useMemo(() => {
-        const cost = parseFloat(state.analysisCost);
-        const salePrice = parseFloat(state.analysisSalePrice);
-        let margin = 0;
-        if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
-            margin = ((salePrice - cost) / cost);
-        }
-        return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
-    }, [state.analysisCost, state.analysisSalePrice]);
-
-
     const selectors = {
         hasPermission,
         priorityConfig,
@@ -1088,7 +1076,15 @@ export const useRequests = () => {
                 .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
                 .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
         }, [state.erpPoHeaders, state.erpPoLines]),
-        costAnalysis,
+        costAnalysis: useMemo(() => {
+            const cost = parseFloat(state.analysisCost);
+            const salePrice = parseFloat(state.analysisSalePrice);
+            let margin = 0;
+            if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
+                margin = ((salePrice - cost) / cost);
+            }
+            return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
+        }, [state.analysisCost, state.analysisSalePrice]),
     };
 
     return {
