@@ -21,7 +21,7 @@ import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/mo
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader as ErpPOHeader, Product, Customer, ErpPurchaseOrderLine
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -152,7 +152,7 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    erpPoHeaders: ErpPurchaseOrderHeader[];
+    erpPoHeaders: ErpPOHeader[];
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
@@ -266,9 +266,9 @@ export const useRequests = () => {
         analysisSalePrice: '',
     });
     
-    const [debouncedSearchTerm] = useDebounce(state.searchTerm, state.companyData?.searchDebounceTime ?? 500);
-    const [debouncedClientSearch] = useDebounce(state.clientSearchTerm, state.companyData?.searchDebounceTime ?? 500);
-    const [debouncedItemSearch] = useDebounce(state.itemSearchTerm, state.companyData?.searchDebounceTime ?? 500);
+    const [debouncedSearchTerm] = useDebounce(state.searchTerm, authCompanyData?.searchDebounceTime ?? 500);
+    const [debouncedClientSearch] = useDebounce(state.clientSearchTerm, authCompanyData?.searchDebounceTime ?? 500);
+    const [debouncedItemSearch] = useDebounce(state.itemSearchTerm, authCompanyData?.searchDebounceTime ?? 500);
     
     const updateState = useCallback((newState: Partial<State>) => {
         setState(prevState => ({ ...prevState, ...newState }));
@@ -1093,3 +1093,5 @@ export const useRequests = () => {
         isAuthorized
     };
 }
+
+    

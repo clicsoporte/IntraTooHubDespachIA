@@ -411,7 +411,7 @@ export async function checkAndApplyMigrations(db: import('better-sqlite3').Datab
 
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='erp_purchase_order_lines'`).get()) {
             console.log("MIGRATION: Creating erp_purchase_order_lines table.");
-            db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY(ORDEN_COMPRA, ARTICULO));`);
+            db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY (ORDEN_COMPRA, ARTICULO));`);
         } else {
              const erpPOLinesInfo = db.prepare(`PRAGMA table_info(erp_purchase_order_lines)`).all() as { name: string }[];
              const erpPOLinesColumns = new Set(erpPOLinesInfo.map(c => c.name));
@@ -1563,3 +1563,5 @@ export async function runDatabaseAudit(userName: string): Promise<AuditResult[]>
 
 // --- Planner-specific functions moved from core ---
 export { confirmPlannerModification };
+
+    

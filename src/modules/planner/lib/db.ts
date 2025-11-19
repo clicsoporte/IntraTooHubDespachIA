@@ -99,6 +99,7 @@ export async function initializePlannerDb(db: import('better-sqlite3').Database)
     db.prepare(`INSERT OR IGNORE INTO planner_settings (key, value) VALUES ('fieldsToTrackChanges', '[]')`).run();
     
     console.log(`Database ${PLANNER_DB_FILE} initialized for Production Planner.`);
+    await runPlannerMigrations(db);
 }
 
 export async function runPlannerMigrations(db: import('better-sqlite3').Database) {
@@ -372,7 +373,7 @@ export async function addOrder(order: Omit<ProductionOrder, 'id' | 'consecutive'
     try {
         const createdOrder = transaction();
         return createdOrder;
-    } catch (error) {
+    } catch (error: any) {
         logError("Failed to create order in DB transaction", { error: (error as Error).message });
         throw error;
     }
@@ -682,3 +683,5 @@ export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promi
 
     return filteredOrders;
 }
+
+    
