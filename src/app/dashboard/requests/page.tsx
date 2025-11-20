@@ -72,6 +72,7 @@ export default function PurchaseRequestPage() {
         isTransitsDialogOpen,
         activeTransits,
         isCostAnalysisDialogOpen,
+        erpEntryNumber,
     } = state;
 
 
@@ -386,7 +387,7 @@ export default function PurchaseRequestPage() {
                         <div className="flex flex-col md:flex-row gap-4">
                             <Input placeholder="Buscar por Nº solicitud, cliente, producto o pedido ERP..." value={searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="max-w-sm" />
                             <Select value={statusFilter} onValueChange={actions.setStatusFilter}><SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filtrar por estado..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{Object.entries(selectors.statusConfig).map(([key, { label }]: [string, { label: string }]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}</SelectContent></Select>
-                            <Select value={classificationFilter} onValueChange={actions.setClassificationFilter}><SelectTrigger className="w-full md:w-[240px]"><SelectValue placeholder="Filtrar por clasificación..." /></SelectTrigger><SelectContent><SelectItem value="all">Todas las Clasificaciones</SelectItem>{selectors.classifications.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                            <Select value={classificationFilter} onValueChange={actions.setClassificationFilter}><SelectTrigger className="w-full md:w-[240px]"><SelectValue placeholder="Filtrar por clasificación..." /></SelectTrigger><SelectContent><SelectItem value="all">Todas las Clasificaciones</SelectItem>{selectors.classifications.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                             <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full md:w-[240px] justify-start text-left font-normal", !dateFilter && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateFilter?.from ? (dateFilter.to ? (`${format(dateFilter.from, "LLL dd, y")} - ${format(dateFilter.to, "LLL dd, y")}`) : (format(dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="range" selected={dateFilter} onSelect={actions.setDateFilter} /></PopoverContent></Popover>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

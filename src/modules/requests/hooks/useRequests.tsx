@@ -14,12 +14,14 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
     getPurchaseRequests, savePurchaseRequest, updatePurchaseRequest, 
     updatePurchaseRequestStatus, getRequestHistory, getRequestSettings, 
-    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines
+    updatePendingAction, getErpOrderData, addNoteToRequest, updateRequestDetails, 
+    saveCostAnalysis as saveCostAnalysisAction
 } from '@/modules/requests/lib/actions';
+import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, ErpPurchaseOrderLine
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, Product, Customer
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -28,11 +30,8 @@ import { useDebounce } from 'use-debounce';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { getDaysRemaining as getSimpleDaysRemaining } from '@/modules/core/lib/time-utils';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
-import { AlertCircle, Undo2, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag } from 'lucide-react';
 import type { RowInput } from 'jspdf-autotable';
-import { getAllProducts as getAllProductsFromDB } from '@/modules/core/lib/db';
-import { getAllCustomers as getAllCustomersFromDB } from '@/modules/core/lib/db';
-import type { Product, Customer } from '../../core/types';
 import { useSearchParams } from 'next/navigation';
 
 
@@ -65,6 +64,7 @@ const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' |
     purchaseType: 'single',
     arrivalDate: '',
     pendingAction: 'none',
+    analysis: undefined,
 };
 
 type UIErpOrderLine = {
@@ -152,12 +152,13 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    products: Product[];
-    customers: Customer[];
     erpPoHeaders: ErpPurchaseOrderHeader[];
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
+    isCostAnalysisDialogOpen: boolean;
+    analysisCost: string;
+    analysisSalePrice: string;
 };
 
 // Helper function to ensure complex fields are in the correct format (array).
@@ -183,6 +184,16 @@ const sanitizeRequest = (request: any): PurchaseRequest => {
       sanitized.involvedClients = [];
   }
 
+  try {
+      if (sanitized.analysis && typeof sanitized.analysis === 'string') {
+          sanitized.analysis = JSON.parse(sanitized.analysis);
+      } else if (typeof sanitized.analysis !== 'object') { // Allow null, but not other non-object types
+          sanitized.analysis = undefined;
+      }
+  } catch {
+      sanitized.analysis = undefined;
+  }
+
   return sanitized as PurchaseRequest;
 };
 
@@ -191,7 +202,7 @@ export const useRequests = () => {
     const { isAuthorized, hasPermission } = useAuthorization(['requests:read']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady } = useAuth();
+    const { user: currentUser, stockLevels: authStockLevels, companyData: authCompanyData, isReady: isAuthReady, products, customers } = useAuth();
     const searchParams = useSearchParams();
     
     const [state, setState] = useState<State>({
@@ -246,12 +257,13 @@ export const useRequests = () => {
         contextInfoData: null,
         isAddNoteDialogOpen: false,
         notePayload: null,
-        products: [],
-        customers: [],
         erpPoHeaders: [],
         erpPoLines: [],
         isTransitsDialogOpen: false,
         activeTransits: null,
+        isCostAnalysisDialogOpen: false,
+        analysisCost: '',
+        analysisSalePrice: '',
     });
     
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, state.companyData?.searchDebounceTime ?? 500);
@@ -272,14 +284,12 @@ export const useRequests = () => {
         }
 
         try {
-             const [settingsData, requestsData, dbProducts, dbCustomers, poHeaders, poLines] = await Promise.all([
+             const [settingsData, requestsData, poHeaders, poLines] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
                     page: state.viewingArchived ? state.archivedPage : undefined,
                     pageSize: state.viewingArchived ? state.pageSize : undefined,
                 }),
-                getAllProductsFromDB(),
-                getAllCustomersFromDB(),
                 getAllErpPurchaseOrderHeaders(),
                 getAllErpPurchaseOrderLines(),
             ]);
@@ -288,8 +298,6 @@ export const useRequests = () => {
 
             updateState({ 
                 requestSettings: settingsData, 
-                products: dbProducts, 
-                customers: dbCustomers,
                 erpPoHeaders: poHeaders,
                 erpPoLines: poLines
             });
@@ -337,11 +345,11 @@ export const useRequests = () => {
 
     // Effect to pre-fill form from URL parameters
     useEffect(() => {
-        if (isAuthReady && state.customers.length > 0 && state.products.length > 0) {
+        if (isAuthReady && customers.length > 0 && products.length > 0) {
             const itemId = searchParams.get('itemId');
             if (itemId) {
-                const product = state.products.find(p => p.id === itemId);
-                const customer = state.customers.find(c => c.id === searchParams.get('clientId'));
+                const product = products.find(p => p.id === itemId);
+                const customer = customers.find(c => c.id === searchParams.get('clientId'));
 
                 if (product) {
                     const newRequestData: Partial<typeof emptyRequest> = {
@@ -361,7 +369,7 @@ export const useRequests = () => {
                 }
             }
         }
-    }, [isAuthReady, searchParams, state.customers, state.products, updateState]);
+    }, [isAuthReady, searchParams, customers, products, updateState]);
 
     useEffect(() => {
         updateState({ companyData: authCompanyData });
@@ -587,7 +595,7 @@ export const useRequests = () => {
         },
         handleSelectItem: (value: string) => {
             updateState({ isItemSearchOpen: false });
-            const product = state.products.find(p => p.id === value);
+            const product = products.find(p => p.id === value);
             if (product) {
                 const stock = authStockLevels.find(s => s.itemId === product.id)?.totalStock ?? 0;
                 const dataToUpdate = { 
@@ -609,7 +617,7 @@ export const useRequests = () => {
         },
         handleSelectClient: (value: string) => {
             updateState({ isClientSearchOpen: false });
-            const client = state.customers.find(c => c.id === value);
+            const client = customers.find(c => c.id === value);
             if (client) {
                 const dataToUpdate = { clientId: client.id, clientName: client.name, clientTaxId: client.taxId };
                 if (state.requestToEdit) {
@@ -632,7 +640,7 @@ export const useRequests = () => {
                 const { headers } = await getErpOrderData(state.erpOrderNumber);
                 
                 const enrichedHeaders = headers.map(h => {
-                    const client = state.customers.find(c => c.id === h.CLIENTE);
+                    const client = customers.find(c => c.id === h.CLIENTE);
                     return { ...h, CLIENTE_NOMBRE: client?.name || 'Cliente no encontrado' };
                 }).sort((a, b) => {
                     if (a.PEDIDO === state.erpOrderNumber) return -1;
@@ -656,13 +664,13 @@ export const useRequests = () => {
             }
         },
         processSingleErpOrder: async (header: ErpOrderHeader) => {
-            const client = state.customers.find(c => c.id === header.CLIENTE);
+            const client = customers.find(c => c.id === header.CLIENTE);
             const enrichedHeader = { ...header, CLIENTE_NOMBRE: client?.name || 'Cliente no encontrado' };
             
             const { lines, inventory } = await getErpOrderData(header.PEDIDO);
 
             const enrichedLines: UIErpOrderLine[] = lines.map(line => {
-                const product = state.products.find(p => p.id === line.ARTICULO) || {id: line.ARTICULO, description: `Artículo ${line.ARTICULO} no encontrado`, active: 'N', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: ''};
+                const product = products.find(p => p.id === line.ARTICULO) || {id: line.ARTICULO, description: `Artículo ${line.ARTICULO} no encontrado`, active: 'N', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: ''};
                 const stock = inventory.find(s => s.itemId === line.ARTICULO) || null;
                 const needsBuying = stock ? line.CANTIDAD_PEDIDA > stock.totalStock : true;
                 return {
@@ -730,7 +738,7 @@ export const useRequests = () => {
                         requiredDate: new Date(erpHeader.FECHA_PROMETIDA).toISOString().split('T')[0],
                         clientId: erpHeader.CLIENTE,
                         clientName: erpHeader.CLIENTE_NOMBRE || '',
-                        clientTaxId: state.customers.find(c => c.id === erpHeader.CLIENTE)?.taxId || '',
+                        clientTaxId: customers.find(c => c.id === erpHeader.CLIENTE)?.taxId || '',
                         itemId: line.ARTICULO,
                         itemDescription: line.product.description,
                         quantity: parseFloat(line.displayQuantity) || 0,
@@ -926,6 +934,39 @@ export const useRequests = () => {
                 isTransitsDialogOpen: true 
             });
         },
+        openCostAnalysisDialog: (request: PurchaseRequest) => {
+            updateState({
+                requestToUpdate: request,
+                analysisCost: request.analysis?.cost?.toString() || '',
+                analysisSalePrice: request.unitSalePrice?.toString() || '',
+                isCostAnalysisDialogOpen: true,
+            });
+        },
+        handleSaveCostAnalysis: async () => {
+            if (!state.requestToUpdate) return;
+            const cost = parseFloat(state.analysisCost);
+            const salePrice = parseFloat(state.analysisSalePrice);
+            if (isNaN(cost) || isNaN(salePrice)) {
+                toast({ title: "Valores inválidos", description: "El costo y el precio de venta deben ser números.", variant: "destructive" });
+                return;
+            }
+            updateState({ isSubmitting: true });
+            try {
+                const updatedRequest = await saveCostAnalysisAction(state.requestToUpdate.id, cost, salePrice);
+                toast({ title: "Análisis Guardado" });
+                setState(prevState => ({
+                    ...prevState,
+                    isCostAnalysisDialogOpen: false,
+                    activeRequests: prevState.activeRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
+                    archivedRequests: prevState.archivedRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
+                }));
+            } catch (error: any) {
+                logError("Failed to save cost analysis", { error: error.message, requestId: state.requestToUpdate.id });
+                toast({ title: "Error", description: `No se pudo guardar el análisis: ${error.message}`, variant: "destructive" });
+            } finally {
+                updateState({ isSubmitting: false });
+            }
+        },
         // setters
         setNewRequestDialogOpen: (isOpen: boolean) => updateState({ 
             isNewRequestDialogOpen: isOpen, 
@@ -973,6 +1014,9 @@ export const useRequests = () => {
         setAddNoteDialogOpen: (isOpen: boolean) => updateState({ isAddNoteDialogOpen: isOpen }),
         setNotePayload: (payload: RequestNotePayload | null) => updateState({ notePayload: payload }),
         setTransitsDialogOpen: (isOpen: boolean) => updateState({ isTransitsDialogOpen: isOpen }),
+        setCostAnalysisDialogOpen: (isOpen: boolean) => updateState({ isCostAnalysisDialogOpen: isOpen }),
+        setAnalysisCost: (cost: string) => updateState({ analysisCost: cost }),
+        setAnalysisSalePrice: (price: string) => updateState({ analysisSalePrice: price }),
     };
 
     const selectors = {
@@ -984,26 +1028,26 @@ export const useRequests = () => {
         clientOptions: useMemo(() => {
             if (debouncedClientSearch.length < 2) return [];
             const searchTerms = normalizeText(debouncedClientSearch).split(' ').filter(Boolean);
-            return state.customers.filter(c => {
+            return customers.filter(c => {
                 const targetText = normalizeText(`${c.id} ${c.name} ${c.taxId}`);
                 return searchTerms.every(term => targetText.includes(term));
             }).map(c => ({ value: c.id, label: `[${c.id}] ${c.name} (${c.taxId})` }));
-        }, [state.customers, debouncedClientSearch]),
+        }, [customers, debouncedClientSearch]),
         itemOptions: useMemo(() => {
             if (debouncedItemSearch.length < 2) return [];
             const searchTerms = normalizeText(debouncedItemSearch).split(' ').filter(Boolean);
-            return state.products.filter(p => {
+            return products.filter(p => {
                 const targetText = normalizeText(`${p.id} ${p.description}`);
                 return searchTerms.every(term => targetText.includes(term));
             }).map(p => ({ value: p.id, label: `[${p.id}] - ${p.description}` }));
-        }, [state.products, debouncedItemSearch]),
-        classifications: useMemo(() => Array.from(new Set(state.products.map(p => p.classification).filter(Boolean))), [state.products]),
+        }, [products, debouncedItemSearch]),
+        classifications: useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]),
         filteredRequests: useMemo(() => {
             let requestsToFilter = state.viewingArchived ? state.archivedRequests : state.activeRequests;
             
             const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
             return requestsToFilter.filter(request => {
-                const product = state.products.find(p => p.id === request.itemId);
+                const product = products.find(p => p.id === request.itemId);
                 const targetText = normalizeText(`${request.consecutive} ${request.clientName} ${request.itemDescription} ${request.purchaseOrder || ''} ${request.erpOrderNumber || ''}`);
                 
                 const searchMatch = debouncedSearchTerm ? searchTerms.every(term => targetText.includes(term)) : true;
@@ -1014,7 +1058,7 @@ export const useRequests = () => {
 
                 return searchMatch && statusMatch && classificationMatch && dateMatch && myRequestsMatch;
             });
-        }, [state.viewingArchived, state.activeRequests, state.archivedRequests, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.products, state.dateFilter, state.showOnlyMyRequests, currentUser?.name, currentUser?.erpAlias]),
+        }, [state.viewingArchived, state.activeRequests, state.archivedRequests, debouncedSearchTerm, state.statusFilter, state.classificationFilter, products, state.dateFilter, state.showOnlyMyRequests, currentUser?.name, currentUser?.erpAlias]),
         stockLevels: authStockLevels,
         visibleErpOrderLines: useMemo(() => {
             if (!state.showOnlyShortageItems) {
@@ -1031,6 +1075,15 @@ export const useRequests = () => {
                 .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
                 .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
         }, [state.erpPoHeaders, state.erpPoLines]),
+        costAnalysis: useMemo(() => {
+            const cost = parseFloat(state.analysisCost);
+            const salePrice = parseFloat(state.analysisSalePrice);
+            let margin = 0;
+            if (!isNaN(cost) && !isNaN(salePrice) && salePrice > 0) {
+                 margin = ((salePrice - cost) / salePrice) * 100;
+            }
+            return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
+        }, [state.analysisCost, state.analysisSalePrice]),
     };
 
     return {
