@@ -1,0 +1,243 @@
+# Arquitectura y Código de Ejemplo para Módulo "Bases de Datos y Migraciones"
+# Este archivo contiene todos los componentes de código necesarios para entender y replicar
+# el sistema de bases de datos multi-archivo y el mecanismo de migración de la aplicación.
+
+# ==============================================================================
+# COMPONENTE 1: El Orquestador Central (db.ts)
+# Origen: src/modules/core/lib/db.ts
+# Propósito: Este es el archivo más importante. Contiene la lógica para conectar,
+# crear e inicializar todas las bases de datos. Su pieza clave es la constante
+# `DB_MODULES`, que actúa como un registro central de todas las bases de datos
+# que utiliza la aplicación.
+# ==============================================================================
+
+// --- Contenido de src/modules/core/lib/db.ts ---
+
+"use server";
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { initialCompany, initialRoles } from './data';
+// ... (se omiten otras importaciones para brevedad)
+
+// --- 1.1 El Registro de Módulos (El Corazón de la Arquitectura) ---
+// Esta constante es el "mapa" de todo el sistema de bases de datos.
+// Cada objeto define un módulo, su archivo de base de datos, y las funciones
+// que se deben ejecutar para crearlo (initFn) y actualizarlo (migrationFn).
+
+const DB_MODULES: DatabaseModule[] = [
+    { 
+        id: 'clic-tools-main', 
+        name: 'Clic-Tools (Sistema Principal)', 
+        dbFile: 'intratool.db', 
+        initFn: initializeMainDatabase, 
+        migrationFn: checkAndApplyMigrations,
+        schema: { /* ... schema definition ... */ }
+    },
+    { id: 'purchase-requests', name: 'Solicitud de Compra', dbFile: 'requests.db', initFn: initializeRequestsDb, migrationFn: runRequestMigrations, schema: requestSchema },
+    { id: 'production-planner', name: 'Planificador de Producción', dbFile: 'planner.db', initFn: initializePlannerDb, migrationFn: runPlannerMigrations, schema: plannerSchema },
+    { id: 'warehouse-management', name: 'Gestión de Almacenes', dbFile: 'warehouse.db', initFn: initializeWarehouseDb, migrationFn: runWarehouseMigrations, schema: warehouseSchema },
+    { id: 'cost-assistant', name: 'Asistente de Costos', dbFile: 'cost_assistant.db', initFn: initializeCostAssistantDb, migrationFn: runCostAssistantMigrations, schema: costAssistantSchema },
+];
+
+
+// --- 1.2 La Lógica de Conexión y Creación ---
+// Esta función utiliza el registro `DB_MODULES` para gestionar las conexiones.
+
+const dbDirectory = path.join(process.cwd(), 'dbs');
+const dbConnections = new Map<string, Database.Database>();
+
+export async function connectDb(dbFile: string = 'intratool.db', forceRecreate = false): Promise<Database.Database> {
+    if (!forceRecreate && dbConnections.has(dbFile) && dbConnections.get(dbFile)!.open) {
+        return dbConnections.get(dbFile)!;
+    }
+    
+    // ... (Lógica para cerrar conexiones existentes si es necesario) ...
+    
+    const dbPath = path.join(dbDirectory, dbFile);
+    if (!fs.existsSync(dbDirectory)) {
+        fs.mkdirSync(dbDirectory, { recursive: true });
+    }
+
+    let dbExists = fs.existsSync(dbPath);
+    let db = new Database(dbPath);
+
+    const dbModule = DB_MODULES.find(m => m.dbFile === dbFile);
+
+    if (!dbExists) {
+        console.log(`Database ${dbFile} not found, creating and initializing...`);
+        if (dbModule?.initFn) {
+            await dbModule.initFn(db); // Llama a la función de inicialización del módulo.
+        }
+    }
+    
+    // Siempre ejecuta las migraciones para asegurar que la BD esté actualizada.
+    if (dbModule?.migrationFn) {
+        try {
+            await dbModule.migrationFn(db); // Llama a la función de migración del módulo.
+        } catch (error) {
+            console.error(`Migration failed for ${dbFile}, but continuing. Error:`, error);
+        }
+    }
+
+    db.pragma('journal_mode = WAL');
+    dbConnections.set(dbFile, db);
+    return db;
+}
+
+
+// --- 1.3 Función de Inicialización de la Base de Datos Principal ---
+
+async function initializeMainDatabase(db: import('better-sqlite3').Database) {
+    const schema = `
+        CREATE TABLE IF NOT EXISTS users ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS roles ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS company_settings ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS logs ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS api_settings ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS customers ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS products ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS exemptions ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS quote_drafts ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS exemption_laws ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS cabys_catalog ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS stock ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS sql_config ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS import_queries ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS suggestions ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS user_preferences ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS notifications ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS email_settings ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS suppliers ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS erp_order_headers ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS erp_order_lines ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS erp_purchase_order_headers ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS erp_purchase_order_lines ( /* ... */ );
+    `;
+    db.exec(schema);
+
+    // Insertar datos por defecto (roles, configuración inicial de la empresa, etc.)
+    // ... (lógica de inserción de datos iniciales) ...
+    
+    console.log(`Database 'intratool.db' initialized.`);
+}
+
+// --- 1.4 Función de Migración de la Base de Datos Principal ---
+
+export async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
+    try {
+        // Ejemplo de migración: Añadir una nueva columna a una tabla existente.
+        const usersTableInfo = db.prepare(`PRAGMA table_info(users)`).all() as { name: string }[];
+        const userColumns = new Set(usersTableInfo.map(c => c.name));
+
+        if (!userColumns.has('erpAlias')) {
+            console.log("MIGRATION: Adding erpAlias to users table.");
+            db.exec(`ALTER TABLE users ADD COLUMN erpAlias TEXT`);
+        }
+        
+        if (!userColumns.has('forcePasswordChange')) {
+            console.log("MIGRATION: Adding forcePasswordChange to users table.");
+            db.exec(`ALTER TABLE users ADD COLUMN forcePasswordChange BOOLEAN DEFAULT FALSE`);
+        }
+
+        // ... (se añaden más verificaciones para cada tabla y columna nueva) ...
+
+    } catch (error) {
+        console.error("Failed to apply migrations:", error);
+    }
+}
+
+
+# ==============================================================================
+# COMPONENTE 2: Módulos de Base de Datos Individuales
+# Origen: src/modules/[moduleName]/lib/db.ts
+# Propósito: Cada módulo tiene su propio archivo `db.ts` que define cómo se
+# crea (inicializa) y se actualiza (migra) su base de datos específica.
+# ==============================================================================
+
+// --- 2.1 Ejemplo: Módulo Planificador (planner/lib/db.ts) ---
+
+export async function initializePlannerDb(db: import('better-sqlite3').Database) {
+    const schema = `
+        CREATE TABLE IF NOT EXISTS planner_settings ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS production_orders ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS production_order_history ( /* ... */ );
+    `;
+    db.exec(schema);
+    // ... (inserción de datos por defecto para el planificador) ...
+    console.log(`Database 'planner.db' initialized.`);
+}
+
+export async function runPlannerMigrations(db: import('better-sqlite3').Database) {
+    try {
+        // Ejemplo: Añadir la columna 'shiftId' a las órdenes de producción
+        const plannerTableInfo = db.prepare(`PRAGMA table_info(production_orders)`).all() as { name: string }[];
+        const plannerColumns = new Set(plannerTableInfo.map(c => c.name));
+        
+        if (!plannerColumns.has('shiftId')) {
+            db.exec(`ALTER TABLE production_orders ADD COLUMN shiftId TEXT`);
+        }
+        
+        // ... (más migraciones específicas del planificador) ...
+        
+    } catch (error) {
+        console.error("Error during planner migrations:", error);
+    }
+}
+
+// --- 2.2 Ejemplo: Módulo Solicitudes de Compra (requests/lib/db.ts) ---
+
+export async function initializeRequestsDb(db: import('better-sqlite3').Database) {
+    const schema = `
+        CREATE TABLE IF NOT EXISTS request_settings ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS purchase_requests ( /* ... */ );
+        CREATE TABLE IF NOT EXISTS purchase_request_history ( /* ... */ );
+    `;
+    db.exec(schema);
+    // ... (inserción de datos por defecto para solicitudes) ...
+}
+
+export async function runRequestMigrations(db: import('better-sqlite3').Database) {
+    try {
+        // Ejemplo: Añadir la columna 'analysis' a las solicitudes de compra
+        const requestsTableInfo = db.prepare(`PRAGMA table_info(purchase_requests)`).all() as { name: string }[];
+        const requestsColumns = new Set(requestsTableInfo.map(c => c.name));
+
+        if (!requestsColumns.has('analysis')) {
+            db.exec(`ALTER TABLE purchase_requests ADD COLUMN analysis TEXT`);
+        }
+    } catch (error) {
+        console.error("Error during requests migrations:", error);
+    }
+}
+
+// (Se repetiría un patrón similar para los módulos `warehouse` y `cost-assistant`)
+
+
+# ==============================================================================
+# COMPONENTE 3: El Contrato del Esquema (schema.ts)
+# Origen: src/modules/[moduleName]/lib/schema.ts
+# Propósito: Cada módulo tiene un archivo `schema.ts` que exporta un objeto
+# definiendo la estructura "final" esperada de sus tablas. Esto es utilizado
+# por la herramienta de auditoría de mantenimiento para verificar la integridad.
+# ==============================================================================
+
+// --- 3.1 Ejemplo: Esquema del Planificador (planner/lib/schema.ts) ---
+
+import type { ExpectedSchema } from '@/modules/core/types';
+
+export const plannerSchema: ExpectedSchema = {
+    'planner_settings': ['key', 'value'],
+    'production_orders': [
+        'id', 'consecutive', 'purchaseOrder', 'requestDate', 'deliveryDate', 'scheduledStartDate',
+        'scheduledEndDate', 'customerId', 'customerName', 'customerTaxId', 'productId', 'productDescription',
+        'quantity', 'inventory', 'inventoryErp', 'priority', 'status', 'pendingAction', 'notes',
+        'requestedBy', 'approvedBy', 'lastStatusUpdateBy', 'lastStatusUpdateNotes', 'lastModifiedBy',
+        'lastModifiedAt', 'hasBeenModified', 'deliveredQuantity', 'defectiveQuantity', 'erpPackageNumber',
+        'erpTicketNumber', 'reopened', 'machineId', 'shiftId', 'previousStatus', 'erpOrderNumber'
+    ],
+    'production_order_history': ['id', 'orderId', 'timestamp', 'status', 'notes', 'updatedBy'],
+};
+
+// (Cada módulo tendría su propio archivo de esquema similar)
