@@ -7,6 +7,27 @@ const config: Config = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'bg-emerald-600',
+    'bg-amber-700',
+    'bg-purple-700',
+    'bg-orange-600',
+    'bg-cyan-600',
+    'bg-fuchsia-600',
+    'bg-blue-700',
+    'bg-orange-500',
+    'bg-indigo-500',
+    'bg-slate-600',
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-red-600',
+    'bg-cyan-700',
+    'bg-purple-600',
+    'bg-green-600',
+    'bg-green-700',
+    'bg-blue-600',
+    'bg-sky-600'
+  ],
   theme: {
     extend: {
       colors: {
