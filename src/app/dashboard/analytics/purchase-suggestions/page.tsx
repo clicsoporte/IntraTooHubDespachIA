@@ -40,7 +40,7 @@ const CellContent: React.FC<{ item: PurchaseSuggestion; colId: string; selectors
                     <TooltipTrigger asChild>
                         <span className={cn("inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800", className)}>
                             <Info className="h-3 w-3" />
-                            {data.total.toLocaleString()}
+                            {data?.total?.toLocaleString() ?? 0}
                         </span>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -263,13 +263,7 @@ export default function PurchaseSuggestionsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell colSpan={selectors.visibleColumnsData.length + 1}><Skeleton className="h-8 w-full" /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : paginatedSuggestions.length > 0 ? (
+                                    {isLoading ? Array.from({ length: 5 }).map((_, i) => (<TableRow key={i}><TableCell colSpan={selectors.visibleColumnsData.length + 1}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)) : paginatedSuggestions.length > 0 ? (
                                         paginatedSuggestions.map((item: PurchaseSuggestion) => (
                                             <TableRow key={item.itemId}>
                                                 <TableCell>

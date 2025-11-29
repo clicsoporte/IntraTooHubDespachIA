@@ -148,8 +148,23 @@ export function usePurchaseSuggestionsLogic() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthorized, currentUser?.id]);
 
+    const getInTransitStock = useCallback((itemId: string): number => {
+        const activePoNumbers = new Set(state.erpPoHeaders.filter(h => h.ESTADO === 'A').map(h => h.ORDEN_COMPRA));
+        return state.erpPoLines
+            .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
+            .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
+    }, [state.erpPoHeaders, state.erpPoLines]);
+    
+    const suggestionsWithTransit = useMemo(() => {
+        return state.suggestions.map(suggestion => ({
+            ...suggestion,
+            inTransitStock: getInTransitStock(suggestion.itemId),
+        }));
+    }, [state.suggestions, getInTransitStock]);
+
+
     const filteredSuggestions = useMemo(() => {
-        let filtered = state.suggestions;
+        let filtered = suggestionsWithTransit;
         
         if (state.showOnlyMyOrders && currentUser?.erpAlias) {
             const userErpAliasLower = currentUser.erpAlias.toLowerCase();
@@ -208,7 +223,7 @@ export function usePurchaseSuggestionsLogic() {
         });
 
         return filtered;
-    }, [state.suggestions, debouncedSearchTerm, state.classificationFilter, state.showOnlyMyOrders, currentUser, state.sortKey, state.sortDirection]);
+    }, [suggestionsWithTransit, debouncedSearchTerm, state.classificationFilter, state.showOnlyMyOrders, currentUser, state.sortKey, state.sortDirection]);
     
     const paginatedSuggestions = useMemo(() => {
         const start = state.currentPage * state.rowsPerPage;
@@ -255,8 +270,8 @@ export function usePurchaseSuggestionsLogic() {
     };
     
     const selectedSuggestions = useMemo(
-        () => state.suggestions.filter(s => state.selectedItems.has(s.itemId)),
-        [state.suggestions, state.selectedItems]
+        () => suggestionsWithTransit.filter(s => state.selectedItems.has(s.itemId)),
+        [suggestionsWithTransit, state.selectedItems]
     );
 
     const handleCreateRequests = async (confirmedItems?: PurchaseSuggestion[]) => {
@@ -412,14 +427,6 @@ export function usePurchaseSuggestionsLogic() {
         }
     };
     
-    const getInTransitStock = useCallback((itemId: string): number => {
-        const activePoNumbers = new Set(state.erpPoHeaders.filter(h => h.ESTADO === 'A').map(h => h.ORDEN_COMPRA));
-        return state.erpPoLines
-            .filter(line => line.ARTICULO === itemId && activePoNumbers.has(line.ORDEN_COMPRA))
-            .reduce((sum, line) => sum + line.CANTIDAD_ORDENADA, 0);
-    }, [state.erpPoHeaders, state.erpPoLines]);
-
-
     const selectors = {
         filteredSuggestions,
         paginatedSuggestions,
