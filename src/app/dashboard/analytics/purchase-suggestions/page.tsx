@@ -46,9 +46,13 @@ const CellContent: React.FC<{ item: PurchaseSuggestion; colId: string; selectors
                     <TooltipContent>
                         <p className="font-bold">Este artículo ya tiene solicitudes activas:</p>
                         <ul className="list-disc list-inside mt-1 text-xs">
-                            {data.requests.map((req: any) => (
-                                <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
-                            ))}
+                            {data.requests && data.requests.length > 0 ? (
+                                data.requests.map((req: any) => (
+                                    <li key={req.id}>{req.consecutive} ({req.status}) - Cant: {req.quantity}</li>
+                                ))
+                            ) : (
+                                <li>No se encontraron detalles de las solicitudes.</li>
+                            )}
                             <li className="font-semibold mt-1">Total activo: {data.total}</li>
                         </ul>
                     </TooltipContent>
