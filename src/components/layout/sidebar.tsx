@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Sidebar component for the main application layout.
  * It handles navigation, displays user and company information, and adapts
@@ -65,6 +64,7 @@ export function AppSidebar() {
    * @returns True if the link is active, false otherwise.
    */
   const isActive = (href: string) => {
+    if (!pathname) return false;
     if (href === '/dashboard') {
         return pathname === href;
     }
@@ -156,7 +156,7 @@ export function AppSidebar() {
       description: "Mover inventario entre ubicaciones físicas.",
       href: "/dashboard/warehouse/assign",
       icon: PackagePlus,
-      bgColor: "bg-teal-600",
+      bgColor: "bg-fuchsia-600",
       textColor: "text-white",
     },
      {

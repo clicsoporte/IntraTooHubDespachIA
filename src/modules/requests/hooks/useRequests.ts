@@ -21,7 +21,7 @@ import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/mo
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader as ErpPOHeader, Product, Customer, ErpPurchaseOrderLine
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, Product, Customer,
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -152,7 +152,7 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    erpPoHeaders: ErpPOHeader[];
+    erpPoHeaders: ErpPurchaseOrderHeader[];
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
@@ -345,7 +345,7 @@ export const useRequests = () => {
 
     // Effect to pre-fill form from URL parameters
     useEffect(() => {
-        if (isAuthReady && customers.length > 0 && products.length > 0) {
+        if (isAuthReady && customers.length > 0 && products.length > 0 && searchParams) {
             const itemId = searchParams.get('itemId');
             if (itemId) {
                 const product = products.find(p => p.id === itemId);
@@ -899,7 +899,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
@@ -1079,9 +1079,7 @@ export const useRequests = () => {
             const cost = parseFloat(state.analysisCost);
             const salePrice = parseFloat(state.analysisSalePrice);
             let margin = 0;
-            if (!isNaN(cost) && !isNaN(salePrice) && cost > 0) {
-                margin = (salePrice - cost) / cost;
-            } else if (!isNaN(cost) && !isNaN(salePrice) && salePrice > 0) {
+            if (!isNaN(cost) && !isNaN(salePrice) && salePrice > 0) {
                  margin = ((salePrice - cost) / salePrice) * 100;
             }
             return { cost: state.analysisCost, salePrice: state.analysisSalePrice, margin };
