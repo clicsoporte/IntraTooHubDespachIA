@@ -20,7 +20,7 @@ import { WarehouseSettings, WarehouseLocation } from '@/modules/core/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 
@@ -161,8 +161,8 @@ export default function ManageLocationsPage() {
 
         try {
             if (isEditingLocation && currentLocation.id) {
-                await updateLocation(currentLocation as WarehouseLocation);
-                setLocations(prev => prev.map(l => l.id === currentLocation.id ? (currentLocation as WarehouseLocation) : l));
+                const updatedLoc = await updateLocation(currentLocation as WarehouseLocation);
+                setLocations(prev => prev.map(l => l.id === updatedLoc.id ? updatedLoc : l));
                 toast({ title: "Ubicación Actualizada" });
             } else {
                 const newLoc = await addLocation(currentLocation as Omit<WarehouseLocation, 'id'>);
@@ -180,7 +180,9 @@ export default function ManageLocationsPage() {
         if (!locationToDelete) return;
         try {
             await deleteLocation(locationToDelete.id);
-            setLocations(prev => prev.filter(l => l.id !== locationToDelete.id));
+            // Refetch all locations to correctly represent the updated hierarchy
+            const locationsData = await getLocations();
+            setLocations(locationsData);
             toast({ title: "Ubicación Eliminada" });
             setLocationToDelete(null);
         } catch (error: any) {
@@ -192,7 +194,7 @@ export default function ManageLocationsPage() {
     const openLocationForm = (loc?: WarehouseLocation) => {
         if (loc) {
             setCurrentLocation(loc);
-            setIsEditingLocation(true);
+setIsEditingLocation(true);
         } else {
             setCurrentLocation(emptyLocation);
             setIsEditingLocation(false);
