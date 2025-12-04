@@ -61,8 +61,8 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             timestamp TEXT NOT NULL,
             userId INTEGER NOT NULL,
             notes TEXT,
-            FOREIGN KEY (fromLocationId) REFERENCES locations(id),
-            FOREIGN KEY (toLocationId) REFERENCES locations(id)
+            FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE SET NULL,
+            FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE SET NULL
         );
 
         CREATE TABLE IF NOT EXISTS warehouse_config (
@@ -189,11 +189,38 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             );
         `);
     } else {
-        // Migration to add unitCode
         const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
         if (!unitsTableInfo.some(c => c.name === 'unitCode')) {
             console.log("MIGRATION (warehouse.db): Adding unitCode to inventory_units table.");
             db.exec(`ALTER TABLE inventory_units ADD COLUMN unitCode TEXT UNIQUE;`);
+        }
+    }
+
+    const movementsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='movements'`).get();
+    if(movementsTable) {
+        const fkList = db.prepare(`PRAGMA foreign_key_list(movements)`).all() as any[];
+        const fromFK = fkList.find(fk => fk.from === 'fromLocationId');
+        if (fromFK && fromFK.on_delete !== 'SET NULL') {
+            console.log("MIGRATION (warehouse.db): Recreating 'movements' table to update ON DELETE actions.");
+            db.transaction(() => {
+                db.exec('ALTER TABLE movements RENAME TO movements_old;');
+                db.exec(`
+                    CREATE TABLE movements (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        itemId TEXT NOT NULL,
+                        quantity REAL NOT NULL,
+                        fromLocationId INTEGER,
+                        toLocationId INTEGER,
+                        timestamp TEXT NOT NULL,
+                        userId INTEGER NOT NULL,
+                        notes TEXT,
+                        FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE SET NULL,
+                        FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE SET NULL
+                    );
+                `);
+                db.exec('INSERT INTO movements SELECT * FROM movements_old;');
+                db.exec('DROP TABLE movements_old;');
+            })();
         }
     }
 }
@@ -334,8 +361,8 @@ export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'created
     const db = await connectDb(WAREHOUSE_DB_FILE);
     
     const transaction = db.transaction(() => {
-        const settings = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string };
-        const parsedSettings: WarehouseSettings = JSON.parse(settings.value);
+        const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string };
+        const parsedSettings: WarehouseSettings = JSON.parse(settingsRow.value);
         const prefix = parsedSettings.unitPrefix || 'U';
         const nextNumber = parsedSettings.nextUnitNumber || 1;
         const unitCode = `${prefix}${String(nextNumber).padStart(5, '0')}`;
@@ -361,16 +388,17 @@ export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'created
     return transaction();
 }
 
+
 export async function getInventoryUnits(): Promise<InventoryUnit[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     return db.prepare('SELECT * FROM inventory_units ORDER BY createdAt DESC LIMIT 100').all() as InventoryUnit[];
 }
 
-export async function getInventoryUnitById(id: number | string): Promise<InventoryUnit | null> {
+export async function getInventoryUnitById(id: string | number): Promise<InventoryUnit | null> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const searchTerm = String(id);
-    if (searchTerm.toUpperCase().startsWith('U')) {
-        return db.prepare('SELECT * FROM inventory_units WHERE unitCode = ?').get(searchTerm.toUpperCase()) as InventoryUnit | null;
+    const searchTerm = String(id).toUpperCase();
+    if (searchTerm.startsWith('U')) {
+        return db.prepare('SELECT * FROM inventory_units WHERE unitCode = ?').get(searchTerm) as InventoryUnit | null;
     }
     return db.prepare('SELECT * FROM inventory_units WHERE id = ?').get(id) as InventoryUnit | null;
 }
