@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { logError } from '@/modules/core/lib/logger';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 type SearchableItem = {
   id: string;
@@ -96,6 +98,7 @@ export default function WarehousePage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [exactMatch, setExactMatch] = useState(true);
     const [debouncedSearchTerm] = useDebounce(searchTerm, companyData?.searchDebounceTime ?? 500);
     
     const [locations, setLocations] = useState<WarehouseLocation[]>([]);
@@ -166,13 +169,19 @@ export default function WarehousePage() {
 
     const filteredItems = useMemo(() => {
         if (!debouncedSearchTerm) return [];
-
-        const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
-        if (searchTerms.length === 0) return [];
+        const normalizedSearch = normalizeText(debouncedSearchTerm);
         
-        const matchedIndexItems = searchIndex.filter(item => 
-            searchTerms.every(term => item.searchText.includes(term))
-        );
+        let matchedIndexItems: SearchableItem[];
+
+        if (exactMatch) {
+            matchedIndexItems = searchIndex.filter(item => normalizeText(item.id) === normalizedSearch);
+        } else {
+            const searchTerms = normalizedSearch.split(' ').filter(Boolean);
+            if (searchTerms.length === 0) return [];
+            matchedIndexItems = searchIndex.filter(item => 
+                searchTerms.every(term => item.searchText.includes(term))
+            );
+        }
 
         const relevantProductIds = new Set(matchedIndexItems.filter(i => i.type === 'product').map(i => i.id));
         const relevantCustomerIds = new Set(matchedIndexItems.filter(i => i.type === 'customer').map(i => i.id));
@@ -228,7 +237,7 @@ export default function WarehousePage() {
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
-    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, locations]);
+    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, locations, exactMatch]);
 
     if (isLoading || !warehouseSettings) {
         return (
@@ -269,15 +278,25 @@ export default function WarehousePage() {
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Escribe el código/descripción del artículo o el código/nombre del cliente..."
-                                className="w-full pl-10 text-lg h-14"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                        <div className="space-y-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Escribe el código/descripción del artículo o el código/nombre del cliente..."
+                                    className="w-full pl-10 text-lg h-14"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="exact-match" 
+                                    checked={exactMatch} 
+                                    onCheckedChange={(checked) => setExactMatch(checked as boolean)}
+                                />
+                                <Label htmlFor="exact-match">Buscar coincidencia exacta de código</Label>
+                            </div>
                         </div>
                          {
                             !warehouseSettings.enablePhysicalInventoryTracking && (
