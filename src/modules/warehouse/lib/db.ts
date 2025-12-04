@@ -243,14 +243,14 @@ export async function getWarehouseData(): Promise<{ locations: WarehouseLocation
     const stockSettings = await getStockSettingsFromMain();
 
     // Sanitize data to ensure they are plain objects for serialization
-    return {
-        locations: JSON.parse(JSON.stringify(locations)),
-        inventory: JSON.parse(JSON.stringify(inventory)),
-        stock: JSON.parse(JSON.stringify(stock)),
-        itemLocations: JSON.parse(JSON.stringify(itemLocations)),
-        warehouseSettings: JSON.parse(JSON.stringify(warehouseSettings)),
-        stockSettings: JSON.parse(JSON.stringify(stockSettings)),
-    };
+    return JSON.parse(JSON.stringify({
+        locations,
+        inventory,
+        stock: stock || [], // Ensure stock is an array even if null
+        itemLocations,
+        warehouseSettings: warehouseSettings || { locationLevels: [], enablePhysicalInventoryTracking: false },
+        stockSettings: stockSettings || { warehouses: [] },
+    }));
 }
 
 export async function getMovements(itemId?: string): Promise<MovementLog[]> {
