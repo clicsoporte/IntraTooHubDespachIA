@@ -20,7 +20,7 @@ import { WarehouseSettings, WarehouseLocation } from '@/modules/core/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 
@@ -225,7 +225,7 @@ export default function ManageLocationsPage() {
                             </AccordionTrigger>
                             <AccordionContent className="p-6 pt-0">
                                 <CardDescription className="mb-4">
-                                    Define los **nombres** para cada nivel de tu organización. Esto crea la plantilla para construir tu almacén. Por ejemplo: 'Bodega', 'Pasillo', 'Rack', 'Estante', 'Casilla'.
+                                    Define los <strong>nombres</strong> para cada nivel de tu organización. Esto crea la plantilla para construir tu almacén. Por ejemplo: <code>Bodega</code>, <code>Pasillo</code>, <code>Rack</code>, <code>Estante</code>, <code>Casilla</code>.
                                 </CardDescription>
                                 <div className="space-y-4">
                                     {settings.locationLevels?.map((level, index) => (
@@ -261,7 +261,7 @@ export default function ManageLocationsPage() {
                             <AccordionContent className="p-6 pt-0">
                                 <div className="flex items-center justify-between mb-4">
                                     <CardDescription>
-                                        Usa los niveles que definiste en el Paso 1 para construir la estructura real de tu almacén. Por ejemplo, crea una 'Bodega' llamada 'Bodega Principal', luego un 'Pasillo' dentro de ella.
+                                        Usa los niveles que definiste en el Paso 1 para construir la estructura real de tu almacén. Por ejemplo, crea una <code>Bodega</code> llamada <code>Bodega Principal</code>, luego un <code>Pasillo</code> dentro de ella.
                                     </CardDescription>
                                     <Button onClick={() => openLocationForm()}>
                                         <PlusCircle className="mr-2"/> Añadir Ubicación
