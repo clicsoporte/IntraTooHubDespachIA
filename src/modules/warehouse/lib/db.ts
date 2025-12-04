@@ -244,33 +244,12 @@ export async function getWarehouseData(): Promise<{ locations: WarehouseLocation
 
     // Sanitize data to ensure they are plain objects for serialization
     return {
-        locations: locations.map(loc => ({
-            id: Number(loc.id),
-            name: String(loc.name),
-            code: String(loc.code),
-            type: String(loc.type),
-            parentId: loc.parentId ? Number(loc.parentId) : null
-        })),
-        inventory: inventory.map(inv => ({
-            id: Number(inv.id),
-            itemId: String(inv.itemId),
-            locationId: Number(inv.locationId),
-            quantity: Number(inv.quantity),
-            lastUpdated: String(inv.lastUpdated),
-        })),
-        stock: Array.isArray(stock) ? stock.map(s => ({
-            itemId: String(s.itemId),
-            stockByWarehouse: typeof s.stockByWarehouse === 'object' ? {...s.stockByWarehouse} : {},
-            totalStock: Number(s.totalStock)
-        })) : [],
-        itemLocations: itemLocations.map(il => ({
-            id: Number(il.id),
-            itemId: String(il.itemId),
-            locationId: Number(il.locationId),
-            clientId: il.clientId ? String(il.clientId) : null
-        })),
-        warehouseSettings,
-        stockSettings
+        locations: JSON.parse(JSON.stringify(locations)),
+        inventory: JSON.parse(JSON.stringify(inventory)),
+        stock: JSON.parse(JSON.stringify(stock)),
+        itemLocations: JSON.parse(JSON.stringify(itemLocations)),
+        warehouseSettings: JSON.parse(JSON.stringify(warehouseSettings)),
+        stockSettings: JSON.parse(JSON.stringify(stockSettings)),
     };
 }
 

@@ -126,7 +126,7 @@ export const mainTools: Tool[] = [
   {
     id: "warehouse-assign",
     name: "Asignar Inventario",
-    description: "Mover inventario entre ubicaciones físicas.",
+    description: "Ligar clientes y productos a ubicaciones físicas.",
     href: "/dashboard/warehouse/assign",
     icon: PackagePlus,
     bgColor: "bg-fuchsia-600",

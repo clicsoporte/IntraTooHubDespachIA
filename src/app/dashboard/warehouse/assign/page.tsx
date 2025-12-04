@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -11,12 +10,11 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getWarehouseData, logMovement, updateInventory, assignItemToLocation, unassignItemFromLocation } from '@/modules/warehouse/lib/actions';
-import type { Product, WarehouseLocation, WarehouseInventoryItem, ItemLocation, User } from '@/modules/core/types';
+import { getWarehouseData, assignItemToLocation, unassignItemFromLocation } from '@/modules/warehouse/lib/actions';
+import type { Product, WarehouseLocation, ItemLocation, Customer } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
-import { PackageSearch, Loader2, ArrowRight, Info, Trash2 } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -24,119 +22,71 @@ export default function AssignInventoryPage() {
     useAuthorization(['warehouse:inventory:assign']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user, companyData, products: authProducts } = useAuth();
+    const { user, companyData, products: authProducts, customers: authCustomers } = useAuth();
 
     const [isLoading, setIsLoading] = useState(true);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [locations, setLocations] = useState<WarehouseLocation[]>([]);
-    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // --- State for Advanced Mode ---
-    const [inventory, setInventory] = useState<WarehouseInventoryItem[]>([]);
-    const [fromLocationId, setFromLocationId] = useState<string>('');
-    const [toLocationId, setToLocationId] = useState<string>('');
-    const [quantity, setQuantity] = useState<number>(1);
-    
-    // --- State for Simple Mode ---
+    const [products, setProducts] = useState<Product[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [locations, setLocations] = useState<WarehouseLocation[]>([]);
     const [itemLocations, setItemLocations] = useState<ItemLocation[]>([]);
-    const [newLocationId, setNewLocationId] = useState<string>('');
-
-    const [warehouseSettings, setWarehouseSettings] = useState<{ enablePhysicalInventoryTracking: boolean } | null>(null);
     
+    const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+    const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
     const [productSearchTerm, setProductSearchTerm] = useState('');
     const [isProductSearchOpen, setProductSearchOpen] = useState(false);
-    const [fromLocationSearchTerm, setFromLocationSearchTerm] = useState('');
-    const [isFromLocationSearchOpen, setFromLocationSearchOpen] = useState(false);
-    const [toLocationSearchTerm, setToLocationSearchTerm] = useState('');
-    const [isToLocationSearchOpen, setToLocationSearchOpen] = useState(false);
-    const [newLocationSearchTerm, setNewLocationSearchTerm] = useState('');
-    const [isNewLocationSearchOpen, setNewLocationSearchOpen] = useState(false);
+    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+    const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+    const [locationSearchTerm, setLocationSearchTerm] = useState('');
+    const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
 
     const [debouncedProductSearch] = useDebounce(productSearchTerm, companyData?.searchDebounceTime ?? 500);
-    const [debouncedFromLocationSearch] = useDebounce(fromLocationSearchTerm, 300);
-    const [debouncedToLocationSearch] = useDebounce(toLocationSearchTerm, 300);
-    const [debouncedNewLocationSearch] = useDebounce(newLocationSearchTerm, 300);
-
+    const [debouncedCustomerSearch] = useDebounce(customerSearchTerm, companyData?.searchDebounceTime ?? 500);
+    const [debouncedLocationSearch] = useDebounce(locationSearchTerm, 300);
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
         try {
             const wData = await getWarehouseData();
             setProducts(authProducts.filter(p => p.active === 'S'));
+            setCustomers(authCustomers.filter(c => c.active === 'S'));
             setLocations(wData.locations);
-            setWarehouseSettings(wData.warehouseSettings);
-            // This is a bit inefficient, but keeps data consistent
-            if (selectedProductId) {
-                if (wData.warehouseSettings.enablePhysicalInventoryTracking) {
-                    setInventory(wData.inventory.filter(i => i.itemId === selectedProductId));
-                } else {
-                    setItemLocations(wData.itemLocations.filter(il => il.itemId === selectedProductId));
-                }
-            }
-
+            setItemLocations(wData.itemLocations);
         } catch (error) {
-            logError("Failed to load data for inventory assignment", { error });
-            toast({ title: "Error de Carga", description: "No se pudieron cargar productos y ubicaciones.", variant: "destructive" });
+            logError("Failed to load data for assignment page", { error });
+            toast({ title: "Error de Carga", description: "No se pudieron cargar los datos necesarios.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
-    }, [toast, authProducts, selectedProductId]);
+    }, [toast, authProducts, authCustomers]);
     
     useEffect(() => {
-        setTitle("Asignar Inventario a Ubicación");
+        setTitle("Asignar Artículo a Cliente/Ubicación");
         loadInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle]);
-
-    const fetchItemData = useCallback(async (itemId: string) => {
-        if (!warehouseSettings) return;
-        const wData = await getWarehouseData();
-
-        if (warehouseSettings.enablePhysicalInventoryTracking) {
-            const items = wData.inventory.filter(i => i.itemId === itemId);
-            setInventory(items);
-        } else {
-            const assigned = wData.itemLocations.filter(il => il.itemId === itemId);
-            setItemLocations(assigned);
-        }
-    }, [warehouseSettings]);
-
-    useEffect(() => {
-        if (selectedProductId) {
-            fetchItemData(selectedProductId);
-        } else {
-            setInventory([]);
-            setItemLocations([]);
-        }
-    }, [selectedProductId, fetchItemData]);
+    }, [setTitle, loadInitialData]);
 
     const productOptions = useMemo(() =>
         debouncedProductSearch.length < 2 ? [] : products
             .filter(p => p.id.toLowerCase().includes(debouncedProductSearch.toLowerCase()) || p.description.toLowerCase().includes(debouncedProductSearch.toLowerCase()))
-            .map(p => ({ value: p.id, label: `${p.id} - ${p.description}` })),
+            .map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` })),
         [products, debouncedProductSearch]
     );
-    
-    const fromLocationOptions = useMemo(() =>
-        debouncedFromLocationSearch.length < 1 ? [] : locations
-            .filter(l => l.name.toLowerCase().includes(debouncedFromLocationSearch.toLowerCase()) || l.code.toLowerCase().includes(debouncedFromLocationSearch.toLowerCase()))
-            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` })),
-        [locations, debouncedFromLocationSearch]
-    );
-    
-    const toLocationOptions = useMemo(() =>
-        debouncedToLocationSearch.length < 1 ? [] : locations
-            .filter(l => l.name.toLowerCase().includes(debouncedToLocationSearch.toLowerCase()) || l.code.toLowerCase().includes(debouncedToLocationSearch.toLowerCase()))
-            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` })),
-        [locations, debouncedToLocationSearch]
+
+    const customerOptions = useMemo(() =>
+        debouncedCustomerSearch.length < 2 ? [] : customers
+            .filter(c => c.id.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()) || c.name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()))
+            .map(c => ({ value: c.id, label: `[${c.id}] ${c.name}` })),
+        [customers, debouncedCustomerSearch]
     );
 
-     const newLocationOptions = useMemo(() =>
-        debouncedNewLocationSearch.length < 1 ? [] : locations
-            .filter(l => l.name.toLowerCase().includes(debouncedNewLocationSearch.toLowerCase()) || l.code.toLowerCase().includes(debouncedNewLocationSearch.toLowerCase()))
+    const locationOptions = useMemo(() =>
+        debouncedLocationSearch.length < 1 ? [] : locations
+            .filter(l => l.name.toLowerCase().includes(debouncedLocationSearch.toLowerCase()) || l.code.toLowerCase().includes(debouncedLocationSearch.toLowerCase()))
             .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` })),
-        [locations, debouncedNewLocationSearch]
+        [locations, debouncedLocationSearch]
     );
 
     const handleSelectProduct = (value: string) => {
@@ -144,225 +94,96 @@ export default function AssignInventoryPage() {
         const product = products.find(p => p.id === value);
         if (product) {
             setSelectedProductId(value);
-            setProductSearchTerm(`${product.id} - ${product.description}`);
+            setProductSearchTerm(`[${product.id}] ${product.description}`);
         }
     };
     
-    const handleMoveSubmit = async () => {
-        if (!selectedProductId || !toLocationId || !quantity || quantity <= 0 || !user) {
-            toast({ title: "Datos incompletos", description: "Debe seleccionar un producto, una ubicación de destino y una cantidad válida.", variant: "destructive" });
+    const handleSelectCustomer = (value: string) => {
+        setIsCustomerSearchOpen(false);
+        const customer = customers.find(c => c.id === value);
+        if (customer) {
+            setSelectedCustomerId(value);
+            setCustomerSearchTerm(`[${customer.id}] ${customer.name}`);
+        }
+    };
+    
+    const handleSelectLocation = (value: string) => {
+        setIsLocationSearchOpen(false);
+        const location = locations.find(l => String(l.id) === value);
+        if (location) {
+            setSelectedLocationId(value);
+            setLocationSearchTerm(`${location.code} (${location.name})`);
+        }
+    };
+
+    const handleAssign = async () => {
+        if (!selectedProductId || !selectedLocationId) {
+            toast({ title: "Datos Incompletos", description: "Debe seleccionar un producto y una ubicación.", variant: "destructive" });
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const fromId = fromLocationId ? parseInt(fromLocationId) : null;
-            const toId = parseInt(toLocationId);
+            await assignItemToLocation(selectedProductId, parseInt(selectedLocationId, 10), selectedCustomerId);
             
-            await logMovement({
-                itemId: selectedProductId,
-                quantity: quantity,
-                fromLocationId: fromId,
-                toLocationId: toId,
-                userId: (user as User).id,
-                notes: 'Asignación manual de inventario'
-            });
+            const wData = await getWarehouseData();
+            setItemLocations(wData.itemLocations);
 
-            if (fromId) {
-                await updateInventory(selectedProductId, fromId, -quantity);
-            }
-            await updateInventory(selectedProductId, toId, quantity);
-
-            toast({ title: "Movimiento Exitoso", description: `${quantity} unidad(es) de ${selectedProductId} movidas a la ubicación seleccionada.` });
-            logInfo('Inventory manually assigned', { item: selectedProductId, quantity, from: fromId, to: toId, user: user.name });
+            const productName = products.find(p => p.id === selectedProductId)?.description || selectedProductId;
+            const locationName = locations.find(l => String(l.id) === selectedLocationId)?.name || selectedLocationId;
+            const customerName = selectedCustomerId ? (customers.find(c => c.id === selectedCustomerId)?.name || selectedCustomerId) : null;
             
-            await fetchItemData(selectedProductId);
+            const successMessage = customerName 
+                ? `Artículo '${productName}' asignado a ${customerName} en la ubicación ${locationName}.`
+                : `Artículo '${productName}' asignado a la ubicación ${locationName}.`;
             
-            setFromLocationId('');
-            setFromLocationSearchTerm('');
-            setToLocationId('');
-            setToLocationSearchTerm('');
-            setQuantity(1);
+            toast({ title: "Asignación Creada", description: successMessage });
+            logInfo('Item location assigned', { itemId: selectedProductId, locationId: selectedLocationId, clientId: selectedCustomerId });
+            
+            // Optionally reset some fields after assignment
+            // setSelectedProductId(null);
+            // setProductSearchTerm('');
 
-        } catch (error: any) {
-            logError("Failed to assign inventory", { error });
-            toast({ title: "Error en la Asignación", description: `No se pudo completar el movimiento de inventario. ${error.message}`, variant: "destructive" });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    const handleAssignSubmit = async () => {
-        if (!selectedProductId || !newLocationId) {
-            toast({ title: "Datos incompletos", description: "Debe seleccionar un producto y una ubicación.", variant: "destructive" });
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            await assignItemToLocation(selectedProductId, parseInt(newLocationId));
-            toast({ title: "Ubicación Asignada", description: `Se ha asignado el artículo a la ubicación.` });
-            await fetchItemData(selectedProductId);
-            setNewLocationId('');
-            setNewLocationSearchTerm('');
-        } catch (error: any) {
-            logError("Failed to assign location to item", { error });
-            toast({ title: "Error en la Asignación", description: `No se pudo asignar la ubicación. ${error.message}`, variant: "destructive" });
+        } catch(e: any) {
+            logError('Failed to assign item location', { error: e.message });
+            toast({ title: "Error", description: `No se pudo crear la asignación. ${e.message}`, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleUnassign = async (itemLocationId: number) => {
-        if (!selectedProductId) return;
+        setIsSubmitting(true);
         try {
             await unassignItemFromLocation(itemLocationId);
-            toast({ title: "Ubicación Removida", description: "Se ha quitado la asignación de la ubicación." });
-            await fetchItemData(selectedProductId);
-        } catch (error: any) {
-             logError("Failed to unassign location from item", { error });
-            toast({ title: "Error al Remover", description: `No se pudo quitar la ubicación. ${error.message}`, variant: "destructive" });
+            const wData = await getWarehouseData();
+            setItemLocations(wData.itemLocations);
+            toast({ title: "Asignación Eliminada", variant: "destructive" });
+        } catch(e: any) {
+             logError('Failed to unassign item location', { error: e.message });
+            toast({ title: "Error", description: `No se pudo eliminar la asignación. ${e.message}`, variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const renderCurrentInventory = () => {
-        const hasInventory = warehouseSettings?.enablePhysicalInventoryTracking ? inventory.length > 0 : itemLocations.length > 0;
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Ubicaciones Actuales del Artículo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ScrollArea className="h-48">
-                        {hasInventory ? (
-                            <ul className="space-y-2">
-                                {warehouseSettings?.enablePhysicalInventoryTracking ? (
-                                    inventory.map(item => (
-                                        <li key={item.id} className="flex justify-between items-center p-2 border rounded-md">
-                                            <span>{locations.find(l => l.id === item.locationId)?.code || 'Ubicación desconocida'}</span>
-                                            <span className="font-bold">{item.quantity}</span>
-                                        </li>
-                                    ))
-                                ) : (
-                                     itemLocations.map(item => (
-                                        <li key={item.id} className="flex justify-between items-center p-2 border rounded-md">
-                                            <span>{locations.find(l => l.id === item.locationId)?.name || 'Ubicación desconocida'} ({locations.find(l => l.id === item.locationId)?.code})</span>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleUnassign(item.id)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                        </li>
-                                    ))
-                                )}
-                            </ul>
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-muted-foreground">
-                                {selectedProductId ? "Este artículo no tiene ubicaciones asignadas." : "Selecciona un artículo para ver sus ubicaciones."}
-                            </div>
-                        )}
-                    </ScrollArea>
-                </CardContent>
-            </Card>
-        );
-    }
+    const currentAssignments = useMemo(() => {
+        return itemLocations
+            .map(il => {
+                const product = products.find(p => p.id === il.itemId);
+                const customer = il.clientId ? customers.find(c => c.id === il.clientId) : null;
+                const location = locations.find(l => l.id === il.locationId);
+                return { ...il, product, customer, location };
+            })
+            .filter(il => il.product && il.location) // Only show valid assignments
+            .sort((a,b) => (a.customer?.name || '').localeCompare(b.customer?.name || '') || a.product!.id.localeCompare(b.product!.id));
+    }, [itemLocations, products, customers, locations]);
     
-    const renderAdvancedMode = () => (
-        <Card>
-            <form onSubmit={(e) => { e.preventDefault(); handleMoveSubmit(); }}>
-                <CardHeader>
-                    <CardTitle>Asignar o Mover Inventario</CardTitle>
-                    <CardDescription>
-                        Selecciona una ubicación de origen (opcional) y una de destino para mover el inventario.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 items-center">
-                            <div className="col-span-1 sm:col-span-2">
-                                <Label>Desde (Origen)</Label>
-                                <SearchInput
-                                    options={fromLocationOptions}
-                                    onSelect={(value) => { setFromLocationId(value); setFromLocationSearchTerm(locations.find(l => String(l.id) === value)?.name || ''); setFromLocationSearchOpen(false); }}
-                                    value={fromLocationSearchTerm}
-                                    onValueChange={setFromLocationSearchTerm}
-                                    placeholder="Ninguno"
-                                    open={isFromLocationSearchOpen}
-                                    onOpenChange={setFromLocationSearchOpen}
-                                />
-                            </div>
-                            <div className="col-span-1 text-center pt-6">
-                                <ArrowRight className="h-6 w-6 mx-auto text-muted-foreground" />
-                            </div>
-                            <div className="col-span-1 sm:col-span-2">
-                                <Label>Hacia (Destino)</Label>
-                                <SearchInput
-                                    options={toLocationOptions}
-                                    onSelect={(value) => { setToLocationId(value); setToLocationSearchTerm(locations.find(l => String(l.id) === value)?.name || ''); setToLocationSearchOpen(false); }}
-                                    value={toLocationSearchTerm}
-                                    onValueChange={setToLocationSearchTerm}
-                                    placeholder="Selecciona destino"
-                                    open={isToLocationSearchOpen}
-                                    onOpenChange={setToLocationSearchOpen}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <Label htmlFor="quantity">Cantidad a Mover</Label>
-                        <Input
-                            id="quantity"
-                            type="number"
-                            min="1"
-                            value={quantity}
-                            onChange={(e) => setQuantity(Number(e.target.value))}
-                            required
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSubmitting || !selectedProductId}>
-                        {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <PackageSearch className="mr-2" />}
-                        Confirmar Movimiento
-                    </Button>
-                </CardFooter>
-            </form>
-        </Card>
-    );
-
-    const renderSimpleMode = () => (
-        <Card>
-            <form onSubmit={(e) => { e.preventDefault(); handleAssignSubmit(); }}>
-                <CardHeader>
-                    <CardTitle>Asignar Ubicación</CardTitle>
-                    <CardDescription>
-                       Selecciona una ubicación para asociarla con este artículo. Puedes asignar varias.
-                    </CardDescription>
-                </CardHeader>
-                 <CardContent>
-                     <Label>Nueva Ubicación a Asignar</Label>
-                     <SearchInput
-                        options={newLocationOptions}
-                        onSelect={(value) => { setNewLocationId(value); setNewLocationSearchTerm(locations.find(l => String(l.id) === value)?.name || ''); setNewLocationSearchOpen(false); }}
-                        value={newLocationSearchTerm}
-                        onValueChange={setNewLocationSearchTerm}
-                        placeholder="Selecciona una ubicación..."
-                        open={isNewLocationSearchOpen}
-                        onOpenChange={setNewLocationSearchOpen}
-                    />
-                </CardContent>
-                <CardFooter>
-                    <Button type="submit" disabled={isSubmitting || !selectedProductId}>
-                        {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : <PackageSearch className="mr-2" />}
-                        Asignar Ubicación
-                    </Button>
-                </CardFooter>
-            </form>
-        </Card>
-    );
-
     if (isLoading) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                  <div className="grid gap-8 md:grid-cols-3">
                     <div className="md:col-span-1 space-y-6">
-                        <Skeleton className="h-40 w-full" />
                         <Skeleton className="h-64 w-full" />
                     </div>
                     <div className="md:col-span-2">
@@ -375,44 +196,75 @@ export default function AssignInventoryPage() {
 
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="grid gap-8 md:grid-cols-3">
-                <div className="md:col-span-1 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Seleccionar Artículo</CardTitle>
-                            <CardDescription>Busca el artículo al que deseas asignar una ubicación.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <SearchInput
-                                options={productOptions}
-                                onSelect={handleSelectProduct}
-                                value={productSearchTerm}
-                                onValueChange={setProductSearchTerm}
-                                placeholder="Selecciona un artículo..."
-                                open={isProductSearchOpen}
-                                onOpenChange={setProductSearchOpen}
-                            />
-                        </CardContent>
-                    </Card>
-                    {renderCurrentInventory()}
-                </div>
-
-                <div className="md:col-span-2">
-                    { !warehouseSettings?.enablePhysicalInventoryTracking && (
-                         <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 mb-6">
-                            <Info className="h-5 w-5"/>
-                            <p className="text-sm">El modo de control de inventario físico está desactivado. Solo se pueden asignar ubicaciones, no cantidades.</p>
+            <div className="mx-auto max-w-5xl space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Asignar Artículo a Cliente y Ubicación</CardTitle>
+                        <CardDescription>Cree un catálogo de productos por cliente y asigne su ubicación física en el almacén.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label>1. Seleccione un Producto</Label>
+                                <SearchInput options={productOptions} onSelect={handleSelectProduct} value={productSearchTerm} onValueChange={setProductSearchTerm} placeholder="Buscar producto..." open={isProductSearchOpen} onOpenChange={setProductSearchOpen} />
+                            </div>
+                             <div className="space-y-2">
+                                <Label>2. Seleccione un Cliente (Opcional)</Label>
+                                <SearchInput options={customerOptions} onSelect={handleSelectCustomer} value={customerSearchTerm} onValueChange={setCustomerSearchTerm} placeholder="Buscar cliente..." open={isCustomerSearchOpen} onOpenChange={setIsCustomerSearchOpen} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>3. Seleccione una Ubicación</Label>
+                                <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar ubicación..." open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
+                            </div>
                         </div>
-                    )}
-                   {warehouseSettings?.enablePhysicalInventoryTracking ? renderAdvancedMode() : renderSimpleMode()}
-                </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={handleAssign} disabled={isSubmitting || !selectedProductId || !selectedLocationId}>
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Crear Asignación
+                        </Button>
+                    </CardFooter>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Asignaciones Actuales</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="max-h-96 overflow-y-auto">
+                            <table className="w-full">
+                                <thead className="sticky top-0 bg-muted">
+                                    <tr>
+                                        <th className="p-2 text-left">Producto</th>
+                                        <th className="p-2 text-left">Cliente</th>
+                                        <th className="p-2 text-left">Ubicación</th>
+                                        <th className="p-2 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {currentAssignments.map(item => (
+                                        <tr key={item.id} className="border-b">
+                                            <td className="p-2">
+                                                <div className="font-medium">{item.product?.description}</div>
+                                                <div className="text-xs text-muted-foreground">{item.product?.id}</div>
+                                            </td>
+                                            <td className="p-2">{item.customer ? item.customer.name : <span className="text-muted-foreground italic">General</span>}</td>
+                                            <td className="p-2">{item.location?.name} ({item.location?.code})</td>
+                                            <td className="p-2 text-right">
+                                                <Button variant="ghost" size="icon" onClick={() => handleUnassign(item.id)} disabled={isSubmitting}>
+                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                             {currentAssignments.length === 0 && (
+                                <div className="text-center py-10 text-muted-foreground">No hay asignaciones.</div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
-             {isSubmitting && (
-                <div className="fixed bottom-4 right-4 flex items-center gap-2 rounded-lg bg-primary p-3 text-primary-foreground shadow-lg">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Procesando...</span>
-                </div>
-            )}
         </main>
     );
 }
