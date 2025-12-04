@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Main warehouse search page.
  * This component allows users to search for products or customers and see a consolidated
@@ -14,9 +13,9 @@ import { useAuth } from '@/modules/core/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getWarehouseData } from '@/modules/warehouse/lib/actions';
+import { getWarehouseData, getInventoryUnitById } from '@/modules/warehouse/lib/actions';
 import { syncAllData } from '@/modules/core/lib/actions';
-import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer } from '@/modules/core/types';
+import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit } from '@/modules/core/types';
 import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, RefreshCw, Loader2, Info, User, ChevronRight } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Button } from '@/components/ui/button';
@@ -41,6 +40,8 @@ type CombinedItem = {
     }[];
     erpStock: StockInfo | null;
     client?: Customer | null;
+    isUnit?: boolean;
+    unit?: InventoryUnit | null;
 };
 
 const normalizeText = (text: string | null | undefined): string => {
@@ -109,6 +110,8 @@ export default function WarehouseSearchPage() {
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
     const [warehouseSettings, setWarehouseSettings] = useState<{ enablePhysicalInventoryTracking: boolean } | null>(null);
 
+    const [unitSearchResult, setUnitSearchResult] = useState<InventoryUnit | null>(null);
+
     const loadData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -167,12 +170,58 @@ export default function WarehouseSearchPage() {
         }));
         return [...productIndex, ...customerIndex];
     }, [products, customers]);
+    
+    useEffect(() => {
+        const performSearch = async () => {
+            if (!debouncedSearchTerm) {
+                setUnitSearchResult(null);
+                return;
+            }
+            
+            const numericId = parseInt(debouncedSearchTerm, 10);
+            if (!isNaN(numericId)) {
+                setIsLoading(true);
+                try {
+                    const unit = await getInventoryUnitById(numericId);
+                    setUnitSearchResult(unit);
+                } catch(e) {
+                    setUnitSearchResult(null);
+                } finally {
+                    setIsLoading(false);
+                }
+                return;
+            }
+            
+            // If not a numeric ID, clear the unit search result
+            setUnitSearchResult(null);
+        };
+        performSearch();
+    }, [debouncedSearchTerm]);
+
 
     const filteredItems = useMemo(() => {
+        if (unitSearchResult) {
+            const product = products.find(p => p.id === unitSearchResult.productId);
+            const erpStock = stock.find(s => s.itemId === unitSearchResult.productId);
+            return [{
+                isUnit: true,
+                unit: unitSearchResult,
+                product: product || { id: unitSearchResult.productId, description: `Artículo ${unitSearchResult.productId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
+                physicalLocations: [{
+                    path: renderLocationPath(unitSearchResult.locationId, locations)
+                }],
+                erpStock: erpStock || null,
+            }]
+        }
+        
         if (!debouncedSearchTerm) return [];
         const normalizedSearch = normalizeText(debouncedSearchTerm);
         
         let matchedIndexItems: SearchableItem[];
+
+        if (exactMatch && !isNaN(parseInt(normalizedSearch, 10))) {
+            return []; // Already handled by unit search
+        }
 
         if (exactMatch) {
             matchedIndexItems = searchIndex.filter(item => normalizeText(item.id) === normalizedSearch);
@@ -238,9 +287,9 @@ export default function WarehouseSearchPage() {
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
-    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, locations, exactMatch]);
+    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, locations, exactMatch, unitSearchResult]);
 
-    if (isLoading || !warehouseSettings) {
+    if (!warehouseSettings) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
                  <Card className="max-w-4xl mx-auto">
@@ -269,7 +318,7 @@ export default function WarehouseSearchPage() {
                                 </div>
                                 <div>
                                     <CardTitle className="text-2xl">Búsqueda en Almacén</CardTitle>
-                                    <CardDescription>Busca un artículo o cliente para encontrar su ubicación y existencias.</CardDescription>
+                                    <CardDescription>Busca un artículo, cliente o ID de unidad para encontrar su ubicación y existencias.</CardDescription>
                                 </div>
                             </div>
                             <Button onClick={handleRefresh} disabled={isRefreshing} className="w-full sm:w-auto">
@@ -284,7 +333,7 @@ export default function WarehouseSearchPage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                 <Input
                                     type="search"
-                                    placeholder="Escribe el código/descripción del artículo o el código/nombre del cliente..."
+                                    placeholder="Escribe el código/descripción del artículo, cliente o ID de unidad..."
                                     className="w-full pl-10 text-lg h-14"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -296,7 +345,7 @@ export default function WarehouseSearchPage() {
                                     checked={exactMatch} 
                                     onCheckedChange={(checked) => setExactMatch(checked as boolean)}
                                 />
-                                <Label htmlFor="exact-match">Buscar coincidencia exacta de código</Label>
+                                <Label htmlFor="exact-match">Buscar coincidencia exacta de código / ID de unidad</Label>
                             </div>
                         </div>
                          {
@@ -309,15 +358,21 @@ export default function WarehouseSearchPage() {
                         }
                         
                         <div className="space-y-4">
-                            {filteredItems.length > 0 ? (
+                            {isLoading ? (
+                                 <div className="flex justify-center items-center h-40">
+                                    <Loader2 className="animate-spin h-8 w-8 text-muted-foreground"/>
+                                </div>
+                            ) : filteredItems.length > 0 ? (
                                 filteredItems.map(item => (
-                                    <Card key={item.product?.id} className="w-full">
+                                    <Card key={item.product?.id || item.unit?.id} className="w-full">
                                         <CardHeader>
                                             <CardTitle className="text-xl flex items-center gap-2">
                                                 <Package className="h-6 w-6 text-primary" />
-                                                {item.product?.description || 'Producto no encontrado'}
+                                                {item.isUnit ? `Unidad ${item.unit?.id} - ${item.product?.description}` : item.product?.description || 'Producto no encontrado'}
                                             </CardTitle>
-                                            <CardDescription>Código: {item.product?.id}</CardDescription>
+                                            <CardDescription>
+                                                {item.isUnit ? `ID legible: ${item.unit?.humanReadableId || 'N/A'}` : `Código: ${item.product?.id}`}
+                                            </CardDescription>
                                              {item.client && (
                                                 <div className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
                                                     <User className="h-4 w-4"/>
@@ -338,6 +393,7 @@ export default function WarehouseSearchPage() {
                                                     </div>
                                                 )) : <p className="text-sm text-muted-foreground">Sin ubicaciones asignadas.</p>}
                                                 </div>
+                                                {item.unit?.notes && <p className="text-xs italic text-muted-foreground mt-2">&quot;{item.unit.notes}&quot;</p>}
                                             </div>
                                             <div>
                                                  <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>

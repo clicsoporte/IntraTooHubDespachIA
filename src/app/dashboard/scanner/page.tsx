@@ -1,19 +1,20 @@
 /**
  * @fileoverview Page to display the results of a scanned inventory unit QR code.
- * It reads the `unitId` from the URL, fetches the corresponding data, and displays it.
+ * If a `unitId` is provided in the URL, it fetches and displays the unit's data.
+ * If no `unitId` is provided, it redirects the user to the main warehouse search page.
  */
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { getInventoryUnitById } from '@/modules/warehouse/lib/actions';
-import { getLocations, getWarehouseData } from '@/modules/warehouse/lib/actions';
+import { getLocations } from '@/modules/warehouse/lib/actions';
 import type { InventoryUnit, Product, WarehouseLocation, StockInfo } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
-import { AlertCircle, QrCode, Package, MapPin, Warehouse, ChevronRight, Building, Waypoints, Box, Layers } from 'lucide-react';
+import { AlertCircle, QrCode, Package, MapPin, Warehouse, ChevronRight, Building, Waypoints, Box, Layers, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const LocationIcon = ({ type }: { type: WarehouseLocation['type'] }) => {
@@ -55,6 +56,7 @@ const renderLocationPath = (locationId: number | null | undefined, allLocations:
 export default function ScannerResultPage() {
     const { setTitle } = usePageTitle();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const { products, stockLevels } = useAuth();
     
     const [isLoading, setIsLoading] = useState(true);
@@ -69,8 +71,7 @@ export default function ScannerResultPage() {
         const unitId = searchParams.get('unitId');
 
         if (!unitId) {
-            setError("No se proporcionó un ID de unidad para escanear.");
-            setIsLoading(false);
+            router.replace('/dashboard/warehouse/search');
             return;
         }
 
@@ -102,7 +103,18 @@ export default function ScannerResultPage() {
         };
 
         fetchData();
-    }, [setTitle, searchParams, products, stockLevels]);
+    }, [setTitle, searchParams, products, stockLevels, router]);
+
+    if (!searchParams.get('unitId')) {
+        return (
+             <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                    <Loader2 className="h-10 w-10 animate-spin" />
+                    <p>Redirigiendo a la búsqueda principal...</p>
+                </div>
+            </main>
+        );
+    }
 
     if (isLoading) {
         return (
