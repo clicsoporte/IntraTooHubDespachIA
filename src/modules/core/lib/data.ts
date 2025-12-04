@@ -115,21 +115,12 @@ export const mainTools: Tool[] = [
     textColor: 'text-white',
   },
    {
-    id: "warehouse-search",
-    name: "Consulta de Almacén",
-    description: "Localizar artículos y ver existencias en el almacén.",
+    id: "warehouse",
+    name: "Almacén",
+    description: "Consultar ubicaciones, existencias y asignar inventario.",
     href: "/dashboard/warehouse",
     icon: Warehouse,
     bgColor: "bg-cyan-600",
-    textColor: "text-white",
-  },
-  {
-    id: "warehouse-assign",
-    name: "Asignar Inventario",
-    description: "Ligar clientes y productos a ubicaciones físicas.",
-    href: "/dashboard/warehouse/assign",
-    icon: PackagePlus,
-    bgColor: "bg-fuchsia-600",
     textColor: "text-white",
   },
      {
@@ -151,6 +142,29 @@ export const mainTools: Tool[] = [
     textColor: "text-white",
   },
 ];
+
+
+export const warehouseTools: Tool[] = [
+    {
+        id: "warehouse-search",
+        name: "Consulta de Almacén",
+        description: "Localizar artículos y ver existencias en el almacén.",
+        href: "/dashboard/warehouse/search",
+        icon: Search,
+        bgColor: "bg-cyan-600",
+        textColor: "text-white",
+    },
+    {
+        id: "warehouse-assign",
+        name: "Asignar Inventario",
+        description: "Ligar clientes y productos a ubicaciones físicas.",
+        href: "/dashboard/warehouse/assign",
+        icon: PackagePlus,
+        bgColor: "bg-fuchsia-600",
+        textColor: "text-white",
+    },
+];
+
 
 /**
  * Default roles and their permissions.
