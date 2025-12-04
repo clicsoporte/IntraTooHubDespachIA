@@ -96,7 +96,6 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
 export async function runWarehouseMigrations(db: import('better-sqlite3').Database) {
     const warehouseConfigTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='warehouse_config'`).get();
     if (!warehouseConfigTable) {
-        // Table doesn't exist, probably a fresh DB, let initialization handle it
         return;
     }
 
@@ -107,22 +106,20 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             let settingsUpdated = false;
 
             if (typeof settings.enablePhysicalInventoryTracking !== 'boolean') {
-                console.log("MIGRATION (warehouse.db): Adding enablePhysicalInventoryTracking to settings.");
                 settings.enablePhysicalInventoryTracking = false;
                 settingsUpdated = true;
             }
             if (typeof settings.unitPrefix !== 'string') {
-                console.log("MIGRATION (warehouse.db): Adding unitPrefix to settings.");
                 settings.unitPrefix = 'U';
                 settingsUpdated = true;
             }
             if (typeof settings.nextUnitNumber !== 'number') {
-                console.log("MIGRATION (warehouse.db): Adding nextUnitNumber to settings.");
                 settings.nextUnitNumber = 1;
                 settingsUpdated = true;
             }
             if (settingsUpdated) {
                 db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(settings));
+                console.log("MIGRATION (warehouse.db): Added default unit prefix and number settings.");
             }
         }
     } catch (error) {
@@ -131,7 +128,6 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
     
     const itemLocationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='item_locations'`).get();
     if (!itemLocationsTable) {
-        console.log("MIGRATION (warehouse.db): Creating item_locations table.");
         db.exec(`
             CREATE TABLE IF NOT EXISTS item_locations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -144,39 +140,36 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
         `);
     }
 
-    // Migration to handle parentId on DELETE
     const locationsTableInfo = db.prepare(`PRAGMA table_info(locations)`).all() as { name: string, type: string }[];
-    if (!locationsTableInfo.find(c => c.name === 'parentId')) {
+    const hasParentId = locationsTableInfo.some(c => c.name === 'parentId');
+
+    if (!hasParentId) {
         db.exec(`ALTER TABLE locations ADD COLUMN parentId INTEGER REFERENCES locations(id) ON DELETE SET NULL;`);
     } else {
-        // Recreate table to add ON DELETE SET NULL if not present. This is a bit risky but necessary for SQLite.
         const foreignKeyList = db.prepare(`PRAGMA foreign_key_list(locations)`).all() as any[];
         const parentFK = foreignKeyList.find(fk => fk.from === 'parentId');
         if (parentFK && parentFK.on_delete !== 'SET NULL') {
-            console.log("MIGRATION (warehouse.db): Recreating 'locations' table to update parentId's ON DELETE action.");
             db.transaction(() => {
                 db.exec(`
                     CREATE TABLE locations_new (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL,
-                        code TEXT UNIQUE NOT NULL,
-                        type TEXT NOT NULL,
-                        parentId INTEGER,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT UNIQUE NOT NULL,
+                        type TEXT NOT NULL, parentId INTEGER,
                         FOREIGN KEY (parentId) REFERENCES locations(id) ON DELETE SET NULL
                     );
                 `);
-                db.exec(`INSERT INTO locations_new SELECT id, name, code, type, parentId FROM locations;`);
+                db.exec(`INSERT INTO locations_new(id, name, code, type, parentId) SELECT id, name, code, type, parentId FROM locations;`);
                 db.exec(`DROP TABLE locations;`);
                 db.exec(`ALTER TABLE locations_new RENAME TO locations;`);
             })();
+             console.log("MIGRATION (warehouse.db): Recreated 'locations' table to update parentId's ON DELETE action.");
         }
     }
-
+    
     const inventoryUnitsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units'`).get();
     if (!inventoryUnitsTable) {
-        console.log("MIGRATION (warehouse.db): Creating inventory_units table.");
+        console.log("MIGRATION (warehouse.db): Creating 'inventory_units' table with 'unitCode'.");
         db.exec(`
-            CREATE TABLE IF NOT EXISTS inventory_units (
+            CREATE TABLE inventory_units (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 unitCode TEXT UNIQUE,
                 productId TEXT NOT NULL,
@@ -191,7 +184,7 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
     } else {
         const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
         if (!unitsTableInfo.some(c => c.name === 'unitCode')) {
-            console.log("MIGRATION (warehouse.db): Adding unitCode to inventory_units table.");
+            console.log("MIGRATION (warehouse.db): Adding 'unitCode' column to existing 'inventory_units' table.");
             db.exec(`ALTER TABLE inventory_units ADD COLUMN unitCode TEXT UNIQUE;`);
         }
     }
@@ -206,14 +199,9 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
                 db.exec('ALTER TABLE movements RENAME TO movements_old;');
                 db.exec(`
                     CREATE TABLE movements (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        itemId TEXT NOT NULL,
-                        quantity REAL NOT NULL,
-                        fromLocationId INTEGER,
-                        toLocationId INTEGER,
-                        timestamp TEXT NOT NULL,
-                        userId INTEGER NOT NULL,
-                        notes TEXT,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, quantity REAL NOT NULL,
+                        fromLocationId INTEGER, toLocationId INTEGER, timestamp TEXT NOT NULL,
+                        userId INTEGER NOT NULL, notes TEXT,
                         FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE SET NULL,
                         FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE SET NULL
                     );
@@ -243,7 +231,6 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
         const row = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
         if (row) {
             const settings = JSON.parse(row.value);
-            // Ensure all keys exist, falling back to defaults if not.
             return { ...defaults, ...settings };
         }
     } catch (error) {
@@ -283,8 +270,6 @@ export async function updateLocation(location: WarehouseLocation): Promise<Wareh
 
 export async function deleteLocation(id: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    // ON DELETE SET NULL on parentId will handle re-parenting children to the root.
-    // ON DELETE CASCADE on other tables will handle inventory/item_locations.
     db.prepare('DELETE FROM locations WHERE id = ?').run(id);
 }
 
@@ -321,11 +306,10 @@ export async function getWarehouseData(): Promise<{ locations: WarehouseLocation
     const warehouseSettings = await getWarehouseSettings();
     const stockSettings = await getStockSettingsFromMain();
 
-    // Sanitize data to ensure they are plain objects for serialization
     return JSON.parse(JSON.stringify({
         locations: locations || [],
         inventory: inventory || [],
-        stock: stock || [], // Ensure stock is an array even if null
+        stock: stock || [],
         itemLocations: itemLocations || [],
         warehouseSettings: warehouseSettings || { locationLevels: [], enablePhysicalInventoryTracking: false, unitPrefix: 'U', nextUnitNumber: 1 },
         stockSettings: stockSettings || { warehouses: [] },
@@ -340,7 +324,6 @@ export async function getMovements(itemId?: string): Promise<MovementLog[]> {
     return db.prepare('SELECT * FROM movements ORDER BY timestamp DESC').all() as MovementLog[];
 }
 
-// --- Simple Mode Functions ---
 export async function getItemLocations(itemId: string): Promise<ItemLocation[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     return db.prepare('SELECT * FROM item_locations WHERE itemId = ?').all(itemId) as ItemLocation[];
@@ -356,7 +339,6 @@ export async function unassignItemFromLocation(itemLocationId: number): Promise<
     db.prepare('DELETE FROM item_locations WHERE id = ?').run(itemLocationId);
 }
 
-// --- Inventory Unit Functions ---
 export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     
@@ -378,7 +360,6 @@ export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'created
         
         const newId = info.lastInsertRowid as number;
         
-        // Atomically update the next number
         parsedSettings.nextUnitNumber = nextNumber + 1;
         db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(parsedSettings));
 
@@ -412,5 +393,3 @@ export async function updateInventoryUnitLocation(id: number, locationId: number
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('UPDATE inventory_units SET locationId = ? WHERE id = ?').run(locationId, id);
 }
-
-    

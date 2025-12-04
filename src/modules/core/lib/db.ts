@@ -167,6 +167,15 @@ const dbConnections = new Map<string, Database.Database>();
  */
 export async function connectDb(dbFile: string = DB_FILE, forceRecreate = false): Promise<Database.Database> {
     if (!forceRecreate && dbConnections.has(dbFile) && dbConnections.get(dbFile)!.open) {
+        // Migration check on existing connection to be safe.
+        const dbModule = DB_MODULES.find(m => m.dbFile === dbFile);
+        if (dbModule?.migrationFn) {
+            try {
+                await dbModule.migrationFn(dbConnections.get(dbFile)!);
+            } catch (error) {
+                console.error(`Migration check on existing connection failed for ${dbFile}, but continuing. Error:`, error);
+            }
+        }
         return dbConnections.get(dbFile)!;
     }
     
@@ -1563,5 +1572,3 @@ export async function runDatabaseAudit(userName: string): Promise<AuditResult[]>
 
 // --- Planner-specific functions moved from core ---
 export { confirmPlannerModification };
-
-    
