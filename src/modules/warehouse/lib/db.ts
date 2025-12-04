@@ -165,9 +165,10 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
         }
     }
     
+    // ** ROBUST MIGRATION FOR inventory_units **
     const inventoryUnitsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units'`).get();
     if (!inventoryUnitsTable) {
-        console.log("MIGRATION (warehouse.db): Creating 'inventory_units' table with 'unitCode'.");
+        console.log("MIGRATION (warehouse.db): Creating 'inventory_units' table as it does not exist.");
         db.exec(`
             CREATE TABLE inventory_units (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -188,6 +189,7 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             db.exec(`ALTER TABLE inventory_units ADD COLUMN unitCode TEXT UNIQUE;`);
         }
     }
+
 
     const movementsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='movements'`).get();
     if(movementsTable) {
