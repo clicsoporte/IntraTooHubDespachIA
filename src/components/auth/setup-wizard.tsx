@@ -61,7 +61,8 @@ export function SetupWizard({ clientInfo }: SetupWizardProps) {
     try {
         await createFirstUser(formData, clientInfo);
         toast({ title: "¡Configuración Completa!", description: "Tu cuenta de administrador ha sido creada. Ahora puedes iniciar sesión." });
-        router.replace('/'); // Redirect to the login page
+        // Use window.location to force a full page reload, ensuring the server re-evaluates user count.
+        window.location.href = '/';
     } catch (error: any) {
         logError("Error during first user creation", { error: error.message });
         toast({ title: "Error en la Configuración", description: error.message, variant: "destructive" });
