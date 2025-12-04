@@ -393,7 +393,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -440,7 +440,7 @@ export default function HelpPage() {
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>Modifica directamente los campos de cantidad y precio.</li>
                             <li><strong>Atajos de Teclado (<Keyboard className="inline h-4 w-4" />):</strong> Usa la tecla `Enter` en los campos &quot;Cantidad&quot; y &quot;Precio&quot;. El sistema te moverá eficientemente: de Cantidad a Precio, y de Precio de vuelta al buscador de productos para que puedas seguir añadiendo artículos sin usar el mouse.</li>
-                            <li><strong>Uso en Móviles:</strong> En pantallas pequeñas, los campos de Cantidad y Precio ahora tienen más espacio. Si necesitas ver otras columnas como &quot;Cabys&quot; o &quot;Unidad&quot;, puedes activarlas desde los checkboxes que aparecen encima de la tabla.</li>
+                            <li><strong>Uso en Móviles:</strong> En pantallas pequeñas, los campos de Cantidad y Precio ahora tienen más espacio. Si necesitas ver otras columnas como &quot;Cabys&quot; o &quot;Unidad&quot;, puedes activarlas desde el botón &quot;Columnas&quot;.</li>
                         </ul>
                     </li>
                     <li>
@@ -597,62 +597,54 @@ export default function HelpPage() {
         icon: <Warehouse className="mr-4 h-6 w-6 text-cyan-600" />,
         content: (
              <div className="space-y-4">
-                <p>Este módulo te da control sobre la ubicación de tu inventario. Su configuración, aunque potente, puede ser confusa al principio. Se basa en un concepto de dos pasos: el <strong>Molde</strong> y el <strong>Árbol</strong>.</p>
+                <p>Este módulo te da control total sobre la ubicación física de tu inventario. Su configuración, aunque potente, puede ser confusa al principio. Se basa en un concepto de dos pasos: el <strong>Molde (La Jerarquía)</strong> y el <strong>Árbol (Las Ubicaciones Reales)</strong>.</p>
                 
-                <ul className="list-none space-y-3 pl-0">
-                    <li>
-                        <strong className="text-base">1. El Molde (Definir Jerarquía):</strong> Aquí le dices al sistema cómo organizas tu almacén, pero sin crear nada real todavía. Es solo la plantilla. Por ejemplo: le dices que usas &quot;Bodegas&quot;, que dentro de ellas hay &quot;Pasillos&quot;, y que en los pasillos hay &quot;Racks&quot;.
-                    </li>
-                    <li>
-                        <strong className="text-base">2. El Árbol (Crear Ubicaciones Reales):</strong> Una vez que tienes el &quot;molde&quot;, aquí es donde creas el árbol real de tu almacén. Aquí es donde dices: &quot;Ok, voy a crear una ubicación de tipo `Bodega` y se va a llamar `Bodega 04`&quot;. Luego, &quot;dentro de Bodega 04, voy a crear una ubicación de tipo `Pasillo` y se va a llamar `Pasillo Bolsas 01`&quot;, y así sucesivamente.
-                    </li>
-                </ul>
-
-                <h4 className="font-semibold text-lg pt-4 border-t">Tutorial Práctico: Configurando tu Almacén desde Cero</h4>
-                <p>Usemos un ejemplo real: tienes una bodega (`04`), con un pasillo (`01`) entre dos racks (`01` y `02`).</p>
+                <h4 className="font-semibold text-lg pt-2 border-t">Tutorial Práctico: Configurando tu Almacén desde Cero</h4>
+                <p>Usemos un ejemplo real: quieres registrar un inventario muy específico: un producto en la **posición horizontal A**, en el **nivel vertical 3** de un rack, y quieres saber si está al **Frente** o al **Fondo**.</p>
 
                 <h5 className="font-semibold">Paso 1: Crear el &quot;Molde&quot; (La Jerarquía)</h5>
                 <ol className="list-decimal space-y-2 pl-6">
                     <li>Ve a <strong>Administración &gt; Config. Almacenes</strong>.</li>
-                    <li>En la sección <strong>&quot;Paso 1: Definir Jerarquía del Almacén&quot;</strong>, borra los niveles que existan.</li>
-                    <li>Añade, en orden, los siguientes niveles:
+                    <li>En la sección <strong>&quot;Paso 1: Definir Jerarquía del Almacén&quot;</strong>, borra los niveles que existan y añade, en orden, los siguientes niveles exactos:
                         <ul className="list-[circle] space-y-1 pl-5 mt-2">
                             <li>Bodega</li>
                             <li>Pasillo</li>
                             <li>Rack</li>
+                            <li>Posición Horizontal</li>
+                            <li>Nivel Vertical</li>
+                            <li>Profundidad</li>
                         </ul>
                     </li>
-                    <li>Haz clic en <strong>Guardar Niveles</strong>.</li>
+                    <li>Haz clic en <strong>Guardar Niveles</strong>. Acabas de enseñarle al sistema cómo se estructura tu almacén.</li>
                 </ol>
 
                 <h5 className="font-semibold">Paso 2: Construir el &quot;Árbol&quot; (Las Ubicaciones Reales)</h5>
-                <p>Ahora, en la sección <strong>&quot;Paso 2: Crear Ubicaciones Reales&quot;</strong>, vamos a construir el almacén pieza por pieza:</p>
+                <p>Ahora, en la sección <strong>&quot;Paso 2: Crear Ubicaciones Reales&quot;</strong>, vamos a construir la ubicación física pieza por pieza:</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Crear la Bodega:</strong>
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
-                            <li>Haz clic en <strong>&quot;Añadir Ubicación&quot;</strong>.</li>
-                            <li><strong>Nombre:</strong> `Bodega 04`, <strong>Código:</strong> `B04`.</li>
-                            <li><strong>Tipo de Ubicación:</strong> `Nivel 1: Bodega`.</li>
-                            <li><strong>Ubicación Padre:</strong> Déjalo en `Sin padre`.</li>
-                            <li>Guarda. Ya tienes la raíz de tu árbol.</li>
-                        </ul>
+                        <strong>Crear la Bodega:</strong> Añade una ubicación de tipo `Bodega` llamada `Bodega Principal` (código `BP`).
+                    </li>
+                     <li>
+                        <strong>Crear el Pasillo:</strong> Añade una ubicación de tipo `Pasillo` llamada `Pasillo A` (código `PA`), y asígnale como padre a `Bodega Principal`.
+                    </li>
+                     <li>
+                        <strong>Crear el Rack:</strong> Añade una ubicación de tipo `Rack` llamada `Rack 01` (código `R01`), y asígnale como padre a `Pasillo A`.
                     </li>
                     <li>
-                        <strong>Crear el Pasillo:</strong>
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
-                            <li>Haz clic de nuevo en <strong>&quot;Añadir Ubicación&quot;</strong>.</li>
-                            <li><strong>Nombre:</strong> `Pasillo 01`, <strong>Código:</strong> `P01`.</li>
-                            <li><strong>Tipo de Ubicación:</strong> `Nivel 2: Pasillo`.</li>
-                            <li><strong>Ubicación Padre:</strong> Selecciona `Bodega 04`.</li>
-                            <li>Guarda. Verás que `Pasillo 01` aparece anidado debajo de `Bodega 04`.</li>
-                        </ul>
+                        <strong>Crear la Posición Horizontal:</strong> Añade una ubicación de tipo `Posición Horizontal` llamada `Posición 5` (código `H05`), con padre `Rack 01`.
                     </li>
-                    <li>
-                        <strong>Crear los Racks:</strong> Repite el proceso para crear `Rack 01` (Código `R01`) y `Rack 02` (Código `R02`), ambos de tipo `Nivel 3: Rack` y ambos con `Pasillo 01` como padre.
+                     <li>
+                        <strong>Crear el Nivel Vertical:</strong> Añade una ubicación de tipo `Nivel Vertical` llamada `Nivel 3` (código `V03`), con padre `Posición 5`.
+                    </li>
+                     <li>
+                        <strong>Crear la Profundidad (¡La clave!):</strong>
+                         <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
+                            <li>Añade una ubicación de tipo `Profundidad` llamada `Frente` (código `FTE`), con padre `Nivel 3`.</li>
+                             <li>Añade otra ubicación de tipo `Profundidad` llamada `Fondo` (código `FDO`), también con padre `Nivel 3`.</li>
+                        </ul>
                     </li>
                 </ol>
-                <p className="pt-2">Una vez configurado, puedes ir al módulo <strong>Asignar Inventario</strong> para empezar a colocar tus artículos en estas nuevas ubicaciones.</p>
+                <p className="pt-2">¡Listo! Ahora tienes dos ubicaciones finales y distintas (`.../FTE` y `.../FDO`). Al ir al módulo <strong>Asignar Inventario</strong>, puedes asignar una tarima de producto a `Frente` y otra a `Fondo`. Cuando busques el producto en la <strong>Consulta de Almacén</strong>, el sistema te mostrará claramente ambas ubicaciones con su ruta completa.</p>
             </div>
         )
     },
