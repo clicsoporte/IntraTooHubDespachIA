@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file handles the SQLite database connection and provides
  * server-side functions for all database operations. It includes initialization,
@@ -229,10 +230,9 @@ export async function connectDb(dbFile: string = DB_FILE, forceRecreate = false)
             if (dbModule.initFn) {
                 dbModule.initFn(db);
             }
-        } else {
-             // Always run migrations on an existing DB to check for updates.
-             await runMigrations(dbModule, db);
         }
+        // Always run migrations on an existing DB to check for updates.
+        await runMigrations(dbModule, db);
     }
 
     try {

@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
@@ -185,8 +186,68 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
     } else {
         const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
         if (!unitsTableInfo.some(c => c.name === 'unitCode')) {
-            console.log("MIGRATION (warehouse.db): Adding 'unitCode' column to existing 'inventory_units' table.");
-            db.exec(`ALTER TABLE inventory_units ADD COLUMN unitCode TEXT UNIQUE;`);
+            console.log("MIGRATION (warehouse.db): 'unitCode' column is missing. Performing robust migration.");
+            try {
+                db.transaction(() => {
+                    // 1. Rename old table
+                    db.exec('ALTER TABLE inventory_units RENAME TO inventory_units_old;');
+
+                    // 2. Create new table with correct schema
+                    db.exec(`
+                        CREATE TABLE inventory_units (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            unitCode TEXT UNIQUE,
+                            productId TEXT NOT NULL,
+                            humanReadableId TEXT,
+                            locationId INTEGER,
+                            notes TEXT,
+                            createdAt TEXT NOT NULL,
+                            createdBy TEXT NOT NULL,
+                            FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE SET NULL
+                        );
+                    `);
+
+                    // 3. Copy data and generate unit codes
+                    const oldUnits = db.prepare('SELECT * FROM inventory_units_old').all();
+                    const insertNew = db.prepare('INSERT INTO inventory_units (id, unitCode, productId, humanReadableId, locationId, notes, createdAt, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                    
+                    const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string };
+                    const settings = JSON.parse(settingsRow.value);
+                    let nextUnitNumber = settings.nextUnitNumber || 1;
+                    const prefix = settings.unitPrefix || 'U';
+
+                    for (const oldUnit of oldUnits) {
+                        const unitCode = `${prefix}${String(nextUnitNumber).padStart(5, '0')}`;
+                        insertNew.run(
+                            (oldUnit as any).id,
+                            unitCode,
+                            (oldUnit as any).productId,
+                            (oldUnit as any).humanReadableId,
+                            (oldUnit as any).locationId,
+                            (oldUnit as any).notes,
+                            (oldUnit as any).createdAt,
+                            (oldUnit as any).createdBy
+                        );
+                        nextUnitNumber++;
+                    }
+
+                    // Update the next unit number in settings
+                    settings.nextUnitNumber = nextUnitNumber;
+                    db.prepare('UPDATE warehouse_config SET value = ? WHERE key = \'settings\'').run(JSON.stringify(settings));
+
+                    // 4. Drop old table
+                    db.exec('DROP TABLE inventory_units_old;');
+                })();
+                console.log("MIGRATION (warehouse.db): Successfully migrated 'inventory_units' table.");
+            } catch (error) {
+                console.error("CRITICAL: Failed to migrate 'inventory_units' table. Rolling back.", error);
+                // Attempt to restore if something went wrong
+                if (db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units_old'`).get()) {
+                    db.exec('DROP TABLE IF EXISTS inventory_units;');
+                    db.exec('ALTER TABLE inventory_units_old RENAME TO inventory_units;');
+                }
+                throw error; // Re-throw to indicate failure
+            }
         }
     }
 
