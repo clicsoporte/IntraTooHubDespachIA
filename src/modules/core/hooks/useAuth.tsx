@@ -13,6 +13,8 @@ import { getUnreadSuggestionsCount as getUnreadSuggestionsCountAction } from "@/
 import { getExchangeRate } from "../lib/api-actions";
 import { getNotificationsForUser } from "../lib/notifications-actions";
 
+const REDIRECT_URL_KEY = 'redirectUrl';
+
 /**
  * Defines the shape of the authentication context's value.
  */
@@ -36,7 +38,7 @@ interface AuthContextType {
   unreadNotificationsCount: number;
   fetchUnreadNotifications: () => Promise<void>;
   refreshAuth: () => Promise<void>;
-  refreshAuthAndRedirect: (path: string) => Promise<void>;
+  refreshAuthAndRedirect: (path?: string) => Promise<void>;
   logout: () => void;
   refreshExchangeRate: () => Promise<void>;
   setCompanyData: (data: Company) => void;
@@ -143,10 +145,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
 
-  const refreshAuthAndRedirect = async (path: string) => {
+  const refreshAuthAndRedirect = async (path?: string) => {
     setIsReady(false); // Reset readiness to show loading screen during transition
     await loadAuthData();
-    router.push(path);
+    const redirectUrl = sessionStorage.getItem(REDIRECT_URL_KEY);
+    sessionStorage.removeItem(REDIRECT_URL_KEY); // Clean up after reading
+    router.push(redirectUrl || path || '/dashboard');
   };
   
   const handleLogout = async () => {

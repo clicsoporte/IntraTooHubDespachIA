@@ -84,6 +84,7 @@ import {
   UserCheck,
   ShoppingBag,
   QrCode,
+  HelpCircle
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -394,7 +395,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -594,56 +595,87 @@ export default function HelpPage() {
         )
     },
      {
-        title: "Guía Maestra: Módulo de Almacenes (v2.1)",
+        title: "Guía Maestra: Módulo de Almacenes",
         icon: <Warehouse className="mr-4 h-6 w-6 text-cyan-600" />,
         content: (
              <div className="space-y-4">
-                <p>Este módulo te da control total sobre la localización de tu inventario. Con la versión 2.1, hemos introducido la capacidad de rastrear tarimas o lotes individuales mediante códigos QR, centrando la funcionalidad en **dónde está algo**, no en cuánto hay.</p>
+                <p>Este módulo te da control total sobre la localización de tu inventario. Incluye herramientas para mapear tu bodega, asignar productos a ubicaciones y rastrear lotes individuales con códigos QR.</p>
                 
-                <h4 className="font-semibold text-lg pt-2 border-t">Flujo de Trabajo (Localización por Lote)</h4>
-                <p>La idea es simple: cada tarima física, caja o lote de producción recibe una etiqueta con un identificador único del sistema, representado por un código QR.</p>
-                <ol className="list-decimal space-y-4 pl-6">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+                    <HelpCircle className="h-5 w-5"/>
+                    <p className="text-sm">En el panel de Almacén, haz clic en el icono <HelpCircle className="inline h-4 w-4"/> junto al título de cada herramienta para ver una guía específica de esa sección.</p>
+                </div>
+
+                <h4 className="font-semibold text-lg pt-2 border-t">1. Configuración de Ubicaciones</h4>
+                <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Paso 1: Gestionar Ubicaciones Físicas.</strong>
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Ve a <strong>Almacén &gt; Gestionar Ubicaciones</strong>. Aquí es donde construyes el mapa de tu bodega.</li>
-                            <li>Primero, defines la **Jerarquía** (el &quot;molde&quot;): le dices al sistema cómo organizas el espacio (ej: Bodega, Pasillo, Rack, Nivel).</li>
-                            <li>Luego, creas las **Ubicaciones Reales** (el &quot;árbol&quot;), anidando unas dentro de otras (ej: `Rack-01` dentro de `Pasillo-A`).</li>
-                        </ul>
+                        <strong>¿Qué es?:</strong> Es el primer paso para organizar tu almacén. Aquí defines cómo está estructurado.
                     </li>
                     <li>
-                        <strong>Paso 2: Crear y Etiquetar Unidades de Inventario (<QrCode className="inline h-4 w-4"/>).</strong>
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Ve a <strong>Almacén &gt; Gestión de Unidades</strong>. Esta es la nueva herramienta para digitalizar tus tarimas.</li>
-                            <li>Busca el producto (ej: Bolsa 4x4), asígnale un identificador legible (ej: LOTE-2410A) y selecciona la ubicación física donde **debería estar almacenado**.</li>
-                            <li>Al guardar, el sistema genera un **ID de Unidad** único (ej: `U00123`) y te permite **imprimir una etiqueta QR**.</li>
-                            <li>Esta etiqueta se pega en la tarima física.</li>
-                        </ul>
-                    </li>
-                    <li>
-                        <strong>Paso 3: Escanear y Localizar.</strong>
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Un bodeguero encuentra una tarima. Con la cámara de su celular, escanea el código QR.</li>
-                            <li>El sistema lo lleva a una página de resultados que le dice:
-                                <ul className="list-disc list-inside mt-1 pl-4">
-                                    <li>**Producto:** Bolsa 4x4 2mic.</li>
-                                    <li>**ID Humano:** LOTE-2410A.</li>
-                                    <li>**Ubicación Asignada:** Rack C-04 / Nivel 2 / Fondo.</li>
+                        <strong>¿Cómo se hace?:</strong> Ve a <strong>Almacén &gt; Gestionar Ubicaciones</strong>.
+                        <ol className="list-decimal space-y-2 pl-5 mt-2">
+                            <li>
+                                <strong>Paso 1: Definir Jerarquía (El "Molde"):</strong> Dile al sistema los niveles que usas. Por ejemplo, añade en orden: "Bodega", "Pasillo", "Rack", "Nivel".
+                            </li>
+                            <li>
+                                <strong>Paso 2: Crear Ubicaciones Reales (El "Árbol"):</strong> Ahora que tienes el molde, crea las ubicaciones físicas.
+                                <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
+                                    <li>Crea una `Bodega` llamada `BODEGA-01` (Código `B01`).</li>
+                                    <li>Luego, crea un `Pasillo` llamado `PASILLO-A` (Código `P01-A`) y asígnale `BODEGA-01` como "Padre".</li>
+                                    <li>Continúa anidando hasta mapear tu espacio real.</li>
                                 </ul>
                             </li>
-                             <li>
-                                <strong>Búsqueda Manual:</strong> Si el QR está dañado, el bodeguero puede ir a <strong>Almacén &gt; Consulta de Almacén</strong> e ingresar el ID de la unidad (ej: `U00123`) directamente en la barra de búsqueda para obtener el mismo resultado.
-                            </li>
-                        </ul>
+                        </ol>
                     </li>
-                </ol>
-                <Alert variant="default" className="mt-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Importante: Localización, no Cantidad</AlertTitle>
-                    <AlertDescription>
-                        Recuerda que este sistema no lleva el conteo de unidades por tarima. Su objetivo es identificar un lote físico y decirte dónde debe estar guardado. El inventario total sigue siendo controlado por el ERP.
-                    </AlertDescription>
-                </Alert>
+                </ul>
+
+                <h4 className="font-semibold text-lg pt-2 border-t">2. Asignar Productos a Ubicaciones</h4>
+                 <ul className="list-disc space-y-3 pl-6">
+                    <li>
+                        <strong>¿Para qué sirve?:</strong> Para crear un "catálogo" rápido que le dice a todos dónde encontrar un producto general o el inventario de un cliente específico.
+                    </li>
+                    <li>
+                        <strong>¿Cómo se hace?:</strong> Ve a <strong>Almacén &gt; Asignar Cliente a Ubicación</strong>.
+                        <ol className="list-decimal space-y-2 pl-5 mt-2">
+                            <li>Selecciona el **Producto**.</li>
+                            <li>(Opcional) Selecciona el **Cliente** si el inventario es de él.</li>
+                            <li>Selecciona la **Ubicación** física donde se guarda.</li>
+                            <li>Haz clic en **"Crear Asignación"**. La nueva relación aparecerá en la tabla de abajo.</li>
+                        </ol>
+                    </li>
+                </ul>
+
+                <h4 className="font-semibold text-lg pt-2 border-t">3. Gestión de Unidades (Lotes/Tarimas con QR)</h4>
+                <ul className="list-disc space-y-3 pl-6">
+                    <li>
+                        <strong>¿Qué es?:</strong> Es la herramienta para rastrear unidades físicas individuales, como una tarima o un lote de producción. A cada unidad se le asigna un código QR único.
+                    </li>
+                    <li>
+                        <strong>¿Cómo se usa?:</strong> Ve a <strong>Almacén &gt; Gestión de Unidades</strong>.
+                        <ol className="list-decimal space-y-2 pl-5 mt-2">
+                            <li>Selecciona el **Producto** que está en la tarima.</li>
+                            <li>Selecciona la **Ubicación** física donde vas a guardar esa tarima.</li>
+                            <li>(Opcional) Dale un **Identificador Humano** (ej. "LOTE-54321") para que sea fácil de reconocer.</li>
+                            <li>Haz clic en **"Crear Unidad"**. El sistema generará un ID único (ej: `U00001`).</li>
+                            <li>Haz clic en el botón **"Imprimir"** en la tabla para generar y descargar una etiqueta con el código QR y los detalles.</li>
+                        </ol>
+                    </li>
+                </ul>
+                
+                <h4 className="font-semibold text-lg pt-2 border-t">4. Consulta y Escaneo</h4>
+                <ul className="list-disc space-y-3 pl-6">
+                     <li>
+                        <strong>Consulta Manual:</strong> Ve a <strong>Almacén &gt; Consulta de Almacén</strong>. Puedes buscar por código de producto, nombre de cliente o ID de unidad (ej: `U00001`) para ver todas las ubicaciones y existencias relacionadas.
+                    </li>
+                    <li>
+                        <strong>Escaneo con Celular:</strong>
+                        <ol className="list-decimal space-y-2 pl-5 mt-2">
+                            <li>Abre la cámara de tu celular y escanea la etiqueta QR de una unidad.</li>
+                            <li>El navegador te llevará a una URL. Si no has iniciado sesión, te pedirá que lo hagas.</li>
+                            <li>Una vez iniciada la sesión, te mostrará directamente la página de **Resultado de Escaneo** con toda la información de esa unidad: qué producto es, su lote y, lo más importante, su ubicación asignada.</li>
+                        </ol>
+                    </li>
+                </ul>
             </div>
         )
     },

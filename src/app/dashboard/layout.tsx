@@ -14,7 +14,9 @@ import { usePageTitle, PageTitleProvider } from "@/modules/core/hooks/usePageTit
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+const REDIRECT_URL_KEY = 'redirectUrl';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { title } = usePageTitle();
@@ -41,6 +43,8 @@ export default function DashboardLayout({
 }) {
   const { user, isReady } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // This effect is the single source of truth for session verification.
   // It waits until the auth state is fully resolved.
@@ -48,9 +52,11 @@ export default function DashboardLayout({
     // If the auth context is ready but there's no user, it means the session
     // is invalid (or the user logged out). Redirect to the login page.
     if (isReady && !user) {
+      const fullPath = `${pathname}?${searchParams}`;
+      sessionStorage.setItem(REDIRECT_URL_KEY, fullPath);
       router.replace('/');
     }
-  }, [isReady, user, router]);
+  }, [isReady, user, router, pathname, searchParams]);
 
   // While waiting for the initial check and for all auth data to be ready,
   // show a global loading screen.
