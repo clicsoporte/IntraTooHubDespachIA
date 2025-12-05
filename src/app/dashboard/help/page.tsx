@@ -395,7 +395,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -486,7 +486,7 @@ export default function HelpPage() {
                 <li>
                     <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
                 </li>
-                <li>
+                 <li>
                     <strong>Creación desde Sugerencias:</strong> En el módulo de Analíticas, puedes generar solicitudes directamente desde la herramienta &quot;Sugerencias de Compra&quot;. El sistema creará la solicitud con los datos disponibles y la dejará &quot;Pendiente&quot; para que Compras complete la información faltante, como el precio.
                 </li>
                 <li>
@@ -594,11 +594,11 @@ export default function HelpPage() {
             </div>
         )
     },
-     {
+    {
         title: "Guía Maestra: Módulo de Almacenes",
         icon: <Warehouse className="mr-4 h-6 w-6 text-cyan-600" />,
         content: (
-             <div className="space-y-4">
+            <div className="space-y-4">
                 <p>Este módulo te da control total sobre la localización de tu inventario. Incluye herramientas para mapear tu bodega, asignar productos a ubicaciones y rastrear lotes individuales con códigos QR.</p>
                 
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
@@ -615,13 +615,13 @@ export default function HelpPage() {
                         <strong>¿Cómo se hace?:</strong> Ve a <strong>Almacén &gt; Gestionar Ubicaciones</strong>.
                         <ol className="list-decimal space-y-2 pl-5 mt-2">
                             <li>
-                                <strong>Paso 1: Definir Jerarquía (El "Molde"):</strong> Dile al sistema los niveles que usas. Por ejemplo, añade en orden: "Bodega", "Pasillo", "Rack", "Nivel".
+                                <strong>Paso 1: Definir Jerarquía (El &quot;Molde&quot;):</strong> Dile al sistema los niveles que usas. Por ejemplo, añade en orden: &quot;Bodega&quot;, &quot;Pasillo&quot;, &quot;Rack&quot;, &quot;Nivel&quot;.
                             </li>
                             <li>
-                                <strong>Paso 2: Crear Ubicaciones Reales (El "Árbol"):</strong> Ahora que tienes el molde, crea las ubicaciones físicas.
+                                <strong>Paso 2: Crear Ubicaciones Reales (El &quot;Árbol&quot;):</strong> Ahora que tienes el molde, crea las ubicaciones físicas.
                                 <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
                                     <li>Crea una `Bodega` llamada `BODEGA-01` (Código `B01`).</li>
-                                    <li>Luego, crea un `Pasillo` llamado `PASILLO-A` (Código `P01-A`) y asígnale `BODEGA-01` como "Padre".</li>
+                                    <li>Luego, crea un `Pasillo` llamado `PASILLO-A` (Código `P01-A`) y asígnale `BODEGA-01` como &quot;Padre&quot;.</li>
                                     <li>Continúa anidando hasta mapear tu espacio real.</li>
                                 </ul>
                             </li>
@@ -632,7 +632,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">2. Asignar Productos a Ubicaciones</h4>
                  <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>¿Para qué sirve?:</strong> Para crear un "catálogo" rápido que le dice a todos dónde encontrar un producto general o el inventario de un cliente específico.
+                        <strong>¿Para qué sirve?:</strong> Para crear un &quot;catálogo&quot; rápido que le dice a todos dónde encontrar un producto general o el inventario de un cliente específico.
                     </li>
                     <li>
                         <strong>¿Cómo se hace?:</strong> Ve a <strong>Almacén &gt; Asignar Cliente a Ubicación</strong>.
@@ -640,7 +640,7 @@ export default function HelpPage() {
                             <li>Selecciona el **Producto**.</li>
                             <li>(Opcional) Selecciona el **Cliente** si el inventario es de él.</li>
                             <li>Selecciona la **Ubicación** física donde se guarda.</li>
-                            <li>Haz clic en **"Crear Asignación"**. La nueva relación aparecerá en la tabla de abajo.</li>
+                            <li>Haz clic en **&quot;Crear Asignación&quot;**. La nueva relación aparecerá en la tabla de abajo.</li>
                         </ol>
                     </li>
                 </ul>
@@ -655,9 +655,9 @@ export default function HelpPage() {
                         <ol className="list-decimal space-y-2 pl-5 mt-2">
                             <li>Selecciona el **Producto** que está en la tarima.</li>
                             <li>Selecciona la **Ubicación** física donde vas a guardar esa tarima.</li>
-                            <li>(Opcional) Dale un **Identificador Humano** (ej. "LOTE-54321") para que sea fácil de reconocer.</li>
-                            <li>Haz clic en **"Crear Unidad"**. El sistema generará un ID único (ej: `U00001`).</li>
-                            <li>Haz clic en el botón **"Imprimir"** en la tabla para generar y descargar una etiqueta con el código QR y los detalles.</li>
+                            <li>(Opcional) Dale un **Identificador Humano** (ej. &quot;LOTE-54321&quot;) para que sea fácil de reconocer.</li>
+                            <li>Haz clic en **&quot;Crear Unidad&quot;**. El sistema generará un ID único (ej: `U00001`).</li>
+                            <li>Haz clic en el botón **&quot;Imprimir&quot;** en la tabla para generar y descargar una etiqueta con el código QR y los detalles.</li>
                         </ol>
                     </li>
                 </ul>
@@ -698,7 +698,7 @@ export default function HelpPage() {
                         </ul>
                     </li>
                     <li>
-                        <strong>Búsquedas Individuales:</strong> También puedes usar las pestañas &quot;Situación Tributaria&quot; y &quot;Exoneraciones&quot; para hacer consultas directas a Hacienda ingresando una cédula o un número de autorización, respectively.
+                        <strong>Búsquedas Individuales:</strong> También puedes usar las pestañas &quot;Situación Tributaria&quot; y &quot;Exoneraciones&quot; para hacer consultas directas a Hacienda ingresando una cédula o un número de autorización, respectivamente.
                     </li>
                 </ul>
             </div>
