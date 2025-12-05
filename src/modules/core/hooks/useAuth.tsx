@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file defines a central authentication context and hook.
  * It provides a single source of truth for the current user, their role, company data,

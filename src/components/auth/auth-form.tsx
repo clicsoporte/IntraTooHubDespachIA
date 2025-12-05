@@ -22,14 +22,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { User } from "@/modules/core/types";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { login, getAllUsers, saveAllUsers, sendRecoveryEmail } from "@/modules/core/lib/auth-client";
 import { logInfo, logWarn, logError } from "@/modules/core/lib/logger";
 import { useAuth } from "@/modules/core/hooks/useAuth";
+
+const REDIRECT_URL_KEY = 'redirectUrl';
 
 interface AuthFormProps {
   clientInfo: {
@@ -46,6 +48,8 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { refreshAuthAndRedirect } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   
   // State for the main auth flow
   const [authStep, setAuthStep] = useState<'login' | 'force_change' | 'recovery_success'>('login');
@@ -61,6 +65,17 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
   // State for new password form
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  useEffect(() => {
+    // On page load, if there's a path, store it for redirection after login.
+    // This is especially for direct access to protected URLs (e.g. from QR scan).
+    if (pathname && pathname !== '/') {
+        const fullPath = `${pathname}?${searchParams.toString()}`;
+        if (fullPath !== '/?') { // Avoid storing a blank redirect
+             sessionStorage.setItem(REDIRECT_URL_KEY, fullPath);
+        }
+    }
+  }, [pathname, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
