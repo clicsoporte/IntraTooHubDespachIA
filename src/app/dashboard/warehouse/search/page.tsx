@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Main warehouse search page.
  * This component allows users to search for products or customers and see a consolidated
@@ -188,7 +187,7 @@ export default function WarehouseSearchPage() {
     
      useEffect(() => {
         const performUnitSearch = async () => {
-            const normalizedSearch = debouncedSearchTerm.toUpperCase();
+            const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
             if (exactMatch && normalizedSearch.startsWith('U')) {
                 setIsLoading(true);
                 try {
@@ -199,7 +198,7 @@ export default function WarehouseSearchPage() {
                 } finally {
                     setIsLoading(false);
                 }
-            } else if (!normalizedSearch.toUpperCase().startsWith('U')) {
+            } else {
                 setUnitSearchResult(null);
             }
         };
@@ -228,8 +227,9 @@ export default function WarehouseSearchPage() {
         let matchedIndexItems: SearchableItem[];
         
         if (exactMatch) {
-            if (normalizedSearch.toUpperCase().startsWith('U')) return [];
-            matchedIndexItems = searchIndex.filter(item => normalizeText(item.id) === normalizedSearch);
+             if (normalizedSearch.toUpperCase().startsWith('U')) return [];
+             const exactMatchLower = normalizedSearch.toLowerCase();
+             matchedIndexItems = searchIndex.filter(item => normalizeText(item.id).toLowerCase() === exactMatchLower);
         } else {
             const searchTerms = normalizedSearch.split(' ').filter(Boolean);
             if (searchTerms.length === 0) return [];
@@ -266,16 +266,19 @@ export default function WarehouseSearchPage() {
                 }
             });
         } else {
-            itemLocations.forEach(itemLoc => {
+             itemLocations.forEach(itemLoc => {
                 const product = products.find(p => p.id === itemLoc.itemId);
                 
+                // Case 1: The product itself was part of the search results
                 if (groupedByItem[itemLoc.itemId]) {
                     groupedByItem[itemLoc.itemId].physicalLocations.push({
                         path: renderLocationPath(itemLoc.locationId, locations),
                         clientId: itemLoc.clientId || undefined
                     });
                 } 
+                // Case 2: The customer was part of the search results
                 else if (itemLoc.clientId && relevantCustomerIds.has(itemLoc.clientId)) {
+                    // Create an entry for the product if it doesn't exist
                     if (!groupedByItem[itemLoc.itemId]) {
                          groupedByItem[itemLoc.itemId] = {
                             isUnit: false,
@@ -286,6 +289,7 @@ export default function WarehouseSearchPage() {
                             client: customers.find(c => c.id === itemLoc.clientId)
                         };
                     }
+                    // Add the location to this product's entry
                     groupedByItem[itemLoc.itemId].physicalLocations.push({
                         path: renderLocationPath(itemLoc.locationId, locations),
                         clientId: itemLoc.clientId || undefined

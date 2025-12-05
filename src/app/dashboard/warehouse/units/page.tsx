@@ -126,7 +126,7 @@ export default function ManageUnitsPage() {
             const createdUnit = await addInventoryUnit({ ...newUnit, createdBy: user.name });
             setInventoryUnits(prev => [createdUnit, ...prev]);
             
-            toast({ title: "Unidad Creada", description: `Se ha creado la unidad para ${createdUnit.productId}.` });
+            toast({ title: "Unidad Creada", description: `Se ha creado la unidad ${createdUnit.unitCode} para ${createdUnit.productId}.` });
             logInfo('Inventory unit created', { unitCode: createdUnit.unitCode, productId: createdUnit.productId });
             
             // Reset form
@@ -253,7 +253,7 @@ export default function ManageUnitsPage() {
                         <Button onClick={handleCreateUnit} disabled={isSubmitting || !newUnit.productId || !newUnit.locationId}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Crear Unidad y Etiqueta
+                            Crear Unidad
                         </Button>
                     </CardFooter>
                 </Card>
@@ -266,9 +266,10 @@ export default function ManageUnitsPage() {
                             <table className="w-full text-sm">
                                 <thead className="sticky top-0 bg-muted">
                                     <tr className="text-left">
+                                        <th className="p-2">ID Unidad</th>
                                         <th className="p-2">Producto</th>
                                         <th className="p-2">ID Humano</th>
-                                        <th className="p-2">Ubicación Asignada</th>
+                                        <th className="p-2">Ubicación</th>
                                         <th className="p-2">Creado</th>
                                         <th className="p-2 text-right">Acciones</th>
                                     </tr>
@@ -279,6 +280,7 @@ export default function ManageUnitsPage() {
                                         const location = locations.find(l => l.id === unit.locationId);
                                         return (
                                             <tr key={unit.id} className="border-b">
+                                                <td className="p-2 font-mono">{unit.unitCode}</td>
                                                 <td className="p-2">
                                                     <div className="font-medium">{product?.description || 'N/A'}</div>
                                                     <div className="text-xs text-muted-foreground">{unit.productId}</div>
