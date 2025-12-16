@@ -24,7 +24,7 @@ export default function WarehouseDashboardPage() {
     const visibleTools = useMemo(() => {
         if (!isAuthorized) return [];
         return warehouseTools.filter(tool => {
-            if (tool.id === 'warehouse-search') {
+            if (tool.id === 'warehouse-search' || tool.id === 'warehouse-search-simple') {
                 return hasPermission('warehouse:access');
             }
             if (tool.id === 'warehouse-assign') {
