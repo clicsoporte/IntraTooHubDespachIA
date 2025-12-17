@@ -462,20 +462,11 @@ export const adminTools: Tool[] = [
       },
       {
         id: "warehouse-settings",
-        name: "Config. Almacenes",
-        description: "Ajustes de prefijos y comportamiento del módulo.",
+        name: "Config. Almacenes e Inventario",
+        description: "Gestionar bodegas, unidades y jerarquía del almacén.",
         href: "/dashboard/admin/warehouse",
         icon: Wrench,
         bgColor: "bg-fuchsia-600",
-        textColor: "text-white",
-      },
-      {
-        id: "stock-settings",
-        name: "Config. Inventario",
-        description: "Gestionar bodegas y ajustes de existencias.",
-        href: "/dashboard/admin/stock",
-        icon: Boxes,
-        bgColor: "bg-green-700",
         textColor: "text-white",
       },
       {

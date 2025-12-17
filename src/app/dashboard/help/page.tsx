@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -395,7 +394,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -601,87 +600,38 @@ export default function HelpPage() {
             <div className="space-y-4">
                 <p>Este módulo te da control total sobre la localización de tu inventario. Incluye herramientas para mapear tu bodega, asignar productos a ubicaciones y rastrear lotes individuales con códigos QR.</p>
                 
-                <h4 className="font-semibold text-lg pt-4 border-t">El Concepto Clave: El Molde vs. El Árbol</h4>
-                <p>Para configurar tu almacén, debes entender dos pasos:</p>
-                <ul className="list-none space-y-3 pl-0">
-                    <li>
-                        <strong className="text-base">1. El Molde (Definir Jerarquía):</strong> Aquí le dices al sistema las **categorías** que usas para organizar, pero sin crear nada real todavía. Es solo la plantilla. Piensa en esto como definir el vocabulario de tu almacén.
-                        <br/>
-                        <em>Se realiza en: <strong>Administración &gt; Config. Almacenes</strong>.</em>
-                    </li>
-                    <li>
-                        <strong className="text-base">2. El Árbol (Crear Ubicaciones Reales):</strong> Una vez que tienes el &quot;molde&quot;, aquí es donde creas el árbol real de tu almacén usando esas categorías, dándoles nombres y códigos únicos.
-                        <br/>
-                        <em>Se realiza en: <strong>Almacén &gt; Gestionar Ubicaciones</strong>.</em>
-                    </li>
-                </ul>
-
-                <h4 className="font-semibold text-lg pt-4 border-t">Tutorial Práctico: Configurar una Bodega</h4>
-                <p><strong>Escenario:</strong> Tienes una bodega de 6000 m² con 10 racks. Cada rack tiene 2 caras (A y B), 4 pisos de alto y 8 espacios de ancho.</p>
-                
-                <h5 className="font-semibold">Paso 1: Definir el &quot;Molde&quot; (Las Categorías)</h5>
-                <ol className="list-decimal space-y-2 pl-6">
-                    <li>Ve a <strong>Administración &gt; Config. Almacenes</strong>.</li>
-                    <li>En la sección **&quot;Paso 1: Definir Jerarquía del Almacén&quot;**, añade, en orden, los siguientes niveles:
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2">
-                            <li>Bodega</li>
-                            <li>Rack</li>
-                            <li>Cara</li>
-                            <li>Piso</li>
-                            <li>Espacio</li>
-                        </ul>
-                    </li>
-                    <li>Haz clic en <strong>Guardar Niveles</strong>. Acabas de definir tu vocabulario.</li>
-                </ol>
-
-                <h5 className="font-semibold">Paso 2: Construir el &quot;Árbol&quot; (Las Ubicaciones Físicas)</h5>
-                <p>Ahora, ve a <strong>Almacén &gt; Gestionar Ubicaciones</strong> para construir el mapa físico de tu almacén.</p>
+                <h4 className="font-semibold text-lg pt-4 border-t">Configuraciones Clave</h4>
+                <p>Antes de poder usar el módulo de búsqueda eficazmente, hay dos configuraciones importantes que un administrador debe realizar:</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Crear la Bodega Principal:</strong>
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
-                            <li>Clic en <strong>&quot;Añadir Ubicación&quot;</strong>.</li>
-                            <li><strong>Nombre:</strong> `Bodega Principal`, <strong>Código:</strong> `BP`.</li>
-                            <li><strong>Tipo de Ubicación:</strong> `Nivel 1: Bodega`.</li>
-                            <li><strong>Ubicación Padre:</strong> Déjalo en `Sin padre`.</li>
-                            <li>Guarda. Ya tienes la raíz de tu almacén.</li>
-                        </ul>
+                        <strong>Definir la Jerarquía del Almacén:</strong> En <strong>Administración &gt; Config. Almacenes e Inventario</strong>, en la sección &quot;Paso 1: Definir Jerarquía del Almacén&quot;, debes establecer las categorías que usas para organizar tu almacén (ej: Bodega, Pasillo, Rack, etc.). Esto crea la plantilla que usarás para construir el mapa físico.
                     </li>
                     <li>
-                        <strong>Crear los 10 Racks:</strong> Repite el siguiente proceso para cada rack (del 1 al 10).
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
-                            <li>Clic en <strong>&quot;Añadir Ubicación&quot;</strong>.</li>
-                            <li><strong>Nombre:</strong> `Rack 01`, <strong>Código:</strong> `R01`.</li>
-                            <li><strong>Tipo de Ubicación:</strong> `Nivel 2: Rack`.</li>
-                            <li><strong>Ubicación Padre:</strong> Selecciona `Bodega Principal`.</li>
-                            <li>Guarda.</li>
-                        </ul>
-                    </li>
-                     <li>
-                        <strong>Crear las Caras, Pisos y Espacios (Anidación):</strong> Ahora, anida el resto. Por ejemplo, para el Rack 01:
-                        <ul className="list-[circle] space-y-1 pl-5 mt-2 text-sm">
-                            <li>Crea la **`Cara A`** (Tipo: `Nivel 3`, Padre: `Rack 01`).</li>
-                            <li>Dentro de `Cara A`, crea los 4 pisos: **`Piso 1`**, **`Piso 2`**, etc. (Tipo: `Nivel 4`, Padre: `Cara A`).</li>
-                            <li>Dentro de `Piso 1`, crea los 8 espacios: **`Espacio 01`**, **`Espacio 02`**, etc. (Tipo: `Nivel 5`, Padre: `Piso 1`).</li>
-                        </ul>
-                         <p className="text-sm mt-2">Repite este proceso de anidación hasta que todo tu almacén físico esté representado en el sistema.</p>
+                        <strong>Registrar las Bodegas del ERP:</strong> En la misma página de configuración, en la sección &quot;Gestión de Bodegas&quot;, debes registrar cada bodega que existe en tu ERP con su código y un nombre descriptivo (ej: ID `01`, Nombre `Bodega Principal`).
+                        <Alert variant="default" className="mt-2">
+                           <AlertTriangle className="h-4 w-4" />
+                           <AlertTitle>¡Paso Crítico!</AlertTitle>
+                           <AlertDescription>
+                                Si no registras las bodegas aquí, el desglose de inventario en las búsquedas **no aparecerá**, y solo verás un "Total ERP", lo cual puede ser confuso.
+                           </AlertDescription>
+                       </Alert>
                     </li>
                 </ol>
                 
-                <h4 className="font-semibold text-lg pt-4 border-t">Funciones Adicionales</h4>
+                <h4 className="font-semibold text-lg pt-4 border-t">Herramientas Operativas</h4>
                  <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
                     <HelpCircle className="h-5 w-5"/>
-                    <p className="text-sm">En el panel de Almacén, haz clic en el icono <HelpCircle className="inline h-4 w-4"/> junto al título de cada herramienta para ver una guía específica de esa sección.</p>
+                    <p className="text-sm">Una vez configurado, el personal de almacén puede usar las herramientas desde el sub-panel <strong>Almacén</strong>:</p>
                 </div>
-                 <ul className="list-disc space-y-3 pl-6">
+                 <ul className="list-disc space-y-3 pl-6 mt-4">
                     <li>
-                        <strong>Asignar Productos a Ubicaciones:</strong> Usa esta herramienta para indicar dónde se almacena *generalmente* un producto o el inventario de un cliente. Es un catálogo rápido y no rastrea lotes.
+                        <strong>Consulta de Almacén:</strong> La herramienta principal para buscar artículos, clientes o unidades y ver sus ubicaciones y stock del ERP desglosado por bodega.
                     </li>
                     <li>
-                        <strong>Gestión de Unidades (Lotes/Tarimas con QR):</strong> Úsalo para crear identificadores únicos para unidades físicas (ej. una tarima, un lote). El sistema genera un código QR que puedes imprimir y pegar en la unidad para rastrearla fácilmente.
+                        <strong>Gestionar Ubicaciones:</strong> Aquí es donde se construye el "árbol" real de tu almacén, creando las ubicaciones físicas (ej: "Rack 01") y anidándolas según la jerarquía que definiste en la configuración.
                     </li>
                     <li>
-                        <strong>Consulta y Escaneo:</strong> La herramienta de consulta te permite buscar por producto, cliente o ID de unidad. Si escaneas un QR con tu celular, te llevará directamente a una página con la información de esa unidad.
+                        <strong>Gestión de Unidades (QR):</strong> Úsalo para crear identificadores únicos para unidades físicas (ej. una tarima, un lote). El sistema genera un código QR que puedes imprimir y pegar en la unidad para rastrearla fácilmente.
                     </li>
                 </ul>
             </div>
@@ -779,11 +729,7 @@ export default function HelpPage() {
                     </div>
                     <div className="flex items-start gap-4">
                         <Map className="mt-1 h-6 w-6 text-teal-700 shrink-0" />
-                        <div><h4 className="font-semibold">Config. Almacenes</h4><p>Ajusta el prefijo y consecutivo para las etiquetas de unidades de inventario, y habilita o deshabilita el control de inventario físico.</p></div>
-                    </div>
-                    <div className="flex items-start gap-4">
-                        <Boxes className="mt-1 h-6 w-6 text-green-700 shrink-0" />
-                        <div><h4 className="font-semibold">Config. Inventario</h4><p>Gestiona las bodegas del sistema. Puedes añadir nuevas bodegas, marcar una como predeterminada o decidir si una bodega debe ser visible en los desgloses de inventario.</p></div>
+                        <div><h4 className="font-semibold">Config. Almacenes e Inventario</h4><p>Define la jerarquía de ubicaciones, gestiona las bodegas del ERP y ajusta los prefijos para las etiquetas de unidades de inventario.</p></div>
                     </div>
                     <div className="flex items-start gap-4">
                         <FileUp className="mt-1 h-6 w-6 text-cyan-500 shrink-0" />
