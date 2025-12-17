@@ -83,7 +83,8 @@ import {
   UserCheck,
   ShoppingBag,
   QrCode,
-  HelpCircle
+  HelpCircle,
+  ClipboardList
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -394,7 +395,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -598,21 +599,18 @@ export default function HelpPage() {
         icon: <Warehouse className="mr-4 h-6 w-6 text-cyan-600" />,
         content: (
             <div className="space-y-4">
-                <p>Este módulo te da control total sobre la localización de tu inventario. Incluye herramientas para mapear tu bodega, asignar productos a ubicaciones y rastrear lotes individuales con códigos QR.</p>
+                <p>Este módulo te da control total sobre la localización y conteo de tu inventario. Incluye herramientas para mapear tu bodega, registrar conteos y generar etiquetas QR.</p>
                 
-                <h4 className="font-semibold text-lg pt-4 border-t">Configuraciones Clave</h4>
-                <p>Antes de poder usar el módulo de búsqueda eficazmente, hay dos configuraciones importantes que un administrador debe realizar:</p>
+                <h4 className="font-semibold text-lg pt-4 border-t">Configuraciones Clave (Para Administradores)</h4>
+                <p>Antes de poder usar el módulo de búsqueda eficazmente, un administrador debe realizar una configuración crítica desde <strong>Administración &gt; Config. Almacenes e Inventario</strong>:</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Definir la Jerarquía del Almacén:</strong> En <strong>Administración &gt; Config. Almacenes e Inventario</strong>, en la sección &quot;Paso 1: Definir Jerarquía del Almacén&quot;, debes establecer las categorías que usas para organizar tu almacén (ej: Bodega, Pasillo, Rack, etc.). Esto crea la plantilla que usarás para construir el mapa físico.
-                    </li>
-                    <li>
-                        <strong>Registrar las Bodegas del ERP:</strong> En la misma página de configuración, en la sección &quot;Gestión de Bodegas&quot;, debes registrar cada bodega que existe en tu ERP con su código y un nombre descriptivo (ej: ID `01`, Nombre `Bodega Principal`).
-                        <Alert variant="default" className="mt-2">
+                        <strong>Registrar las Bodegas del ERP:</strong> En la sección &quot;Gestión de Bodegas&quot;, debes registrar cada bodega que existe en tu ERP con su código y un nombre descriptivo (ej: ID `01`, Nombre `Bodega Principal`).
+                       <Alert variant="destructive" className="mt-2">
                            <AlertTriangle className="h-4 w-4" />
                            <AlertTitle>¡Paso Crítico!</AlertTitle>
                            <AlertDescription>
-                                Si no registras las bodegas aquí, el desglose de inventario en las búsquedas **no aparecerá**, y solo verás un &quot;Total ERP&quot;, lo cual puede ser confuso.
+                                Si no registras las bodegas aquí, el desglose de inventario del ERP en las búsquedas **no aparecerá**, y solo verás un &quot;Total ERP&quot;, lo cual puede ser confuso.
                            </AlertDescription>
                        </Alert>
                     </li>
@@ -625,13 +623,16 @@ export default function HelpPage() {
                 </div>
                  <ul className="list-disc space-y-3 pl-6 mt-4">
                     <li>
-                        <strong>Consulta de Almacén:</strong> La herramienta principal para buscar artículos, clientes o unidades y ver sus ubicaciones y stock del ERP desglosado por bodega.
+                        <strong>Toma de Inventario (<ClipboardList className="inline h-4 w-4"/>):</strong> Permite a los bodegueros registrar conteos físicos de un producto en una ubicación específica. Estos datos se pueden usar luego para generar reportes y ajustar el inventario en el ERP.
                     </li>
                     <li>
-                        <strong>Gestionar Ubicaciones:</strong> Aquí es donde se construye el &quot;árbol&quot; real de tu almacén, creando las ubicaciones físicas (ej: &quot;Rack 01&quot;) y anidándolas según la jerarquía que definiste en la configuración.
+                        <strong>Consulta de Almacén (<Search className="inline h-4 w-4"/>):</strong> La herramienta principal para buscar artículos y ver sus ubicaciones y stock del ERP desglosado por bodega.
                     </li>
                     <li>
-                        <strong>Gestión de Unidades (QR):</strong> Úsalo para crear identificadores únicos para unidades físicas (ej. una tarima, un lote). El sistema genera un código QR que puedes imprimir y pegar en la unidad para rastrearla fácilmente.
+                        <strong>Gestión de Ubicaciones (<Map className="inline h-4 w-4"/>):</strong> Aquí es donde se construye el &quot;árbol&quot; real de tu almacén, creando las ubicaciones físicas (ej: &quot;Rack 01&quot;) y anidándolas según la jerarquía que un administrador haya definido.
+                    </li>
+                    <li>
+                        <strong>Gestión de Unidades (QR) (<QrCode className="inline h-4 w-4"/>):</strong> Úsalo para crear identificadores únicos para unidades físicas (ej. una tarima, un lote). El sistema genera un código QR que puedes imprimir y pegar en la unidad para rastrearla fácilmente.
                     </li>
                 </ul>
             </div>
@@ -807,7 +808,22 @@ export default function HelpPage() {
         icon: <ListChecks className="mr-4 h-6 w-6 text-fuchsia-600" />,
         content: (
              <div className="space-y-4">
-                <h4 className="font-semibold text-lg">Versión 2.1.0 <Badge variant="secondary">Actual</Badge></h4>
+                <h4 className="font-semibold text-lg">Versión 2.2.0 <Badge variant="secondary">Actual</Badge></h4>
+                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
+                <ul className="list-disc space-y-3 pl-6">
+                    <li>
+                        <strong>Nueva Funcionalidad Mayor: Toma de Inventario Físico.</strong>
+                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
+                            <li>Se añadió una nueva herramienta en Almacén llamada "Toma de Inventario" que permite a los usuarios registrar la cantidad física de un producto en una ubicación específica.</li>
+                            <li>Se simplificó la configuración de Almacén, eliminando el interruptor de "Control de Inventario Físico" para unificar el comportamiento del módulo.</li>
+                            <li>La búsqueda de almacén ahora siempre muestra el desglose de existencias por bodega del ERP, independientemente de la configuración.</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Mejora de UI:</strong> Se consolidaron las páginas de configuración de "Almacenes" e "Inventario" en una sola para una gestión más clara.
+                    </li>
+                </ul>
+                <h4 className="font-semibold text-lg pt-4 border-t">Versión 2.1.0</h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>

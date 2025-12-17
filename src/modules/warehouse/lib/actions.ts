@@ -15,7 +15,6 @@ import {
     logMovement as logMovementServer,
     updateInventory as updateInventoryServer,
     getItemLocations as getItemLocationsServer,
-    assignItemToLocation as assignItemToLocationServer,
     unassignItemFromLocation as unassignItemFromLocationServer,
     getWarehouseData as getWarehouseDataServer,
     getMovements as getMovementsServer,
@@ -50,14 +49,11 @@ export async function deleteLocation(id: number): Promise<void> {
 }
 export const getInventoryForItem = async (itemId: string): Promise<WarehouseInventoryItem[]> => getInventoryForItemServer(itemId);
 export const logMovement = async (movement: Omit<MovementLog, 'id'|'timestamp'>): Promise<void> => logMovementServer(movement);
-export const updateInventory = async(itemId: string, locationId: number, quantityChange: number): Promise<void> => updateInventoryServer(itemId, locationId, quantityChange);
+export const updateInventory = async(itemId: string, locationId: number, quantity: number): Promise<void> => updateInventoryServer(itemId, locationId, quantity);
 
 // --- Simple Mode Actions ---
 export const getItemLocations = async (itemId: string): Promise<ItemLocation[]> => getItemLocationsServer(itemId);
-export async function assignItemToLocation(itemId: string, locationId: number, clientId?: string | null): Promise<void> {
-    await logInfo(`Item ${itemId} assigned to location ID ${locationId}.`);
-    return assignItemToLocationServer(itemId, locationId, clientId);
-}
+
 export async function unassignItemFromLocation(itemLocationId: number): Promise<void> {
     await logInfo(`Item location mapping with ID ${itemLocationId} was removed.`);
     return unassignItemFromLocationServer(itemLocationId);

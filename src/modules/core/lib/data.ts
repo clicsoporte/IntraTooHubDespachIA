@@ -36,6 +36,7 @@ import {
   UserCheck,
   Truck,
   QrCode,
+  ClipboardList,
 } from "lucide-react";
 
 /**
@@ -163,12 +164,12 @@ export const warehouseTools: Tool[] = [
         bgColor: "bg-sky-600",
         textColor: "text-white",
     },
-    {
-        id: "warehouse-assign",
-        name: "Asignar Cliente a Ubicación",
-        description: "Ligar clientes y productos a ubicaciones físicas.",
-        href: "/dashboard/warehouse/assign",
-        icon: PackagePlus,
+     {
+        id: "inventory-count",
+        name: "Toma de Inventario",
+        description: "Registrar conteos físicos de inventario por ubicación.",
+        href: "/dashboard/warehouse/inventory-count",
+        icon: ClipboardList,
         bgColor: "bg-fuchsia-600",
         textColor: "text-white",
     },

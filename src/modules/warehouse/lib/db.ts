@@ -81,7 +81,6 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             { type: 'shelf', name: 'Estante' },
             { type: 'bin', name: 'Casilla' }
         ],
-        enablePhysicalInventoryTracking: false,
         unitPrefix: 'U',
         nextUnitNumber: 1,
     };
@@ -105,9 +104,10 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             const settings = JSON.parse(settingsRow.value);
             let settingsUpdated = false;
 
-            if (typeof settings.enablePhysicalInventoryTracking !== 'boolean') {
-                settings.enablePhysicalInventoryTracking = false;
+            if (settings.enablePhysicalInventoryTracking !== undefined) {
+                delete settings.enablePhysicalInventoryTracking;
                 settingsUpdated = true;
+                console.log("MIGRATION (warehouse.db): Removed obsolete 'enablePhysicalInventoryTracking' setting.");
             }
             if (typeof settings.unitPrefix !== 'string') {
                 settings.unitPrefix = 'U';
@@ -119,7 +119,7 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             }
             if (settingsUpdated) {
                 db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(settings));
-                console.log("MIGRATION (warehouse.db): Added default unit prefix and number settings.");
+                console.log("MIGRATION (warehouse.db): Cleaned up and added default unit settings.");
             }
         }
     } catch (error) {
@@ -285,7 +285,6 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
             { type: 'shelf', name: 'Estante' },
             { type: 'bin', name: 'Casilla' }
         ],
-        enablePhysicalInventoryTracking: false,
         unitPrefix: 'U',
         nextUnitNumber: 1,
     };
@@ -293,6 +292,10 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
         const row = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
         if (row) {
             const settings = JSON.parse(row.value);
+            // Ensure enablePhysicalInventoryTracking is removed if it exists from old versions
+            if (settings.enablePhysicalInventoryTracking !== undefined) {
+                delete settings.enablePhysicalInventoryTracking;
+            }
             return { ...defaults, ...settings };
         }
     } catch (error) {
@@ -303,9 +306,13 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
 
 export async function saveWarehouseSettings(settings: WarehouseSettings): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
+    const settingsToSave = { ...settings };
+    // @ts-ignore - Ensure this obsolete property is not saved.
+    delete settingsToSave.enablePhysicalInventoryTracking;
+    
     db.prepare(`
         INSERT OR REPLACE INTO warehouse_config (key, value) VALUES ('settings', ?)
-    `).run(JSON.stringify(settings));
+    `).run(JSON.stringify(settingsToSave));
 }
 
 export async function getLocations(): Promise<WarehouseLocation[]> {
@@ -370,14 +377,14 @@ export async function getInventoryForItem(itemId: string): Promise<WarehouseInve
     return db.prepare('SELECT * FROM inventory WHERE itemId = ?').all(itemId) as WarehouseInventoryItem[];
 }
 
-export async function updateInventory(itemId: string, locationId: number, quantityChange: number): Promise<void> {
+export async function updateInventory(itemId: string, locationId: number, quantity: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
      db.prepare(
         `INSERT INTO inventory (itemId, locationId, quantity, lastUpdated) 
          VALUES (?, ?, ?, datetime('now'))
          ON CONFLICT(itemId, locationId) 
-         DO UPDATE SET quantity = quantity + ?`
-    ).run(itemId, locationId, quantityChange, quantityChange);
+         DO UPDATE SET quantity = ?`
+    ).run(itemId, locationId, quantity, quantity);
 }
 
 export async function logMovement(movement: Omit<MovementLog, 'id' | 'timestamp'>): Promise<void> {
@@ -402,7 +409,7 @@ export async function getWarehouseData(): Promise<{ locations: WarehouseLocation
         inventory: inventory || [],
         stock: stock || [],
         itemLocations: itemLocations || [],
-        warehouseSettings: warehouseSettings || { locationLevels: [], enablePhysicalInventoryTracking: false, unitPrefix: 'U', nextUnitNumber: 1 },
+        warehouseSettings: warehouseSettings,
         stockSettings: stockSettings || { warehouses: [] },
     }));
 }
@@ -420,17 +427,12 @@ export async function getItemLocations(itemId: string): Promise<ItemLocation[]> 
     return db.prepare('SELECT * FROM item_locations WHERE itemId = ?').all(itemId) as ItemLocation[];
 }
 
-export async function assignItemToLocation(itemId: string, locationId: number, clientId?: string | null): Promise<void> {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('INSERT OR IGNORE INTO item_locations (itemId, locationId, clientId) VALUES (?, ?, ?)').run(itemId, locationId, clientId);
-}
-
 export async function unassignItemFromLocation(itemLocationId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('DELETE FROM item_locations WHERE id = ?').run(itemLocationId);
 }
 
-export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {
+export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt'>): Promise<InventoryUnit> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     
     const transaction = db.transaction(() => {

@@ -20,7 +20,6 @@ import { getStockSettings, saveStockSettings } from '@/modules/core/lib/db';
 import { Save, PlusCircle, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WarehouseSettings, StockSettings, Warehouse } from '@/modules/core/types';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -159,22 +158,6 @@ export default function WarehouseSettingsPage() {
                                 </div>
                             </div>
                          </div>
-                        <Separator />
-                         <div className="space-y-4 rounded-lg border p-4">
-                            <h3 className="font-semibold">Modo de Funcionamiento</h3>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="enable-physical-inventory"
-                                    checked={warehouseSettings.enablePhysicalInventoryTracking}
-                                    onCheckedChange={(checked) => setWarehouseSettings(prev => prev ? { ...prev, enablePhysicalInventoryTracking: checked } : null)}
-                                />
-                                <Label htmlFor="enable-physical-inventory" className="text-base">Habilitar Control de Inventario Físico</Label>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-2">
-                            Si está desactivado, el sistema solo permitirá asignar ubicaciones a un artículo (modo informativo). 
-                            Si está activado, se habilitará el control de cantidades por ubicación y movimientos de inventario.
-                            </p>
-                        </div>
                         <Separator />
                         <div className="space-y-4 rounded-lg border p-4">
                             <h3 className="font-semibold">Gestión de Bodegas (para desglose de stock ERP)</h3>

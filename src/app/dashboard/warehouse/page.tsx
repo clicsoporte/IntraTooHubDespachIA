@@ -27,7 +27,7 @@ export default function WarehouseDashboardPage() {
             if (tool.id === 'warehouse-search' || tool.id === 'warehouse-search-simple') {
                 return hasPermission('warehouse:access');
             }
-            if (tool.id === 'warehouse-assign') {
+            if (tool.id === 'inventory-count') {
                 return hasPermission('warehouse:inventory:assign');
             }
             if (tool.id === 'warehouse-units') {
