@@ -297,58 +297,66 @@ export default function SimpleWarehouseSearchPage() {
 
                     <div className="space-y-4 pt-4">
                          {filteredItems.length > 0 ? (
-                            filteredItems.map((item, itemIndex) => (
-                                <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg flex items-center gap-2">
-                                            <Package className="h-5 w-5 text-primary" />
-                                            {item.isUnit ? `${item.unit.unitCode} - ${item.product?.description}` : item.product?.description}
-                                        </CardTitle>
-                                        <CardDescription>{item.isUnit ? `ID legible: ${item.unit.humanReadableId}` : `Código: ${item.product?.id}`}</CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Ubicaciones Asignadas</h4>
-                                            <div className="space-y-2">
-                                                {item.physicalLocations.map((loc, index) => (
-                                                    <div key={index} className="flex justify-between items-center p-2 border rounded-md">
-                                                        {loc.path}
-                                                        <div className="flex items-center gap-1">
-                                                            {loc.quantity !== undefined && <span className="font-bold text-lg">{loc.quantity}</span>}
-                                                            {item.product && loc.location && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}><Printer className="h-4 w-4" /></Button>}
+                            filteredItems.map((item, itemIndex) => {
+                                const warehouseEntries = (item.erpStock && stockSettings) 
+                                    ? Object.entries(item.erpStock.stockByWarehouse)
+                                        .filter(([, qty]) => qty > 0)
+                                        .map(([whId, qty]) => ({
+                                            whId,
+                                            qty,
+                                            warehouse: stockSettings.warehouses.find(w => w.id === whId)
+                                        }))
+                                        .filter(entry => entry.warehouse?.isVisible)
+                                    : [];
+
+                                return (
+                                    <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
+                                        <CardHeader>
+                                            <CardTitle className="text-lg flex items-center gap-2">
+                                                <Package className="h-5 w-5 text-primary" />
+                                                {item.isUnit ? `${item.unit.unitCode} - ${item.product?.description}` : item.product?.description}
+                                            </CardTitle>
+                                            <CardDescription>{item.isUnit ? `ID legible: ${item.unit.humanReadableId}` : `Código: ${item.product?.id}`}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="space-y-4">
+                                            <div>
+                                                <h4 className="font-semibold mb-2">Ubicaciones Asignadas</h4>
+                                                <div className="space-y-2">
+                                                    {item.physicalLocations.map((loc, index) => (
+                                                        <div key={index} className="flex justify-between items-center p-2 border rounded-md">
+                                                            {loc.path}
+                                                            <div className="flex items-center gap-1">
+                                                                {loc.quantity !== undefined && <span className="font-bold text-lg">{loc.quantity}</span>}
+                                                                {item.product && loc.location && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}><Printer className="h-4 w-4" /></Button>}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
+                                                {item.erpStock && stockSettings ? (
+                                                    <div className="space-y-2">
+                                                        {warehouseEntries.map(entry => (
+                                                            <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
+                                                                <span>{entry.warehouse?.name} ({entry.whId})</span>
+                                                                <span className="font-bold text-lg">{entry.qty.toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                        <Separator />
+                                                        <div className="flex justify-between items-center p-2 font-bold">
+                                                            <span>Total ERP</span>
+                                                            <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
                                                         </div>
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
+                                                )}
                                             </div>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
-                                            {item.erpStock && stockSettings ? (
-                                                <div className="space-y-2">
-                                                    {Object.entries(item.erpStock.stockByWarehouse)
-                                                        .filter(([, qty]) => qty > 0)
-                                                        .map(([whId, qty]) => {
-                                                            const warehouse = stockSettings.warehouses.find(w => w.id === whId);
-                                                            return warehouse?.isVisible ? (
-                                                                <div key={whId} className="flex justify-between items-center p-2 border rounded-md">
-                                                                    <span>{warehouse.name} ({whId})</span>
-                                                                    <span className="font-bold text-lg">{qty.toLocaleString()}</span>
-                                                                </div>
-                                                            ) : null;
-                                                    })}
-                                                    <Separator />
-                                                    <div className="flex justify-between items-center p-2 font-bold">
-                                                        <span>Total ERP</span>
-                                                        <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })
                         ) : debouncedSearchTerm ? (
                             <div className="text-center py-10 text-muted-foreground"><p>No se encontraron resultados.</p></div>
                         ) : null}

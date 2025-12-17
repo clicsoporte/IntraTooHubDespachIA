@@ -420,73 +420,81 @@ export default function WarehouseSearchPage() {
                                     <Loader2 className="animate-spin h-8 w-8 text-muted-foreground"/>
                                 </div>
                             ) : filteredItems.length > 0 ? (
-                                filteredItems.map((item, itemIndex) => (
-                                    <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
-                                        <CardHeader>
-                                            <CardTitle className="text-xl flex items-center gap-2">
-                                                <Package className="h-6 w-6 text-primary" />
-                                                {item.isUnit ? `Unidad ${item.unit.unitCode} - ${item.product?.description}` : item.product?.description || 'Producto no encontrado'}
-                                            </CardTitle>
-                                            <CardDescription>
-                                                {item.isUnit ? `ID legible: ${item.unit.humanReadableId || 'N/A'}` : `Código: ${item.product?.id}`}
-                                            </CardDescription>
-                                             {!item.isUnit && item.client && (
-                                                <div className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
-                                                    <User className="h-4 w-4"/>
-                                                    <span>Inventario de Cliente: <strong>{item.client.name}</strong> ({item.client.id})</span>
-                                                </div>
-                                            )}
-                                        </CardHeader>
-                                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                            <div>
-                                                <h4 className="font-semibold mb-2">Ubicaciones Físicas Asignadas</h4>
-                                                <div className="space-y-2">
-                                                {item.physicalLocations.length > 0 ? item.physicalLocations.map((loc, index) => (
-                                                    <div key={index} className="flex justify-between items-center p-2 border rounded-md">
-                                                        <span>{loc.path}</span>
-                                                        <div className='flex items-center gap-1'>
-                                                            {loc.quantity !== undefined && (
-                                                                <span className="font-bold text-lg">{loc.quantity.toLocaleString()}</span>
-                                                            )}
-                                                            {item.product && loc.location && (
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}>
-                                                                    <Printer className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
+                                filteredItems.map((item, itemIndex) => {
+                                    const warehouseEntries = (item.erpStock && stockSettings) 
+                                        ? Object.entries(item.erpStock.stockByWarehouse)
+                                            .filter(([, qty]) => qty > 0)
+                                            .map(([whId, qty]) => ({
+                                                whId,
+                                                qty,
+                                                warehouse: stockSettings.warehouses.find(w => w.id === whId)
+                                            }))
+                                            .filter(entry => entry.warehouse?.isVisible)
+                                        : [];
+
+                                    return (
+                                        <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
+                                            <CardHeader>
+                                                <CardTitle className="text-xl flex items-center gap-2">
+                                                    <Package className="h-6 w-6 text-primary" />
+                                                    {item.isUnit ? `Unidad ${item.unit.unitCode} - ${item.product?.description}` : item.product?.description || 'Producto no encontrado'}
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    {item.isUnit ? `ID legible: ${item.unit.humanReadableId || 'N/A'}` : `Código: ${item.product?.id}`}
+                                                </CardDescription>
+                                                 {!item.isUnit && item.client && (
+                                                    <div className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
+                                                        <User className="h-4 w-4"/>
+                                                        <span>Inventario de Cliente: <strong>{item.client.name}</strong> ({item.client.id})</span>
                                                     </div>
-                                                )) : <p className="text-sm text-muted-foreground">Sin ubicaciones asignadas.</p>}
+                                                )}
+                                            </CardHeader>
+                                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                                <div>
+                                                    <h4 className="font-semibold mb-2">Ubicaciones Físicas Asignadas</h4>
+                                                    <div className="space-y-2">
+                                                    {item.physicalLocations.length > 0 ? item.physicalLocations.map((loc, index) => (
+                                                        <div key={index} className="flex justify-between items-center p-2 border rounded-md">
+                                                            <span>{loc.path}</span>
+                                                            <div className='flex items-center gap-1'>
+                                                                {loc.quantity !== undefined && (
+                                                                    <span className="font-bold text-lg">{loc.quantity.toLocaleString()}</span>
+                                                                )}
+                                                                {item.product && loc.location && (
+                                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}>
+                                                                        <Printer className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )) : <p className="text-sm text-muted-foreground">Sin ubicaciones asignadas.</p>}
+                                                    </div>
+                                                    {item.isUnit && item.unit?.notes && <p className="text-xs italic text-muted-foreground mt-2">&quot;{item.unit.notes}&quot;</p>}
                                                 </div>
-                                                {item.isUnit && item.unit?.notes && <p className="text-xs italic text-muted-foreground mt-2">&quot;{item.unit.notes}&quot;</p>}
-                                            </div>
-                                            <div>
-                                                 <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
-                                                 {item.erpStock && stockSettings ? (
-                                                     <div className="space-y-2">
-                                                        {Object.entries(item.erpStock.stockByWarehouse)
-                                                             .filter(([, qty]) => qty > 0)
-                                                             .map(([whId, qty]) => {
-                                                                const warehouse = stockSettings.warehouses.find(w => w.id === whId);
-                                                                return warehouse?.isVisible ? (
-                                                                    <div key={whId} className="flex justify-between items-center p-2 border rounded-md">
-                                                                        <span>{warehouse.name} ({whId})</span>
-                                                                        <span className="font-bold text-lg">{qty.toLocaleString()}</span>
-                                                                    </div>
-                                                                ) : null;
-                                                        })}
-                                                         <Separator />
-                                                         <div className="flex justify-between items-center p-2 font-bold">
-                                                            <span>Total ERP</span>
-                                                            <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
+                                                <div>
+                                                     <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
+                                                     {item.erpStock && stockSettings ? (
+                                                         <div className="space-y-2">
+                                                            {warehouseEntries.map(entry => (
+                                                                <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
+                                                                    <span>{entry.warehouse?.name} ({entry.whId})</span>
+                                                                    <span className="font-bold text-lg">{entry.qty.toLocaleString()}</span>
+                                                                </div>
+                                                            ))}
+                                                             <Separator />
+                                                             <div className="flex justify-between items-center p-2 font-bold">
+                                                                <span>Total ERP</span>
+                                                                <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
+                                                             </div>
                                                          </div>
-                                                     </div>
-                                                 ) : (
-                                                     <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
-                                                 )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))
+                                                     ) : (
+                                                         <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
+                                                     )}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })
                             ) : debouncedSearchTerm ? (
                                 <div className="text-center py-10 text-muted-foreground">
                                     <p>No se encontraron resultados para &quot;{debouncedSearchTerm}&quot;.</p>
