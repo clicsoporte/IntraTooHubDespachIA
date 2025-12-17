@@ -149,7 +149,7 @@ export default function SimpleWarehouseSearchPage() {
     useEffect(() => {
         const performUnitSearch = async () => {
             const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
-            if (exactMatch && normalizedSearch.startsWith(warehouseSettings?.unitPrefix || 'U')) {
+            if (exactMatch && warehouseSettings?.unitPrefix && normalizedSearch.startsWith(warehouseSettings.unitPrefix)) {
                 setIsLoading(true);
                 try {
                     const unit = await getInventoryUnitById(normalizedSearch);
@@ -189,7 +189,7 @@ export default function SimpleWarehouseSearchPage() {
         let matchedIndexItems: SearchableItem[] = [];
         
         if (exactMatch) {
-             if (normalizedSearch.toUpperCase().startsWith(warehouseSettings?.unitPrefix || 'U')) return [];
+             if (warehouseSettings?.unitPrefix && normalizedSearch.toUpperCase().startsWith(warehouseSettings.unitPrefix)) return [];
              const exactMatchLower = normalizedSearch.toLowerCase();
              matchedIndexItems = products.filter(p => normalizeText(p.id).toLowerCase() === exactMatchLower).map(p => ({ id: p.id, type: 'product', searchText: '' }));
         } else {
@@ -298,13 +298,13 @@ export default function SimpleWarehouseSearchPage() {
                     <div className="space-y-4 pt-4">
                          {filteredItems.length > 0 ? (
                             filteredItems.map((item, itemIndex) => {
-                                const warehouseEntries = (item.erpStock && stockSettings) 
+                                const warehouseEntries = (item.erpStock?.stockByWarehouse) 
                                     ? Object.entries(item.erpStock.stockByWarehouse)
                                         .filter(([, qty]) => qty > 0)
                                         .map(([whId, qty]) => ({
                                             whId,
                                             qty,
-                                            warehouse: stockSettings.warehouses.find(w => w.id === whId)
+                                            warehouse: stockSettings?.warehouses.find(w => w.id === whId)
                                         }))
                                         .filter(entry => entry.warehouse?.isVisible)
                                     : [];
@@ -335,7 +335,7 @@ export default function SimpleWarehouseSearchPage() {
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
-                                                {item.erpStock && stockSettings ? (
+                                                {warehouseEntries.length > 0 ? (
                                                     <div className="space-y-2">
                                                         {warehouseEntries.map(entry => (
                                                             <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
@@ -346,7 +346,7 @@ export default function SimpleWarehouseSearchPage() {
                                                         <Separator />
                                                         <div className="flex justify-between items-center p-2 font-bold">
                                                             <span>Total ERP</span>
-                                                            <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
+                                                            <span className="text-xl">{item.erpStock?.totalStock.toLocaleString()}</span>
                                                         </div>
                                                     </div>
                                                 ) : (

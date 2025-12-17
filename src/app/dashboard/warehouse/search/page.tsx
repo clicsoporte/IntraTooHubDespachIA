@@ -193,7 +193,7 @@ export default function WarehouseSearchPage() {
      useEffect(() => {
         const performUnitSearch = async () => {
             const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
-            if (exactMatch && normalizedSearch.startsWith(warehouseSettings?.unitPrefix || 'U')) {
+            if (exactMatch && warehouseSettings?.unitPrefix && normalizedSearch.startsWith(warehouseSettings.unitPrefix)) {
                 setIsLoading(true);
                 try {
                     const unit = await getInventoryUnitById(normalizedSearch);
@@ -233,7 +233,7 @@ export default function WarehouseSearchPage() {
         let matchedIndexItems: SearchableItem[];
         
         if (exactMatch) {
-             if (normalizedSearch.toUpperCase().startsWith(warehouseSettings?.unitPrefix || 'U')) return [];
+             if (warehouseSettings?.unitPrefix && normalizedSearch.toUpperCase().startsWith(warehouseSettings.unitPrefix)) return [];
              const exactMatchLower = normalizedSearch.toLowerCase();
              matchedIndexItems = searchIndex.filter(item => normalizeText(item.id).toLowerCase() === exactMatchLower);
         } else {
@@ -276,7 +276,6 @@ export default function WarehouseSearchPage() {
              itemLocations.forEach(itemLoc => {
                 const product = products.find(p => p.id === itemLoc.itemId);
                 
-                // Case 1: The product itself was part of the search results
                 if (groupedByItem[itemLoc.itemId]) {
                     groupedByItem[itemLoc.itemId].physicalLocations.push({
                         path: renderLocationPath(itemLoc.locationId, locations),
@@ -284,9 +283,7 @@ export default function WarehouseSearchPage() {
                         location: locations.find(l => l.id === itemLoc.locationId),
                     });
                 } 
-                // Case 2: The customer was part of the search results
                 else if (itemLoc.clientId && relevantCustomerIds.has(itemLoc.clientId)) {
-                    // Create an entry for the product if it doesn't exist
                     if (!groupedByItem[itemLoc.itemId]) {
                          groupedByItem[itemLoc.itemId] = {
                             isUnit: false,
@@ -297,7 +294,6 @@ export default function WarehouseSearchPage() {
                             client: customers.find(c => c.id === itemLoc.clientId)
                         };
                     }
-                    // Add the location to this product's entry
                     groupedByItem[itemLoc.itemId].physicalLocations.push({
                         path: renderLocationPath(itemLoc.locationId, locations),
                         clientId: itemLoc.clientId || undefined,
@@ -421,13 +417,13 @@ export default function WarehouseSearchPage() {
                                 </div>
                             ) : filteredItems.length > 0 ? (
                                 filteredItems.map((item, itemIndex) => {
-                                    const warehouseEntries = (item.erpStock && stockSettings) 
+                                    const warehouseEntries = (item.erpStock?.stockByWarehouse) 
                                         ? Object.entries(item.erpStock.stockByWarehouse)
                                             .filter(([, qty]) => qty > 0)
                                             .map(([whId, qty]) => ({
                                                 whId,
                                                 qty,
-                                                warehouse: stockSettings.warehouses.find(w => w.id === whId)
+                                                warehouse: stockSettings?.warehouses.find(w => w.id === whId)
                                             }))
                                             .filter(entry => entry.warehouse?.isVisible)
                                         : [];
@@ -473,7 +469,7 @@ export default function WarehouseSearchPage() {
                                                 </div>
                                                 <div>
                                                      <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
-                                                     {item.erpStock && stockSettings ? (
+                                                     {warehouseEntries.length > 0 ? (
                                                          <div className="space-y-2">
                                                             {warehouseEntries.map(entry => (
                                                                 <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
@@ -484,7 +480,7 @@ export default function WarehouseSearchPage() {
                                                              <Separator />
                                                              <div className="flex justify-between items-center p-2 font-bold">
                                                                 <span>Total ERP</span>
-                                                                <span className="text-xl">{item.erpStock.totalStock.toLocaleString()}</span>
+                                                                <span className="text-xl">{item.erpStock?.totalStock.toLocaleString()}</span>
                                                              </div>
                                                          </div>
                                                      ) : (
