@@ -463,14 +463,16 @@ export default function WarehouseSearchPage() {
                                                  <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
                                                  {item.erpStock && stockSettings ? (
                                                      <div className="space-y-2">
-                                                        {Object.entries(item.erpStock.stockByWarehouse).map(([whId, qty]) => {
-                                                            const warehouse = stockSettings.warehouses.find(w => w.id === whId);
-                                                            return warehouse?.isVisible ? (
-                                                                <div key={whId} className="flex justify-between items-center p-2 border rounded-md">
-                                                                    <span>{warehouse.name} ({whId})</span>
-                                                                    <span className="font-bold text-lg">{qty.toLocaleString()}</span>
-                                                                </div>
-                                                            ) : null;
+                                                        {Object.entries(item.erpStock.stockByWarehouse)
+                                                             .filter(([, qty]) => qty > 0)
+                                                             .map(([whId, qty]) => {
+                                                                const warehouse = stockSettings.warehouses.find(w => w.id === whId);
+                                                                return warehouse?.isVisible ? (
+                                                                    <div key={whId} className="flex justify-between items-center p-2 border rounded-md">
+                                                                        <span>{warehouse.name} ({whId})</span>
+                                                                        <span className="font-bold text-lg">{qty.toLocaleString()}</span>
+                                                                    </div>
+                                                                ) : null;
                                                         })}
                                                          <Separator />
                                                          <div className="flex justify-between items-center p-2 font-bold">
