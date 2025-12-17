@@ -86,12 +86,15 @@ export default function ManageUnitsPage() {
         [products, debouncedProductSearch]
     );
 
-    const locationOptions = useMemo(() =>
-        debouncedLocationSearch.length < 1 ? [] : locations
-            .filter(l => l.name.toLowerCase().includes(debouncedLocationSearch.toLowerCase()) || l.code.toLowerCase().includes(debouncedLocationSearch.toLowerCase()))
-            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` })),
-        [locations, debouncedLocationSearch]
-    );
+    const locationOptions = useMemo(() => {
+        const searchTerm = debouncedLocationSearch.trim().toLowerCase();
+        if (searchTerm === '*' || searchTerm === '') {
+            return locations.map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+        }
+        return locations
+            .filter(l => l.name.toLowerCase().includes(searchTerm) || l.code.toLowerCase().includes(searchTerm))
+            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+    }, [locations, debouncedLocationSearch]);
 
     const handleSelectProduct = (value: string) => {
         setProductSearchOpen(false);
@@ -235,7 +238,7 @@ export default function ManageUnitsPage() {
                             </div>
                              <div className="space-y-2">
                                 <Label>2. Ubicación <span className="text-destructive">*</span></Label>
-                                <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar ubicación física..." open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
+                                <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar o '*' para ver todas..." open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
                             </div>
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
