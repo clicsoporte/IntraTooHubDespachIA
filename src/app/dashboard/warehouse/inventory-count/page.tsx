@@ -116,6 +116,7 @@ export default function InventoryCountPage() {
             await logMovement({
                 itemId: selectedProductId,
                 quantity: quantity,
+                fromLocationId: null,
                 toLocationId: parseInt(selectedLocationId, 10),
                 userId: user.id,
                 notes: 'Conteo de inventario físico inicial'
