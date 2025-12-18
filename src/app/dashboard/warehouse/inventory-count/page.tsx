@@ -21,6 +21,18 @@ import { Loader2, Save } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
+    if (!locationId) return "Sin ubicación";
+    const path: WarehouseLocation[] = [];
+    let current: WarehouseLocation | undefined = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        const parentId = current.parentId;
+        current = parentId ? locations.find(l => l.id === parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
 export default function InventoryCountPage() {
     useAuthorization(['warehouse:inventory:assign']); // Reusing permission, can be changed
     const { setTitle } = usePageTitle();
@@ -72,11 +84,11 @@ export default function InventoryCountPage() {
     const locationOptions = useMemo(() => {
         const searchTerm = debouncedLocationSearch.trim().toLowerCase();
         if (searchTerm === '*' || searchTerm === '') {
-            return locations.map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+            return locations.map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
         }
         return locations
-            .filter(l => l.name.toLowerCase().includes(searchTerm) || l.code.toLowerCase().includes(searchTerm))
-            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+            .filter(l => renderLocationPathAsString(l.id, locations).toLowerCase().includes(searchTerm))
+            .map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
     }, [locations, debouncedLocationSearch]);
 
     const handleSelectProduct = (value: string) => {
@@ -93,7 +105,7 @@ export default function InventoryCountPage() {
         const location = locations.find(l => String(l.id) === value);
         if (location) {
             setSelectedLocationId(value);
-            setLocationSearchTerm(`${location.code} (${location.name})`);
+            setLocationSearchTerm(renderLocationPathAsString(location.id, locations));
         }
     };
 
@@ -119,13 +131,13 @@ export default function InventoryCountPage() {
                 fromLocationId: null,
                 toLocationId: parseInt(selectedLocationId, 10),
                 userId: user.id,
-                notes: 'Conteo de inventario físico inicial'
+                notes: 'Conteo de inventario físico'
             });
             
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
             logInfo('Physical inventory count saved', { itemId: selectedProductId, locationId: selectedLocationId, quantity, user: user.name });
             
-            // Reset for next count
+            // Reset for next count, keeping location if user wants to count another item there
             setSelectedProductId(null);
             setProductSearchTerm('');
             setCountedQuantity('');

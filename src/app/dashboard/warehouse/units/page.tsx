@@ -33,6 +33,19 @@ const initialNewUnitState = {
     notes: ''
 };
 
+const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
+    if (!locationId) return "Sin ubicación";
+    const path: WarehouseLocation[] = [];
+    let current: WarehouseLocation | undefined = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        const parentId = current.parentId;
+        current = parentId ? locations.find(l => l.id === parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
+
 export default function ManageUnitsPage() {
     useAuthorization(['warehouse:units:manage']);
     const { setTitle } = usePageTitle();
@@ -89,11 +102,11 @@ export default function ManageUnitsPage() {
     const locationOptions = useMemo(() => {
         const searchTerm = debouncedLocationSearch.trim().toLowerCase();
         if (searchTerm === '*' || searchTerm === '') {
-            return locations.map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+            return locations.map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
         }
         return locations
-            .filter(l => l.name.toLowerCase().includes(searchTerm) || l.code.toLowerCase().includes(searchTerm))
-            .map(l => ({ value: String(l.id), label: `${l.code} (${l.name})` }));
+            .filter(l => renderLocationPathAsString(l.id, locations).toLowerCase().includes(searchTerm))
+            .map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
     }, [locations, debouncedLocationSearch]);
 
     const handleSelectProduct = (value: string) => {
@@ -110,7 +123,7 @@ export default function ManageUnitsPage() {
         const location = locations.find(l => String(l.id) === value);
         if (location) {
             setNewUnit(prev => ({ ...prev, locationId: Number(value) }));
-            setLocationSearchTerm(`${location.code} (${location.name})`);
+            setLocationSearchTerm(renderLocationPathAsString(location.id, locations));
         }
     };
 
@@ -193,7 +206,7 @@ export default function ManageUnitsPage() {
             doc.text(`Ubicación Sugerida:`, 0.2, 2.0);
             doc.setFontSize(12);
             doc.setFont('Helvetica', 'bold');
-            doc.text(`${location?.code || 'N/A'} - ${location?.name || 'N/A'}`, 0.2, 2.2);
+            doc.text(renderLocationPathAsString(location?.id || 0, locations), 0.2, 2.2);
 
             doc.setFontSize(8);
             doc.text(`ID Interno: ${unit.unitCode}`, 0.2, 2.8);
@@ -289,7 +302,7 @@ export default function ManageUnitsPage() {
                                                     <div className="text-xs text-muted-foreground">{unit.productId}</div>
                                                 </td>
                                                 <td className="p-2 font-mono">{unit.humanReadableId || '-'}</td>
-                                                <td className="p-2">{location ? `${location.code} (${location.name})` : 'N/A'}</td>
+                                                <td className="p-2">{location ? renderLocationPathAsString(location.id, locations) : 'N/A'}</td>
                                                 <td className="p-2 text-xs text-muted-foreground">
                                                     <div>{unit.createdBy}</div>
                                                     <div>{format(new Date(unit.createdAt), 'dd/MM/yyyy HH:mm')}</div>
