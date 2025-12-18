@@ -153,7 +153,6 @@ export async function executeNotificationAction(notificationId: number, actionTy
                         requestId: notification.entityId,
                         status: 'canceled',
                         notes: `Cancelación aprobada por ${updatedBy}.`,
-                        updatedBy,
                         reopen: false
                     });
                 }
