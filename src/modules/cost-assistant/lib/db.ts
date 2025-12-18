@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server-side functions for the cost assistant database.
  * This file handles all direct interactions with the `cost_assistant.db` SQLite database,

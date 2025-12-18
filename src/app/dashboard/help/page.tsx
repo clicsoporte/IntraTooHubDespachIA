@@ -395,7 +395,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Ajustar y Calcular Precios.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>En la tabla de &quot;Artículos Extraídos&quot;, puedes editar la mayoría de los campos.</li>
-                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manually** si necesitas ajustar el costo base para un artículo específico.</li>
+                            <li><strong>Costo Unit. (s/IVA):</strong> Este es el costo real del artículo (costo de factura + costo prorrateado +/- efecto del descuento). Puedes **sobrescribirlo manualmente** si necesitas ajustar el costo base para un artículo específico.</li>
                             <li><strong>Imp. %:</strong> El sistema extrae el impuesto del XML, pero puedes editarlo aquí si es necesario (ej. de &quot;13&quot; a &quot;1&quot;).</li>
                             <li><strong>Margen:</strong> Introduce el margen de ganancia deseado (ej. &quot;20&quot; para un 20%).</li>
                             <li>El sistema calculará automáticamente el **P.V.P. Unitario Sugerido** y la **Ganancia por Línea** en tiempo real.</li>
@@ -814,13 +814,13 @@ export default function HelpPage() {
                     <li>
                         <strong>Nueva Funcionalidad Mayor: Toma de Inventario Físico.</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Se añadió una nueva herramienta en Almacén llamada "Toma de Inventario" que permite a los usuarios registrar la cantidad física de un producto en una ubicación específica.</li>
-                            <li>Se simplificó la configuración de Almacén, eliminando el interruptor de "Control de Inventario Físico" para unificar el comportamiento del módulo.</li>
+                            <li>Se añadió una nueva herramienta en Almacén llamada &quot;Toma de Inventario&quot; que permite a los usuarios registrar la cantidad física de un producto en una ubicación específica.</li>
+                            <li>Se simplificó la configuración de Almacén, eliminando el interruptor de &quot;Control de Inventario Físico&quot; para unificar el comportamiento del módulo.</li>
                             <li>La búsqueda de almacén ahora siempre muestra el desglose de existencias por bodega del ERP, independientemente de la configuración.</li>
                         </ul>
                     </li>
                     <li>
-                        <strong>Mejora de UI:</strong> Se consolidaron las páginas de configuración de "Almacenes" e "Inventario" en una sola para una gestión más clara.
+                        <strong>Mejora de UI:</strong> Se consolidaron las páginas de configuración de &quot;Almacenes&quot; e &quot;Inventario&quot; en una sola para una gestión más clara.
                     </li>
                 </ul>
                 <h4 className="font-semibold text-lg pt-4 border-t">Versión 2.1.0</h4>
