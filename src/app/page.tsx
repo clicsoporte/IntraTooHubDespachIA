@@ -7,7 +7,7 @@
 
 import { AuthForm } from "@/components/auth/auth-form";
 import { SetupWizard } from "@/components/auth/setup-wizard";
-import { getCompanySettings, getUserCount } from "@/modules/core/lib/db";
+import { getInitialPageData } from "@/app/actions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Network, UserPlus, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,22 +21,10 @@ export default function InitialPage() {
 
   useEffect(() => {
     async function checkUserStatus() {
-      try {
-        const [userCount, companyData] = await Promise.all([
-          getUserCount(),
-          getCompanySettings()
-        ]);
-        setHasUsers(userCount > 0);
-        if (companyData?.systemName) {
-          setCompanyName(companyData.systemName);
-        }
-      } catch (error) {
-        console.error("Error checking initial user status:", error);
-        // Fallback to login form if there's an error, as it's the most common state.
-        setHasUsers(true);
-      } finally {
-        setIsLoading(false);
-      }
+      const { hasUsers, companyName } = await getInitialPageData();
+      setHasUsers(hasUsers);
+      setCompanyName(companyName);
+      setIsLoading(false);
     }
     checkUserStatus();
   }, []);
