@@ -21,6 +21,8 @@ import { generateDocument } from '@/modules/core/lib/pdf-generator';
 
 export type SortKey = 'productId' | 'physicalCount' | 'erpStock' | 'difference' | 'lastCountDate' | 'locationName';
 export type SortDirection = 'asc' | 'desc';
+export type DifferenceFilter = 'all' | 'with-difference' | 'shortage' | 'surplus';
+
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -33,12 +35,13 @@ interface State {
     dateRange: DateRange;
     searchTerm: string;
     classificationFilter: string[];
+    differenceFilter: DifferenceFilter;
     sortKey: SortKey;
     sortDirection: SortDirection;
     visibleColumns: string[];
 }
 
-const availableColumns = [
+export const availableColumns = [
     { id: 'productId', label: 'Producto', sortable: true },
     { id: 'locationName', label: 'Ubicación', sortable: true },
     { id: 'physicalCount', label: 'Conteo Físico', sortable: true, align: 'right' },
@@ -64,6 +67,7 @@ export function usePhysicalInventoryReport() {
         },
         searchTerm: '',
         classificationFilter: [],
+        differenceFilter: 'all',
         sortKey: 'difference',
         sortDirection: 'desc',
         visibleColumns: availableColumns.map(c => c.id),
@@ -101,12 +105,13 @@ export function usePhysicalInventoryReport() {
                 }
             }
             setIsInitialLoading(false);
+            updateState({ isLoading: false }); // Stop loading initially
         };
 
         if (isAuthorized) {
             loadPrefs();
         }
-    }, [setTitle, isAuthorized, user]);
+    }, [setTitle, isAuthorized, user, updateState]);
 
     const sortedData = useMemo(() => {
         let data = [...state.reportData];
@@ -127,6 +132,18 @@ export function usePhysicalInventoryReport() {
             });
         }
         
+        switch (state.differenceFilter) {
+            case 'with-difference':
+                data = data.filter(item => item.difference !== 0);
+                break;
+            case 'shortage':
+                data = data.filter(item => item.difference < 0);
+                break;
+            case 'surplus':
+                data = data.filter(item => item.difference > 0);
+                break;
+        }
+        
         data.sort((a, b) => {
             const valA = a[state.sortKey];
             const valB = b[state.sortKey];
@@ -145,7 +162,7 @@ export function usePhysicalInventoryReport() {
         });
 
         return data;
-    }, [state.reportData, debouncedSearchTerm, state.sortKey, state.sortDirection, state.classificationFilter, products]);
+    }, [state.reportData, debouncedSearchTerm, state.sortKey, state.sortDirection, state.classificationFilter, state.differenceFilter, products]);
 
     const handleSort = (key: SortKey) => {
         if (state.sortKey === key) {
@@ -216,7 +233,8 @@ export function usePhysicalInventoryReport() {
         setDateRange: (range: DateRange | undefined) => updateState({ dateRange: range || { from: undefined, to: undefined } }),
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
         setClassificationFilter: (filter: string[]) => updateState({ classificationFilter: filter }),
-        handleClearFilters: () => updateState({ searchTerm: '', classificationFilter: [] }),
+        setDifferenceFilter: (filter: DifferenceFilter) => updateState({ differenceFilter: filter }),
+        handleClearFilters: () => updateState({ searchTerm: '', classificationFilter: [], differenceFilter: 'all' }),
         handleSort,
         handleExportExcel,
         handleExportPDF,

@@ -5,108 +5,52 @@
  */
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React from 'react';
+import { usePhysicalInventoryReport, type SortKey } from '@/modules/analytics/hooks/usePhysicalInventoryReport';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, RefreshCw, FileSpreadsheet, Search, FilterX, ArrowUp, ArrowDown } from 'lucide-react';
-import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
-import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getPhysicalInventoryReportData } from '@/modules/analytics/lib/actions';
-import type { PhysicalInventoryComparisonItem } from '@/modules/core/types';
-import { exportToExcel } from '@/modules/core/lib/excel-export';
+import { Loader2, RefreshCw, FileSpreadsheet, Search, FilterX, ArrowUp, ArrowDown, FileDown, CalendarIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
-import { useDebounce } from 'use-debounce';
 import { cn } from '@/lib/utils';
-
-type SortKey = 'productId' | 'physicalCount' | 'erpStock' | 'difference';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 export default function PhysicalInventoryReportPage() {
-    useAuthorization(['warehouse:access']);
-    const { setTitle } = usePageTitle();
-    const [isLoading, setIsLoading] = useState(true);
-    const [reportData, setReportData] = useState<PhysicalInventoryComparisonItem[]>([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
-    const [sortKey, setSortKey] = useState<SortKey>('difference');
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const {
+        state,
+        actions,
+        selectors,
+        isAuthorized,
+        isInitialLoading,
+    } = usePhysicalInventoryReport();
+    
+    const { isLoading, dateRange, searchTerm, classificationFilter, differenceFilter, sortKey, sortDirection, visibleColumns } = state;
+    const { sortedData, classifications, availableColumns, visibleColumnsData } = selectors;
 
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const data = await getPhysicalInventoryReportData();
-            setReportData(data);
-        } catch (error) {
-            console.error("Failed to fetch physical inventory report data:", error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        setTitle("Reporte de Inventario Físico");
-        fetchData();
-    }, [setTitle, fetchData]);
-
-    const filteredAndSortedData = useMemo(() => {
-        let data = [...reportData];
-
-        if (debouncedSearchTerm) {
-            const lowercasedFilter = debouncedSearchTerm.toLowerCase();
-            data = data.filter(item =>
-                item.productDescription.toLowerCase().includes(lowercasedFilter) ||
-                item.productId.toLowerCase().includes(lowercasedFilter) ||
-                item.locationName.toLowerCase().includes(lowercasedFilter)
-            );
-        }
-        
-        data.sort((a, b) => {
-            const valA = a[sortKey];
-            const valB = b[sortKey];
-            const direction = sortDirection === 'asc' ? 1 : -1;
-            if (typeof valA === 'string' && typeof valB === 'string') {
-                return valA.localeCompare(valB) * direction;
-            }
-            return (valA - valB) * direction;
-        });
-
-        return data;
-    }, [reportData, debouncedSearchTerm, sortKey, sortDirection]);
-
-    const handleSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortDirection('asc');
-        }
-    };
+    if (isInitialLoading) {
+        return (
+            <main className="flex-1 p-4 md:p-6 lg:p-8">
+                <Card>
+                    <CardHeader><Skeleton className="h-8 w-64" /><Skeleton className="h-5 w-96 mt-2" /></CardHeader>
+                    <CardContent className="space-y-4"><Skeleton className="h-10 w-full max-w-sm" /><Skeleton className="h-48 w-full" /></CardContent>
+                </Card>
+            </main>
+        );
+    }
+    
+    if (isAuthorized === false) return null;
 
     const renderSortIcon = (key: SortKey) => {
         if (sortKey !== key) return null;
         return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
-    };
-
-    const handleExport = () => {
-        const dataToExport = filteredAndSortedData.map(item => ({
-            'Código Producto': item.productId,
-            'Descripción': item.productDescription,
-            'Ubicación': `${item.locationCode} (${item.locationName})`,
-            'Conteo Físico': item.physicalCount,
-            'Stock ERP': item.erpStock,
-            'Diferencia': item.difference,
-            'Fecha Conteo': format(parseISO(item.lastCountDate), 'dd/MM/yyyy HH:mm', { locale: es }),
-        }));
-
-        exportToExcel({
-            fileName: 'reporte_conteo_inventario',
-            sheetName: 'ConteoFisico',
-            headers: Object.keys(dataToExport[0] || {}),
-            data: dataToExport.map(Object.values),
-            columnWidths: [20, 40, 25, 15, 15, 15, 20],
-        });
     };
 
     return (
@@ -118,71 +62,97 @@ export default function PhysicalInventoryReportPage() {
                             <CardTitle>Reporte de Comparación de Inventario</CardTitle>
                             <CardDescription>Compara las cantidades contadas físicamente con el stock registrado en el ERP.</CardDescription>
                         </div>
-                        <Button onClick={fetchData} disabled={isLoading}>
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                            Refrescar Datos
+                        <Button onClick={actions.fetchData} disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                            Generar Reporte
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por producto o ubicación..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-8"
-                            />
-                        </div>
-                        <Button variant="ghost" onClick={() => setSearchTerm('')}><FilterX className="mr-2 h-4 w-4" />Limpiar</Button>
-                        <Button onClick={handleExport} disabled={filteredAndSortedData.length === 0}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar a Excel</Button>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button id="date" variant={"outline"} className={cn("w-full sm:w-auto sm:min-w-[260px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateRange?.from ? (dateRange.to ? (`${format(dateRange.from, "LLL dd, y", { locale: es })} - ${format(dateRange.to, "LLL dd, y", { locale: es })}`) : format(dateRange.from, "LLL dd, y", { locale: es })) : (<span>Rango de Fechas del Conteo</span>)}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={actions.setDateRange} numberOfMonths={2} locale={es} /></PopoverContent>
+                        </Popover>
+                        <div className="relative flex-1 min-w-[240px]"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por producto o ubicación..." value={searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="pl-8 w-full" /></div>
+                        <Select value={differenceFilter} onValueChange={actions.setDifferenceFilter}>
+                            <SelectTrigger className="w-full sm:w-auto min-w-[200px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Mostrar Todo</SelectItem>
+                                <SelectItem value="with-difference">Solo con Diferencias</SelectItem>
+                                <SelectItem value="shortage">Solo Faltantes (Físico &lt; ERP)</SelectItem>
+                                <SelectItem value="surplus">Solo Sobrantes (Físico &gt; ERP)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <MultiSelectFilter title="Clasificación" options={classifications.map(c => ({ value: c, label: c }))} selectedValues={classificationFilter} onSelectedChange={actions.setClassificationFilter} className="w-full sm:w-auto" />
+                        <Button variant="ghost" onClick={actions.handleClearFilters} className="flex-shrink-0"><FilterX className="mr-2 h-4 w-4" />Limpiar</Button>
                     </div>
-                    <div className="border rounded-md">
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                     <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Resultados del Conteo</CardTitle>
+                            <CardDescription>Se encontraron {sortedData.length} registros que coinciden con tus filtros.</CardDescription>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <DialogColumnSelector allColumns={availableColumns} visibleColumns={visibleColumns} onColumnChange={actions.handleColumnVisibilityChange} onSave={actions.savePreferences} />
+                            <Button variant="outline" onClick={actions.handleExportPDF} disabled={isLoading || sortedData.length === 0}><FileDown className="mr-2"/>Exportar PDF</Button>
+                            <Button variant="outline" onClick={actions.handleExportExcel} disabled={isLoading || sortedData.length === 0}><FileSpreadsheet className="mr-2"/>Exportar Excel</Button>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <ScrollArea className="h-[60vh] border rounded-md">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="cursor-pointer" onClick={() => handleSort('productId')}>
-                                        <div className="flex items-center gap-2">Producto {renderSortIcon('productId')}</div>
-                                    </TableHead>
-                                    <TableHead>Ubicación</TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('physicalCount')}>
-                                        <div className="flex items-center justify-end gap-2">Conteo Físico {renderSortIcon('physicalCount')}</div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('erpStock')}>
-                                        <div className="flex items-center justify-end gap-2">Stock ERP {renderSortIcon('erpStock')}</div>
-                                    </TableHead>
-                                    <TableHead className="text-right cursor-pointer" onClick={() => handleSort('difference')}>
-                                        <div className="flex items-center justify-end gap-2">Diferencia {renderSortIcon('difference')}</div>
-                                    </TableHead>
-                                    <TableHead>Último Conteo</TableHead>
+                                    {visibleColumnsData.map(col => (
+                                        <TableHead key={col.id} className={cn("cursor-pointer", col.align === 'right' && 'text-right')} onClick={() => col.sortable && actions.handleSort(col.id as SortKey)}>
+                                            <div className="flex items-center gap-2">
+                                                {col.align === 'right' && <div className="flex-1" />}
+                                                {col.label} {renderSortIcon(col.id as SortKey)}
+                                            </div>
+                                        </TableHead>
+                                    ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={6} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
-                                ) : filteredAndSortedData.length > 0 ? (
-                                    filteredAndSortedData.map(item => (
+                                    <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                                ) : sortedData.length > 0 ? (
+                                    sortedData.map(item => (
                                         <TableRow key={`${item.productId}-${item.locationId}`}>
-                                            <TableCell>
-                                                <div className="font-medium">{item.productDescription}</div>
-                                                <div className="text-sm text-muted-foreground">{item.productId}</div>
-                                            </TableCell>
-                                            <TableCell>{item.locationName} ({item.locationCode})</TableCell>
-                                            <TableCell className="text-right font-medium">{item.physicalCount.toLocaleString()}</TableCell>
-                                            <TableCell className="text-right">{item.erpStock.toLocaleString()}</TableCell>
-                                            <TableCell className={cn("text-right font-bold", item.difference !== 0 && (item.difference > 0 ? "text-green-600" : "text-red-600"))}>
-                                                {item.difference.toLocaleString()}
-                                            </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">{format(parseISO(item.lastCountDate), 'dd/MM/yy HH:mm')}</TableCell>
+                                            {visibleColumns.includes('productId') && (
+                                                <TableCell>
+                                                    <div className="font-medium">{item.productDescription}</div>
+                                                    <div className="text-sm text-muted-foreground">{item.productId}</div>
+                                                </TableCell>
+                                            )}
+                                            {visibleColumns.includes('locationName') && <TableCell>{item.locationName} ({item.locationCode})</TableCell>}
+                                            {visibleColumns.includes('physicalCount') && <TableCell className="text-right font-medium">{item.physicalCount.toLocaleString()}</TableCell>}
+                                            {visibleColumns.includes('erpStock') && <TableCell className="text-right">{item.erpStock.toLocaleString()}</TableCell>}
+                                            {visibleColumns.includes('difference') && (
+                                                <TableCell className={cn("text-right font-bold", item.difference !== 0 && (item.difference > 0 ? "text-green-600" : "text-red-600"))}>
+                                                    {item.difference > 0 ? '+' : ''}{item.difference.toLocaleString()}
+                                                </TableCell>
+                                            )}
+                                            {visibleColumns.includes('lastCountDate') && <TableCell className="text-xs text-muted-foreground">{format(parseISO(item.lastCountDate), 'dd/MM/yy HH:mm')}</TableCell>}
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={6} className="h-24 text-center">No hay datos de conteo para mostrar.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center">No hay datos de conteo para los filtros seleccionados.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
-                    </div>
+                    </ScrollArea>
                 </CardContent>
             </Card>
         </main>

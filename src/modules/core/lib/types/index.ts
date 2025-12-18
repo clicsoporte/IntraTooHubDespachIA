@@ -473,7 +473,8 @@ export type WarehouseLocationLevel = {
 
 export type WarehouseSettings = {
     locationLevels: WarehouseLocationLevel[];
-    enablePhysicalInventoryTracking: boolean;
+    unitPrefix: string;
+    nextUnitNumber: number;
 };
 
 export type WarehouseLocation = {
@@ -484,16 +485,16 @@ export type WarehouseLocation = {
     parentId?: number | null; // For hierarchical structure
 };
 
-/** For Advanced Mode: Tracks quantity in a specific location */
+/** Tracks physical quantity in a specific location */
 export type WarehouseInventoryItem = {
     id: number;
-    itemId: string; // Foreign key to main products table (Product['id'])
+    itemId: string; // Corresponds to Product['id'] from main DB
     locationId: number; // Foreign key to locations table
     quantity: number;
     lastUpdated: string;
 };
 
-/** For Simple Mode: Maps an item to a location without quantity */
+/** Maps an item to a location without quantity */
 export type ItemLocation = {
     id: number;
     itemId: string;
@@ -504,6 +505,7 @@ export type ItemLocation = {
 /** Represents a single physical unit of inventory (pallet, box, etc.) */
 export type InventoryUnit = {
     id: number;
+    unitCode?: string; // e.g., 'U00001'
     productId: string;
     humanReadableId?: string; // e.g. a lot number
     locationId: number | null;
@@ -766,15 +768,29 @@ export type ProductionReportData = {
     details: (ProductionOrder & { completionDate: string | null })[];
 }
 
+export interface PhysicalInventoryComparisonItem {
+    productId: string;
+    productDescription: string;
+    locationId: number;
+    locationName: string;
+    locationCode: string;
+    physicalCount: number;
+    erpStock: number;
+    difference: number;
+    lastCountDate: string;
+}
+
 // --- User Preferences ---
 export interface UserPreferences {
     classificationFilter: string[];
     showOnlyMyOrders: boolean;
     visibleColumns: string[];
-    sortKey: 'item' | 'sourceOrders' | 'involvedClients' | 'erpUsers' | 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock' | undefined;
+    sortKey: SortKey | undefined;
     sortDirection: 'asc' | 'desc';
     rowsPerPage: number;
 };
+
+type SortKey = 'item' | 'sourceOrders' | 'involvedClients' | 'erpUsers' | 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock';
 
 
 // --- Cost Assistant Types ---
