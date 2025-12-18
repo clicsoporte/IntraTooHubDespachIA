@@ -166,8 +166,8 @@ export const warehouseTools: Tool[] = [
     },
      {
         id: "inventory-count",
-        name: "Toma de Inventario",
-        description: "Registrar conteos físicos de inventario por ubicación.",
+        name: "Toma de Inventario / Asignación",
+        description: "Registrar conteos físicos y asignar ubicaciones a productos.",
         href: "/dashboard/warehouse/inventory-count",
         icon: ClipboardList,
         bgColor: "bg-fuchsia-600",
