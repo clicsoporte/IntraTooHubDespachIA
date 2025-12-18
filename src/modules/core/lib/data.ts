@@ -42,8 +42,7 @@ import {
 
 /**
  * The default user to be created in the database.
- * This ensures there is always at least one administrator.
- * @deprecated This is no longer used. The first user is created via the setup wizard.
+ * This is no longer used. The first user is created via the setup wizard.
  */
 export const initialUsers: User[] = [];
 
@@ -119,7 +118,7 @@ export const mainTools: Tool[] = [
    {
     id: "warehouse",
     name: "Almacén",
-    description: "Consultar ubicaciones, gestionar unidades y asignar inventario.",
+    description: "Consultar ubicaciones, gestionar unidades y registrar conteos.",
     href: "/dashboard/warehouse",
     icon: Warehouse,
     bgColor: "bg-cyan-600",

@@ -492,6 +492,7 @@ export type WarehouseInventoryItem = {
     locationId: number; // Foreign key to locations table
     quantity: number;
     lastUpdated: string;
+    updatedBy: string;
 };
 
 /** Maps an item to a location without quantity */
@@ -778,6 +779,7 @@ export interface PhysicalInventoryComparisonItem {
     erpStock: number;
     difference: number;
     lastCountDate: string;
+    updatedBy: string;
 }
 
 // --- User Preferences ---
@@ -785,12 +787,12 @@ export interface UserPreferences {
     classificationFilter: string[];
     showOnlyMyOrders: boolean;
     visibleColumns: string[];
-    sortKey: SortKey | undefined;
+    sortKey?: SortKey;
     sortDirection: 'asc' | 'desc';
     rowsPerPage: number;
 };
 
-type SortKey = 'item' | 'sourceOrders' | 'involvedClients' | 'erpUsers' | 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock';
+export type SortKey = 'item' | 'sourceOrders' | 'involvedClients' | 'erpUsers' | 'earliestCreationDate' | 'earliestDueDate' | 'shortage' | 'totalRequired' | 'currentStock' | 'inTransitStock';
 
 
 // --- Cost Assistant Types ---

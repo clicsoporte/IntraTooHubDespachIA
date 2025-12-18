@@ -85,7 +85,7 @@ import {
   QrCode,
   HelpCircle,
   ClipboardList,
-  ClipboardCheck
+  ClipboardCheck,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -482,7 +482,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                 <ul className="list-disc space-y-3 pl-6">
                 <li>
-                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, podrás desmarcar la casilla &quot;Mostrar solo mis solicitudes&quot; para ver las de todos los usuarios.
+                    <strong>Visibilidad por Defecto:</strong> Por seguridad y claridad, la vista de solicitudes siempre mostrará por defecto solo los documentos que tú has creado. Si tienes el permiso `requests:read:all`, la casilla "Mostrar solo mis solicitudes" aparecerá desmarcada por defecto, dándote visibilidad total, pero puedes marcarla para enfocarte en tus documentos.
                 </li>
                 <li>
                     <strong>Creación Inteligente desde ERP (<Layers className="inline h-4 w-4"/>):</strong> Permite crear solicitudes de compra automáticamente a partir de un pedido de venta del ERP. El sistema analiza el pedido, compara con el inventario actual y sugiere qué artículos comprar.
@@ -528,7 +528,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Funcionalidades Clave</h4>
                  <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Visibilidad por Defecto:</strong> Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` pueden desmarcar el filtro para tener una vista global de la producción.
+                        <strong>Visibilidad por Defecto:</strong> Al igual que en Compras, el planificador te mostrará por defecto solo las órdenes que tú has creado. Los usuarios con el permiso `planner:read:all` verán la casilla de &quot;Mostrar solo mis órdenes&quot; desmarcada al inicio para tener una vista global.
                     </li>
                     <li>
                         <strong>Validación de Campos:</strong> Al crear una nueva orden, el sistema ahora te avisará si olvidas seleccionar un cliente, un producto, o si la cantidad es cero, evitando errores.
@@ -812,41 +812,26 @@ export default function HelpPage() {
         icon: <ListChecks className="mr-4 h-6 w-6 text-fuchsia-600" />,
         content: (
              <div className="space-y-4">
-                <h4 className="font-semibold text-lg">Versión 2.3.0 <Badge variant="secondary">Actual</Badge></h4>
+                <h4 className="font-semibold text-lg">Versión 2.0.0 <Badge variant="secondary">Actual</Badge></h4>
                 <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Nueva Funcionalidad Mayor: Reporte de Inventario Físico.</strong> Se añadió un nuevo reporte en Analíticas que compara los conteos físicos registrados en la herramienta &quot;Toma de Inventario&quot; contra el stock del ERP, resaltando las diferencias para facilitar los ajustes.
-                    </li>
-                </ul>
-                <h4 className="font-semibold text-lg pt-4 border-t">Versión 2.2.0</h4>
-                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
-                <ul className="list-disc space-y-3 pl-6">
-                    <li>
-                        <strong>Nueva Funcionalidad Mayor: Toma de Inventario Físico.</strong>
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Se añadió una nueva herramienta en Almacén llamada &quot;Toma de Inventario&quot; que permite a los usuarios registrar la cantidad física de un producto en una ubicación específica.</li>
-                            <li>Se simplificó la configuración de Almacén, eliminando el interruptor de &quot;Control de Inventario Físico&quot; para unificar el comportamiento del módulo.</li>
-                            <li>La búsqueda de almacén ahora siempre muestra el desglose de existencias por bodega del ERP, independientemente de la configuración.</li>
-                        </ul>
+                        <strong>Revisión General de Calidad y Estabilidad:</strong> Se ha realizado una auditoría completa del código para mejorar la estabilidad, eliminar código muerto y optimizar la experiencia de usuario.
                     </li>
                     <li>
-                        <strong>Mejora de UI:</strong> Se consolidaron las páginas de configuración de &quot;Almacenes&quot; e &quot;Inventario&quot; en una sola para una gestión más clara.
-                    </li>
-                </ul>
-                <h4 className="font-semibold text-lg pt-4 border-t">Versión 2.1.0</h4>
-                <p className="text-sm text-muted-foreground">Lanzamiento: Octubre 2024</p>
-                <ul className="list-disc space-y-3 pl-6">
-                    <li>
-                        <strong>Nueva Funcionalidad Mayor: Gestión de Unidades y Escaneo QR.</strong>
-                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
-                            <li>Se añadió una nueva herramienta en Almacén para crear **Unidades de Inventario** (lotes, tarimas) con identificadores únicos y etiquetas QR.</li>
-                            <li>La búsqueda en almacén ahora permite encontrar estas unidades por su ID único (ej: `U00123`).</li>
-                            <li>Se creó una nueva página de escaneo que, al leer un QR, muestra la información del producto y su ubicación asignada.</li>
-                        </ul>
+                        <strong>Mejora de Autenticación:</strong> Se eliminó el "parpadeo" de la pantalla de login al acceder a rutas protegidas y se mejoró el redireccionamiento después de iniciar sesión.
                     </li>
                     <li>
-                        <strong>Reorganización del Módulo de Almacén:</strong> Las funciones operativas de gestión de ubicaciones y jerarquía se movieron del panel de Administración al sub-panel de Almacén, mejorando la coherencia y los permisos de usuario.
+                        <strong>Funcionalidad Activada:</strong> Se activó la lógica para "Solicitar Desaprobación" y "Solicitar Cancelación" en el módulo Planificador de Producción, incluyendo las notificaciones correspondientes para los administradores.
+                    </li>
+                    <li>
+                        <strong>Corrección de Permisos:</strong> Se corrigió el comportamiento de los permisos `:read:all` en los módulos de Compras y Planificador para que los supervisores vean todos los documentos por defecto.
+                    </li>
+                    <li>
+                        <strong>Actualización Masiva de Documentación:</strong> El Centro de Ayuda ha sido completamente revisado y actualizado para reflejar todas las funcionalidades actuales del sistema.
+                    </li>
+                    <li>
+                        <strong>Control de Cambios:</strong> Se ha añadido esta misma sección de "Changelog" al Centro de Ayuda para mantener un registro de las mejoras en cada versión.
                     </li>
                 </ul>
             </div>
