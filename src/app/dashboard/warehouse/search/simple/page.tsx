@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWarehouseData, getInventoryUnitById, addInventoryUnit } from '@/modules/warehouse/lib/actions';
-import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit } from '@/modules/core/types';
+import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit, WarehouseSettings } from '@/modules/core/types';
 import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, Loader2, Info, User, ChevronRight, Printer, LogOut } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Button } from '@/components/ui/button';
@@ -119,7 +119,7 @@ export default function SimpleWarehouseSearchPage() {
     const [itemLocations, setItemLocations] = useState<ItemLocation[]>([]);
     const [stock, setStock] = useState<StockInfo[]>([]);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
-    const [warehouseSettings, setWarehouseSettings] = useState<{ enablePhysicalInventoryTracking: boolean, unitPrefix?: string } | null>(null);
+    const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
 
     const [unitSearchResult, setUnitSearchResult] = useState<InventoryUnit | null>(null);
 
@@ -217,27 +217,25 @@ export default function SimpleWarehouseSearchPage() {
             }
         });
         
-        if (warehouseSettings?.enablePhysicalInventoryTracking) {
-             inventory.forEach(item => {
-                if (groupedByItem[item.itemId]) {
-                    groupedByItem[item.itemId].physicalLocations.push({
-                        path: renderLocationPath(item.locationId, locations),
-                        quantity: item.quantity,
-                        location: locations.find(l => l.id === item.locationId),
-                    });
-                }
-            });
-        } else {
-             itemLocations.forEach(itemLoc => {
-                if (groupedByItem[itemLoc.itemId]) {
-                    groupedByItem[itemLoc.itemId].physicalLocations.push({
-                        path: renderLocationPath(itemLoc.locationId, locations),
-                        clientId: itemLoc.clientId || undefined,
-                        location: locations.find(l => l.id === itemLoc.locationId),
-                    });
-                } 
-            });
-        }
+        inventory.forEach(item => {
+            if (groupedByItem[item.itemId]) {
+                groupedByItem[item.itemId].physicalLocations.push({
+                    path: renderLocationPath(item.locationId, locations),
+                    quantity: item.quantity,
+                    location: locations.find(l => l.id === item.locationId),
+                });
+            }
+        });
+        
+        itemLocations.forEach(itemLoc => {
+            if (groupedByItem[itemLoc.itemId]) {
+                groupedByItem[itemLoc.itemId].physicalLocations.push({
+                    path: renderLocationPath(itemLoc.locationId, locations),
+                    clientId: itemLoc.clientId || undefined,
+                    location: locations.find(l => l.id === itemLoc.locationId),
+                });
+            } 
+        });
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
@@ -320,7 +318,7 @@ export default function SimpleWarehouseSearchPage() {
                                         </CardHeader>
                                         <CardContent className="space-y-4">
                                             <div>
-                                                <h4 className="font-semibold mb-2">Ubicaciones Asignadas</h4>
+                                                <h4 className="font-semibold mb-2">Ubicaciones y Cantidades Físicas</h4>
                                                 <div className="space-y-2">
                                                     {item.physicalLocations.map((loc, index) => (
                                                         <div key={index} className="flex justify-between items-center p-2 border rounded-md">

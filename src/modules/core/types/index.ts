@@ -485,7 +485,7 @@ export type WarehouseLocation = {
     parentId?: number | null; // For hierarchical structure
 };
 
-/** For Advanced Mode: Tracks quantity in a specific location */
+/** Tracks physical quantity in a specific location */
 export type WarehouseInventoryItem = {
     id: number;
     itemId: string; // Foreign key to main products table (Product['id'])
@@ -494,7 +494,7 @@ export type WarehouseInventoryItem = {
     lastUpdated: string;
 };
 
-/** For Simple Mode: Maps an item to a location without quantity */
+/** Maps an item to a location without quantity */
 export type ItemLocation = {
     id: number;
     itemId: string;

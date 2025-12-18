@@ -292,7 +292,7 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
         const row = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
         if (row) {
             const settings = JSON.parse(row.value);
-            // Ensure enablePhysicalInventoryTracking is removed if it exists from old versions
+            // Ensure this obsolete property is removed if it exists from old versions
             if (settings.enablePhysicalInventoryTracking !== undefined) {
                 delete settings.enablePhysicalInventoryTracking;
             }
