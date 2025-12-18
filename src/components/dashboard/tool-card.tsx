@@ -7,6 +7,8 @@
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { Tool } from "@/modules/core/types";
+import { cn } from "@/lib/utils";
+
 
 interface ToolCardProps {
   tool: Tool;
@@ -33,8 +35,8 @@ export function ToolCard({ tool, badgeCount = 0 }: ToolCardProps) {
         )}
         <CardHeader className="grid grid-cols-[auto_1fr] items-center gap-4">
           {Icon && (
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
-               <Icon className="h-6 w-6" />
+            <div className={cn("flex h-12 w-12 items-center justify-center rounded-lg shrink-0", tool.bgColor || 'bg-primary')}>
+               <Icon className="h-6 w-6 text-white" />
             </div>
           )}
           <div className="text-left">

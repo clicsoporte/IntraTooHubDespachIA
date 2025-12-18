@@ -848,6 +848,9 @@ export default function HelpPage() {
                     <li>
                         <strong>Actualización Masiva de Documentación:</strong> El Centro de Ayuda ha sido completamente revisado, actualizado con las últimas funcionalidades y se ha añadido esta sección de "Control de Cambios".
                     </li>
+                     <li>
+                        <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos. **Causa:** Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. **Solución:** Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.tsx`, devolviendo la identidad visual a cada herramienta.
+                    </li>
                 </ul>
             </div>
         )

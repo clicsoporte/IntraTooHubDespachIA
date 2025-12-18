@@ -86,6 +86,7 @@ export const mainTools: Tool[] = [
     description: "Crear y gestionar cotizaciones para clientes.",
     href: "/dashboard/quoter",
     icon: Sheet,
+    bgColor: "bg-green-500",
   },
   {
     id: "purchase-request",
@@ -93,6 +94,7 @@ export const mainTools: Tool[] = [
     description: "Crear y gestionar solicitudes de compra internas.",
     href: "/dashboard/requests",
     icon: ShoppingCart,
+    bgColor: "bg-amber-700",
   },
    {
     id: "planner",
@@ -100,6 +102,7 @@ export const mainTools: Tool[] = [
     description: "Gestionar y visualizar la carga de producción.",
     href: "/dashboard/planner",
     icon: CalendarCheck,
+    bgColor: "bg-purple-700",
   },
   {
     id: 'cost-assistant',
@@ -107,6 +110,7 @@ export const mainTools: Tool[] = [
     description: 'Calcular costos y precios a partir de facturas XML.',
     href: '/dashboard/cost-assistant',
     icon: Calculator,
+    bgColor: 'bg-orange-600',
   },
    {
     id: "warehouse",
@@ -114,6 +118,7 @@ export const mainTools: Tool[] = [
     description: "Consultar ubicaciones, gestionar unidades y registrar conteos.",
     href: "/dashboard/warehouse",
     icon: Warehouse,
+    bgColor: "bg-cyan-600",
   },
      {
       id: "hacienda-query",
@@ -121,6 +126,7 @@ export const mainTools: Tool[] = [
       description: "Verificar situación tributaria y exoneraciones.",
       href: "/dashboard/hacienda",
       icon: Search,
+      bgColor: "bg-fuchsia-600",
     },
   {
     id: "help",
@@ -128,6 +134,7 @@ export const mainTools: Tool[] = [
     description: "Consultar la documentación y guías de uso del sistema.",
     href: "/dashboard/help",
     icon: LifeBuoy,
+    bgColor: "bg-blue-700",
   },
 ];
 
@@ -139,6 +146,7 @@ export const warehouseTools: Tool[] = [
         description: "Localizar artículos, clientes y unidades de inventario.",
         href: "/dashboard/warehouse/search",
         icon: Search,
+        bgColor: 'bg-blue-600',
     },
     {
         id: "warehouse-search-simple",
@@ -146,6 +154,7 @@ export const warehouseTools: Tool[] = [
         description: "Interfaz optimizada para búsquedas rápidas en celulares y tablets.",
         href: "/dashboard/warehouse/search/simple",
         icon: QrCode,
+        bgColor: 'bg-sky-600',
     },
      {
         id: "assign-item",
@@ -153,6 +162,7 @@ export const warehouseTools: Tool[] = [
         description: "Asociar productos a clientes y ubicaciones de forma permanente.",
         href: "/dashboard/warehouse/assign",
         icon: PackagePlus,
+        bgColor: 'bg-teal-600',
     },
     {
         id: "inventory-count",
@@ -160,6 +170,7 @@ export const warehouseTools: Tool[] = [
         description: "Registrar conteos físicos de productos en ubicaciones específicas.",
         href: "/dashboard/warehouse/inventory-count",
         icon: ClipboardCheck,
+        bgColor: 'bg-lime-600',
     },
     {
         id: "warehouse-units",
@@ -167,6 +178,7 @@ export const warehouseTools: Tool[] = [
         description: "Crear y etiquetar unidades de inventario (lotes/tarimas).",
         href: "/dashboard/warehouse/units",
         icon: QrCode,
+        bgColor: 'bg-cyan-700',
     },
     {
         id: "warehouse-locations",
@@ -174,6 +186,7 @@ export const warehouseTools: Tool[] = [
         description: "Definir la jerarquía y crear las ubicaciones físicas del almacén.",
         href: "/dashboard/warehouse/locations",
         icon: Map,
+        bgColor: 'bg-purple-600',
     }
 ];
 
@@ -345,6 +358,7 @@ export const adminTools: Tool[] = [
         description: "Añadir, editar y gestionar usuarios y sus roles.",
         href: "/dashboard/admin/users",
         icon: Users,
+        bgColor: 'bg-blue-500',
       },
       {
         id: "role-management",
@@ -352,6 +366,7 @@ export const adminTools: Tool[] = [
         description: "Definir roles y asignar permisos granulares.",
         href: "/dashboard/admin/roles",
         icon: ShieldCheck,
+        bgColor: 'bg-green-600',
       },
       {
         id: "general-settings",
@@ -359,6 +374,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar los datos de la empresa y logo.",
         href: "/dashboard/admin/general",
         icon: Briefcase,
+        bgColor: 'bg-orange-500',
       },
       {
         id: "email-settings",
@@ -366,6 +382,7 @@ export const adminTools: Tool[] = [
         description: "Ajustes del servidor SMTP para enviar correos.",
         href: "/dashboard/admin/email",
         icon: Mail,
+        bgColor: 'bg-purple-600',
       },
       {
         id: "suggestions-viewer",
@@ -373,6 +390,7 @@ export const adminTools: Tool[] = [
         description: "Revisar el feedback enviado por los usuarios del sistema.",
         href: "/dashboard/admin/suggestions",
         icon: MessageSquare,
+        bgColor: 'bg-green-700',
       },
       {
         id: "quoter-settings",
@@ -380,6 +398,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar prefijos y consecutivos del cotizador.",
         href: "/dashboard/admin/quoter", 
         icon: BookMarked,
+        bgColor: 'bg-blue-600',
       },
       {
         id: "cost-assistant-settings",
@@ -387,6 +406,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar ajustes para el asistente de costos.",
         href: "/dashboard/admin/cost-assistant",
         icon: Calculator,
+        bgColor: 'bg-orange-500',
       },
       {
         id: "import-data",
@@ -394,6 +414,7 @@ export const adminTools: Tool[] = [
         description: "Cargar clientes, productos, exoneraciones y...",
         href: "/dashboard/admin/import",
         icon: FileUp,
+        bgColor: 'bg-cyan-700',
       },
        {
         id: "maintenance",
@@ -401,6 +422,7 @@ export const adminTools: Tool[] = [
         description: "Backup, restauración y reseteo del sistema.",
         href: "/dashboard/admin/maintenance",
         icon: ServerCog,
+        bgColor: 'bg-red-600',
       },
       {
         id: "api-settings",
@@ -408,6 +430,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar URLs y claves de APIs externas.",
         href: "/dashboard/admin/api",
         icon: Network,
+        bgColor: 'bg-indigo-500',
       },
        {
         id: "planner-settings",
@@ -415,6 +438,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar máquinas y otros ajustes del...",
         href: "/dashboard/admin/planner",
         icon: Factory,
+        bgColor: 'bg-slate-600',
       },
        {
         id: "requests-settings",
@@ -422,6 +446,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar rutas y otros ajustes de compras.",
         href: "/dashboard/admin/requests",
         icon: Store,
+        bgColor: 'bg-amber-700',
       },
       {
         id: "warehouse-settings",
@@ -429,6 +454,7 @@ export const adminTools: Tool[] = [
         description: "Gestionar bodegas, unidades y jerarquía del almacén.",
         href: "/dashboard/admin/warehouse",
         icon: Wrench,
+        bgColor: 'bg-purple-600',
       },
       {
         id: "log-viewer",
@@ -436,6 +462,7 @@ export const adminTools: Tool[] = [
         description: "Revisar los registros y errores del sistema.",
         href: "/dashboard/admin/logs",
         icon: FileTerminal,
+        bgColor: 'bg-gray-500',
       }
 ];
 
@@ -446,6 +473,7 @@ export const analyticsTools: Tool[] = [
         description: "Analizar pedidos y stock para sugerir compras proactivas.",
         href: "/dashboard/analytics/purchase-suggestions",
         icon: Lightbulb,
+        bgColor: "bg-blue-600",
     },
     {
         id: "purchase-report",
@@ -453,6 +481,7 @@ export const analyticsTools: Tool[] = [
         description: "Visualizar y exportar un reporte histórico de compras.",
         href: "/dashboard/analytics/purchase-report",
         icon: FileText,
+        bgColor: "bg-green-600",
     },
      {
         id: "transits-report",
@@ -460,6 +489,7 @@ export const analyticsTools: Tool[] = [
         description: "Monitorear órdenes de compra del ERP activas y en tránsito.",
         href: "/dashboard/analytics/transits-report",
         icon: Truck,
+        bgColor: "bg-orange-500",
     },
     {
         id: "production-report",
@@ -467,6 +497,7 @@ export const analyticsTools: Tool[] = [
         description: "Analizar rendimiento y desperdicio de órdenes completadas.",
         href: "/dashboard/analytics/production-report",
         icon: BarChartBig,
+        bgColor: "bg-purple-600",
     },
     {
         id: "physical-inventory-report",
@@ -474,6 +505,7 @@ export const analyticsTools: Tool[] = [
         description: "Comparar conteos físicos con el stock del ERP para encontrar diferencias.",
         href: "/dashboard/analytics/physical-inventory-report",
         icon: ClipboardCheck,
+        bgColor: "bg-cyan-600",
     },
     {
         id: "user-permissions",
@@ -481,6 +513,7 @@ export const analyticsTools: Tool[] = [
         description: "Auditar los permisos asignados a cada usuario según su rol.",
         href: "/dashboard/analytics/user-permissions",
         icon: UserCheck,
+        bgColor: "bg-slate-600",
     },
 ];
 

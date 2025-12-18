@@ -64,6 +64,7 @@ export type Tool = {
   description: string;
   href: string;
   icon: LucideIcon;
+  bgColor?: string;
   adminOnly?: boolean;
 };
 
