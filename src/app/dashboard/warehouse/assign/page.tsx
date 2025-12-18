@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Page for associating products with clients and warehouse locations.
  * This tool allows users to create a catalog-like mapping, indicating where
@@ -20,6 +21,8 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
     if (!locationId) return "Sin ubicación";
