@@ -105,7 +105,6 @@ export default function UsersPage() {
     // State for dialogs and forms
     const [isAddUserDialogOpen, setAddUserDialogOpen] = useState(false);
     const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-    const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
     
     const [newUser, setNewUser] = useState<NewUserForm>(emptyUser);
     const [currentUserToEdit, setCurrentUserToEdit] = useState<User | null>(null);
@@ -243,7 +242,6 @@ export default function UsersPage() {
         toast({ title: "Usuario Eliminado", description: `${userToDelete.name} ha sido eliminado.`, variant: "destructive" });
         await logWarn("User deleted", { user: userToDelete.name });
         
-        setDeleteAlertOpen(false);
         setUserToDelete(null);
     }
 
@@ -256,7 +254,6 @@ export default function UsersPage() {
 
     const openDeleteAlert = (user: User) => {
         setUserToDelete(user);
-        setDeleteAlertOpen(true);
     }
 
     if (isAuthorized === null) {
@@ -410,9 +407,25 @@ export default function UsersPage() {
                                         <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                         <DropdownMenuItem onSelect={() => openEditDialog(user)}>Editar</DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => openDeleteAlert(user)} className="text-red-600">
-                                            Eliminar
-                                        </DropdownMenuItem>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-red-600">
+                                                    Eliminar
+                                                </div>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario {user.name} y sus datos del sistema.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteUser()} className={buttonVariants({ variant: "destructive" })}>Sí, eliminar usuario</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                     </TableCell>
@@ -496,22 +509,6 @@ export default function UsersPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-        
-        {/* Delete User Alert Dialog */}
-        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario {userToDelete?.name} y sus datos del sistema.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>Sí, eliminar usuario</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </>
   );
 }
