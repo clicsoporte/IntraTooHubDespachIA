@@ -820,7 +820,7 @@ export default function HelpPage() {
                 <div className="space-y-2">
                     <p><strong>Síntoma:</strong> Después de guardar un cambio en la configuración o importar datos, la aplicación se reinicia o muestra un error &quot;aborted&quot;.</p>
                     <p><strong>Diagnóstico:</strong> El vigilante de archivos de `iisnode` está detectando cambios en las bases de datos (`.db`) y reinicia la aplicación de forma incorrecta.</p>
-                    <p><strong>La Solución Definitiva (v2.0.0+):</strong> A partir de la versión 2.0.0, el proyecto incluye un archivo `web.config` en la raíz. Este archivo ya está configurado para decirle a IIS que **ignore** los cambios en la carpeta `dbs/`, solucionando el problema de raíz. Simplemente asegúrate de que este archivo se copie al servidor durante el despliegue.</p>
+                    <p><strong>La Solución Definitiva (v2.0.0+):</strong> A partir de la versión 2.0.0, el proyecto incluye un archivo `web.config` en la raíz. Este archivo ya está configurado para decirle a IIS que **ignore** los cambios en la carpeta &quot;dbs/&quot;, solucionando el problema de raíz. Simplemente asegúrate de que este archivo se copie al servidor durante el despliegue.</p>
                 </div>
             </div>
         )
@@ -834,10 +834,10 @@ export default function HelpPage() {
                 <p className="text-sm text-muted-foreground">Lanzamiento: Julio 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Auditoría General y Estabilización:</strong> Se refactorizó la lógica de carga y autenticación para eliminar condiciones de carrera y "parpadeos" en la interfaz. Se activó la funcionalidad completa para solicitudes de cancelación/desaprobación en el centro de notificaciones. Se corrigió el comportamiento de los permisos de visibilidad total (`read:all`) en Planificador y Compras. Se consolidó código duplicado (hook de sugerencias de compra) y se eliminaron archivos huérfanos.
+                        <strong>Auditoría General y Estabilización:</strong> Se refactorizó la lógica de carga y autenticación para eliminar condiciones de carrera y &quot;parpadeos&quot; en la interfaz. Se activó la funcionalidad completa para solicitudes de cancelación/desaprobación en el centro de notificaciones. Se corrigió el comportamiento de los permisos de visibilidad total (`read:all`) en Planificador y Compras. Se consolidó código duplicado (hook de sugerencias de compra) y se eliminaron archivos huérfanos.
                     </li>
                     <li>
-                        <strong>Mejora de Usabilidad (Tooltips):</strong> Se añadieron mensajes de ayuda (tooltips) a los botones de acción desactivados en los módulos de Planificador y Solicitudes de Compra. Ahora, los usuarios pueden ver por qué una acción no está disponible (ej: "Se requiere asignar una máquina"), mejorando la claridad y reduciendo la frustración.
+                        <strong>Mejora de Usabilidad (Tooltips):</strong> Se añadieron mensajes de ayuda (tooltips) a los botones de acción desactivados en los módulos de Planificador y Solicitudes de Compra. Ahora, los usuarios pueden ver por qué una acción no está disponible (ej: &quot;Se requiere asignar una máquina&quot;), mejorando la claridad y reduciendo la frustración.
                     </li>
                      <li>
                         <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos después de un cambio de arquitectura. <strong>Causa:</strong> Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. <strong>Solución:</strong> Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.ts`, devolviendo la identidad visual a cada herramienta.
