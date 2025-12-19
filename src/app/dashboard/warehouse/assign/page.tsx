@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Page for associating products with clients and warehouse locations.
  * This tool allows users to create a catalog-like mapping, indicating where
@@ -18,11 +17,14 @@ import { getLocations, getItemLocations, assignItemToLocation, unassignItemFromL
 import type { Product, Customer, WarehouseLocation, ItemLocation } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Printer } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import jsPDF from "jspdf";
+import { format } from 'date-fns';
+
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
     if (!locationId) return "Sin ubicación";
@@ -159,7 +161,7 @@ export default function AssignItemPage() {
             toast({ title: "Asignación Creada", description: "La asociación entre producto, cliente y ubicación ha sido guardada." });
             logInfo('Item location assignment created', { itemId: selectedProductId, locationId: selectedLocationId, clientId: selectedClientId, user: user.name });
             
-            // Reset selectors
+            // Reset selectors for next assignment, keeping the product selected
             setSelectedClientId(null);
             setSelectedLocationId(null);
             setClientSearchTerm('');
@@ -186,6 +188,63 @@ export default function AssignItemPage() {
             setIsSubmitting(false);
         }
     };
+
+    const handlePrintRackLabel = async (assignment: ItemLocation) => {
+        const product = authProducts.find(p => p.id === assignment.itemId);
+        const client = authCustomers.find(c => c.id === assignment.clientId);
+        const locationString = renderLocationPathAsString(assignment.locationId, locations);
+    
+        if (!product) {
+          toast({ title: "Error", description: "No se encontró el producto para esta asignación.", variant: "destructive" });
+          return;
+        }
+    
+        try {
+          const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+    
+          // --- Main Product Code ---
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(150);
+          const productCodeLines = doc.splitTextToSize(product.id, pageWidth - 80);
+          doc.text(productCodeLines, pageWidth / 2, pageHeight / 2 - 60, { align: "center" });
+    
+          // --- Product Description ---
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(24);
+          const descriptionLines = doc.splitTextToSize(product.description, pageWidth - 80);
+          doc.text(descriptionLines, pageWidth / 2, pageHeight / 2 + (productCodeLines.length * 50), { align: "center" });
+    
+          // --- Bottom Information ---
+          const bottomY = pageHeight - 40;
+          doc.setFontSize(12);
+          
+          // Client Info
+          if (client) {
+            doc.setFont("Helvetica", "bold");
+            doc.text("Cliente:", 40, bottomY - 40);
+            doc.setFont("Helvetica", "normal");
+            doc.text(client.name, 95, bottomY - 40);
+          }
+          
+          // Location Info
+          doc.setFont("Helvetica", "bold");
+          doc.text("Ubicación:", 40, bottomY - 20);
+          doc.setFont("Helvetica", "normal");
+          doc.text(locationString, 105, bottomY - 20);
+    
+          // Date Info
+          doc.setFontSize(9);
+          doc.setTextColor(150);
+          doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - 40, bottomY, { align: "right" });
+    
+          doc.save(`etiqueta_rack_${product.id}.pdf`);
+        } catch (error: any) {
+          logError('Failed to generate rack label', { error });
+          toast({ title: "Error al generar PDF", description: "No se pudo crear la etiqueta.", variant: "destructive" });
+        }
+      };
     
     if (isLoading) {
         return (
@@ -239,7 +298,7 @@ export default function AssignItemPage() {
                                         <TableHead>Producto</TableHead>
                                         <TableHead>Cliente</TableHead>
                                         <TableHead>Ubicación</TableHead>
-                                        <TableHead className="text-right">Acción</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -256,6 +315,9 @@ export default function AssignItemPage() {
                                                 <TableCell>{client?.name || <span className="italic text-muted-foreground">General</span>}</TableCell>
                                                 <TableCell>{locationString}</TableCell>
                                                 <TableCell className="text-right">
+                                                    <Button variant="ghost" size="icon" onClick={() => handlePrintRackLabel(a)}>
+                                                        <Printer className="h-4 w-4 text-blue-600" />
+                                                    </Button>
                                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteAssignment(a.id)} disabled={isSubmitting}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
                                                     </Button>
