@@ -25,6 +25,7 @@ import type {
     PlannerNotePayload, UpdateProductionOrderPayload, AdministrativeActionPayload, Product, StockInfo 
 } from '../../core/types';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { getDaysRemaining as getSimpleDaysRemaining } from '@/modules/core/lib/time-utils';
@@ -32,7 +33,7 @@ import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import type { RowInput } from 'jspdf-autotable';
 import { addNoteToOrder as addNoteServer } from '@/modules/planner/lib/actions';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
-import { AlertCircle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag } from 'lucide-react';
 import { getStatusConfig } from '../lib/utils';
 import { saveUserPreferences, getUserPreferences } from '@/modules/core/lib/db';
 

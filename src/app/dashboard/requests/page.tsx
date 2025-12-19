@@ -1,3 +1,4 @@
+
 // This file was restored to its stable version.
 // The previous content was causing compilation issues.
 'use client';
@@ -159,33 +160,19 @@ export default function PurchaseRequestPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Acciones de Solicitud</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                         <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <div className={cn(!permissions.canEdit.allowed && "cursor-not-allowed")}>
-                                                    <DropdownMenuItem onSelect={() => { actions.setRequestToEdit(request); actions.setEditRequestDialogOpen(true); }} disabled={!permissions.canEdit.allowed}>
-                                                        <Pencil className="mr-2"/> Editar Solicitud
-                                                    </DropdownMenuItem>
-                                                </div>
-                                            </TooltipTrigger>
-                                            {!permissions.canEdit.allowed && permissions.canEdit.reason && <TooltipContent><p>{permissions.canEdit.reason}</p></TooltipContent>}
-                                        </Tooltip>
+                                        <DropdownMenuItem onSelect={() => { actions.setRequestToEdit(request); actions.setEditRequestDialogOpen(true); }} disabled={!permissions.canEdit}>
+                                            <Pencil className="mr-2"/> Editar Solicitud
+                                        </DropdownMenuItem>
                                         {selectors.hasPermission('requests:notes:add') && <DropdownMenuItem onSelect={() => actions.openAddNoteDialog(request)}><Pencil className="mr-2"/> Añadir Nota</DropdownMenuItem>}
                                         {selectors.hasPermission('requests:edit:pending') && <DropdownMenuItem onSelect={() => actions.openCostAnalysisDialog(request)}><DollarSign className="mr-2" /> Analizar Costo</DropdownMenuItem>}
                                         <DropdownMenuSeparator />
                                         <DropdownMenuLabel>Cambio de Estado</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        {changeStatusActions.filter(a => a.check.visible).length > 0 ? (
-                                            changeStatusActions.filter(a => a.check.visible).map((action, index) => (
-                                                <Tooltip key={index}>
-                                                    <TooltipTrigger asChild>
-                                                        <div className={cn(!action.check.allowed && "cursor-not-allowed")}>
-                                                            <DropdownMenuItem onSelect={action.action} className={action.className} disabled={!action.check.allowed}>
-                                                                {action.icon} {action.label}
-                                                            </DropdownMenuItem>
-                                                        </div>
-                                                    </TooltipTrigger>
-                                                    {!action.check.allowed && action.check.reason && <TooltipContent><p>{action.check.reason}</p></TooltipContent>}
-                                                </Tooltip>
+                                        {changeStatusActions.filter(a => a.check).length > 0 ? (
+                                            changeStatusActions.filter(a => a.check).map((action, index) => (
+                                                <DropdownMenuItem key={index} onSelect={action.action} className={action.className} disabled={!action.check}>
+                                                    {action.icon} {action.label}
+                                                </DropdownMenuItem>
                                             ))
                                         ) : (
                                             <DropdownMenuItem disabled>No hay acciones disponibles</DropdownMenuItem>
@@ -472,4 +459,3 @@ export default function PurchaseRequestPage() {
     
 
     
-
