@@ -349,7 +349,6 @@ export const analyticsPermissions = [
 
 /**
  * List of tools available in the admin section.
- * The 'icon' property is now the imported icon component.
  */
 export const adminTools: Tool[] = [
     {

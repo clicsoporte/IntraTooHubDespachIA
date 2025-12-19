@@ -63,7 +63,8 @@ export type Tool = {
   name: string;
   description: string;
   href: string;
-  icon: () => React.JSX.Element; // Changed to a function that returns a JSX element
+  icon: LucideIcon;
+  bgColor?: string;
   adminOnly?: boolean;
 };
 

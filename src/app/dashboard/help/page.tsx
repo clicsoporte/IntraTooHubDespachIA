@@ -499,6 +499,9 @@ export default function HelpPage() {
                  <li>
                     <strong>Alerta de Duplicados (<Info className="inline h-4 w-4 text-amber-500" />):</strong> Al crear una solicitud, si el sistema detecta que ya existen otras solicitudes activas (pendientes, aprobadas u ordenadas) para el mismo artículo, te mostrará una advertencia para evitar compras duplicadas.
                 </li>
+                 <li>
+                    <strong>Tooltips Informativos:</strong> Si un botón de acción (como &quot;Aprobar&quot; o &quot;Reabrir&quot;) está desactivado, ahora puedes pasar el cursor sobre él para ver un mensaje que explica por qué no está disponible (ej: &quot;Solo para solicitudes aprobadas&quot;).
+                </li>
                 <li>
                     <strong>Pasos Opcionales:</strong> En <strong>Administración &gt; Config. Compras</strong>, puedes activar el paso de &quot;Recibido en Bodega&quot; y el paso final &quot;Ingresado en ERP&quot; para un control más detallado del proceso logístico.
                 </li>
@@ -535,6 +538,9 @@ export default function HelpPage() {
                     </li>
                     <li>
                         <strong>Validación de Campos:</strong> Al crear una nueva orden, el sistema ahora te avisará si olvidas seleccionar un cliente, un producto, o si la cantidad es cero, evitando errores.
+                    </li>
+                    <li>
+                        <strong>Tooltips Informativos:</strong> Si un botón de acción (como &quot;Aprobar&quot; o &quot;Iniciar Progreso&quot;) está desactivado, ahora puedes pasar el cursor sobre él para ver un mensaje que explica por qué no está disponible (ej: &quot;Se requiere asignar una máquina&quot; o &quot;Solo para órdenes aprobadas&quot;).
                     </li>
                     <li>
                         <strong>Alertas y Solicitudes de Cambio:</strong>
@@ -828,13 +834,13 @@ export default function HelpPage() {
                 <p className="text-sm text-muted-foreground">Lanzamiento: Julio 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Mejora de Estabilidad y Lógica (Auditoría General):</strong> Se refactorizó la lógica de carga y autenticación para eliminar condiciones de carrera y "parpadeos" en la interfaz. Se activó la funcionalidad completa para solicitudes de cancelación/desaprobación y se corrigió el comportamiento de los permisos de visibilidad total (`read:all`) en Planificador y Compras. Se consolidó código duplicado y se eliminaron archivos huérfanos.
+                        <strong>Auditoría General y Estabilización:</strong> Se refactorizó la lógica de carga y autenticación para eliminar condiciones de carrera y "parpadeos" en la interfaz. Se activó la funcionalidad completa para solicitudes de cancelación/desaprobación en el centro de notificaciones. Se corrigió el comportamiento de los permisos de visibilidad total (`read:all`) en Planificador y Compras. Se consolidó código duplicado (hook de sugerencias de compra) y se eliminaron archivos huérfanos.
                     </li>
                     <li>
                         <strong>Mejora de Usabilidad (Tooltips):</strong> Se añadieron mensajes de ayuda (tooltips) a los botones de acción desactivados en los módulos de Planificador y Solicitudes de Compra. Ahora, los usuarios pueden ver por qué una acción no está disponible (ej: "Se requiere asignar una máquina"), mejorando la claridad y reduciendo la frustración.
                     </li>
                      <li>
-                        <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos después de un cambio de arquitectura. **Causa:** Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. **Solución:** Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.ts`, devolviendo la identidad visual a cada herramienta.
+                        <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos después de un cambio de arquitectura. <strong>Causa:</strong> Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. <strong>Solución:</strong> Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.ts`, devolviendo la identidad visual a cada herramienta.
                     </li>
                 </ul>
             </div>
