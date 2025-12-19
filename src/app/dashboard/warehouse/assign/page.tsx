@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
@@ -60,7 +60,7 @@ export default function AssignItemPage() {
     const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
     const [productSearchTerm, setProductSearchTerm] = useState('');
-    const [isProductSearchOpen, setProductSearchOpen] = useState(false);
+    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [isClientSearchOpen, setIsClientSearchOpen] = useState(false);
     const [locationSearchTerm, setLocationSearchTerm] = useState('');
@@ -313,15 +313,20 @@ export default function AssignItemPage() {
                                         </div>
                                         <div className="space-y-2 md:col-span-2">
                                             <Label>3. Seleccione una Ubicación <span className="text-destructive">*</span></Label>
-                                            <SearchInput 
-                                                options={locationOptions} 
-                                                onSelect={handleSelectLocation} 
-                                                value={locationSearchTerm} 
-                                                onValueChange={setLocationSearchTerm} 
-                                                placeholder="Buscar... ('*' o vacío para ver todas)" 
-                                                open={isLocationSearchOpen} 
-                                                onOpenChange={setIsLocationSearchOpen}
-                                            />
+                                            <div className="flex items-center gap-2">
+                                                <SearchInput 
+                                                    options={locationOptions} 
+                                                    onSelect={handleSelectLocation} 
+                                                    value={locationSearchTerm} 
+                                                    onValueChange={setLocationSearchTerm} 
+                                                    placeholder="Buscar... ('*' o vacío para ver todas)" 
+                                                    open={isLocationSearchOpen} 
+                                                    onOpenChange={setIsLocationSearchOpen}
+                                                />
+                                                <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationSearchOpen(true)}>
+                                                    <List className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                     <DialogFooter>

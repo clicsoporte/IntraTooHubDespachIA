@@ -10,8 +10,6 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Command,
-  CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -22,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "./scroll-area"; // Import ScrollArea
 
 export interface SearchInputProps {
   options: { label: string; value: string; className?: string }[];
@@ -87,10 +86,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                         onValueChange={onValueChange}
                         disabled
                     />
-                    <CommandList>
-                         {options.length > 0 ? (
-                             <CommandGroup>
-                                {options.map((option) => (
+                    <ScrollArea className="h-auto max-h-72">
+                        <CommandList>
+                            {options.length > 0 ? (
+                                options.map((option) => (
                                 <CommandItem
                                     key={option.value}
                                     value={option.label}
@@ -99,10 +98,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
                                 >
                                     {option.label}
                                 </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        ) : null }
-                    </CommandList>
+                                ))
+                            ) : null }
+                        </CommandList>
+                    </ScrollArea>
                 </Command>
             </PopoverContent>
         </Popover>
