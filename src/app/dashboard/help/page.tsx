@@ -828,10 +828,10 @@ export default function HelpPage() {
                 <p className="text-sm text-muted-foreground">Lanzamiento: Julio 2024</p>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Mejora Radical de Estabilidad:</strong> Se refactorizó la lógica de autenticación y carga inicial, eliminando completamente el "parpadeo" de la pantalla de login y las condiciones de carrera al acceder a rutas protegidas.
+                        <strong>Mejora Radical de Estabilidad:</strong> Se refactorizó la lógica de autenticación y carga inicial, eliminando completamente el &quot;parpadeo&quot; de la pantalla de login y las condiciones de carrera al acceder a rutas protegidas.
                     </li>
                     <li>
-                        <strong>Activación de Funcionalidad:</strong> Se activó completamente la lógica para "Solicitar Desaprobación" y "Solicitar Cancelación" en los módulos de Planificador y Compras, incluyendo las notificaciones a los administradores para su aprobación.
+                        <strong>Activación de Funcionalidad:</strong> Se activó completamente la lógica para &quot;Solicitar Desaprobación&quot; y &quot;Solicitar Cancelación&quot; en los módulos de Planificador y Compras, incluyendo las notificaciones a los administradores para su aprobación.
                     </li>
                     <li>
                         <strong>Nuevo Asistente de Creación de Racks:</strong> Se añadió una potente herramienta en la gestión de ubicaciones que permite crear y clonar estructuras de racks completas de forma masiva, reduciendo drásticamente el tiempo de configuración de una bodega.
@@ -846,7 +846,7 @@ export default function HelpPage() {
                         <strong>Restauración de Funcionalidad:</strong> Se restauró la página y funcionalidad de &quot;Asignar Artículo a Cliente y Ubicación&quot;, diferenciándola claramente de la &quot;Toma de Inventario Físico&quot;.
                     </li>
                     <li>
-                        <strong>Actualización Masiva de Documentación:</strong> El Centro de Ayuda ha sido completamente revisado, actualizado con las últimas funcionalidades y se ha añadido esta sección de "Control de Cambios".
+                        <strong>Actualización Masiva de Documentación:</strong> El Centro de Ayuda ha sido completamente revisado, actualizado con las últimas funcionalidades y se ha añadido esta sección de &quot;Control de Cambios&quot;.
                     </li>
                      <li>
                         <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos. **Causa:** Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. **Solución:** Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.tsx`, devolviendo la identidad visual a cada herramienta.
