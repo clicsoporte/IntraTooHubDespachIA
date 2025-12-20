@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 
@@ -64,6 +65,7 @@ export default function AssignItemPage() {
 
     const [productSearchTerm, setProductSearchTerm] = useState('');
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    const [exactProductMatch, setExactProductMatch] = useState(false);
     const [clientSearchTerm, setClientSearchTerm] = useState('');
     const [isClientSearchOpen, setIsClientSearchOpen] = useState(false);
     const [locationSearchTerm, setLocationSearchTerm] = useState('');
@@ -96,12 +98,22 @@ export default function AssignItemPage() {
         loadInitialData();
     }, [setTitle, loadInitialData]);
 
-    const productOptions = useMemo(() =>
-        debouncedProductSearch.length < 2 ? [] : authProducts
-            .filter(p => p.id.toLowerCase().includes(debouncedProductSearch.toLowerCase()) || p.description.toLowerCase().includes(debouncedProductSearch.toLowerCase()))
-            .map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` })),
-        [authProducts, debouncedProductSearch]
-    );
+    const productOptions = useMemo(() => {
+        if (!debouncedProductSearch) return [];
+        const searchLower = debouncedProductSearch.toLowerCase();
+        
+        if (exactProductMatch) {
+            return authProducts
+                .filter(p => p.id.toLowerCase() === searchLower)
+                .map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` }));
+        }
+
+        if (debouncedProductSearch.length < 2) return [];
+
+        return authProducts
+            .filter(p => p.id.toLowerCase().includes(searchLower) || p.description.toLowerCase().includes(searchLower))
+            .map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` }));
+    }, [authProducts, debouncedProductSearch, exactProductMatch]);
 
     const clientOptions = useMemo(() =>
         debouncedClientSearch.length < 2 ? [] : authCustomers
@@ -157,6 +169,7 @@ export default function AssignItemPage() {
         setProductSearchTerm('');
         setClientSearchTerm('');
         setLocationSearchTerm('');
+        setExactProductMatch(false);
     }, []);
 
     const handleCreateAssignment = async () => {
@@ -314,6 +327,10 @@ export default function AssignItemPage() {
                                         <div className="space-y-2">
                                             <Label>1. Seleccione un Producto <span className="text-destructive">*</span></Label>
                                             <SearchInput options={productOptions} onSelect={handleSelectProduct} value={productSearchTerm} onValueChange={setProductSearchTerm} placeholder="Buscar producto..." open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} />
+                                             <div className="flex items-center space-x-2 pt-1">
+                                                <Checkbox id="exact-product-match" checked={exactProductMatch} onCheckedChange={(checked) => setExactProductMatch(checked as boolean)} />
+                                                <Label htmlFor="exact-product-match" className="text-xs font-normal">Buscar coincidencia exacta de código</Label>
+                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label>2. Seleccione un Cliente (Opcional)</Label>
