@@ -252,10 +252,6 @@ export default function UsersPage() {
         setEditDialogOpen(true);
     }
 
-    const openDeleteAlert = (user: User) => {
-        setUserToDelete(user);
-    }
-
     if (isAuthorized === null) {
         return null;
     }
@@ -407,22 +403,26 @@ export default function UsersPage() {
                                         <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                         <DropdownMenuItem onSelect={() => openEditDialog(user)}>Editar</DropdownMenuItem>
-                                        <AlertDialog>
+                                        <AlertDialog onOpenChange={(open) => !open && setUserToDelete(null)}>
                                             <AlertDialogTrigger asChild>
-                                                <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 text-red-600">
+                                                <Button
+                                                    variant="ghost"
+                                                    className="w-full justify-start px-2 py-1.5 text-sm font-normal text-destructive hover:bg-destructive/10"
+                                                    onClick={() => setUserToDelete(user)}
+                                                    >
                                                     Eliminar
-                                                </div>
+                                                </Button>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario {user.name} y sus datos del sistema.
+                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente al usuario {userToDelete?.name} y sus datos del sistema.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteUser()} className={buttonVariants({ variant: "destructive" })}>Sí, eliminar usuario</AlertDialogAction>
+                                                    <AlertDialogAction onClick={handleDeleteUser} className={buttonVariants({ variant: "destructive" })}>Sí, eliminar usuario</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
