@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -375,7 +376,9 @@ export const useRequests = () => {
         updateState({ companyData: authCompanyData });
     }, [authCompanyData, updateState]);
     
-    const getRequestPermissions = useCallback((request: PurchaseRequest): Record<string, boolean> => {
+    const getRequestPermissions = useCallback((request: PurchaseRequest): Record<string, { allowed: boolean; visible: boolean; reason: string | null }> => {
+        const createResult = (allowed: boolean, reason: string | null = null, visible = true) => ({ allowed, reason: allowed ? null : reason, visible });
+    
         const isPending = request.status === 'pending';
         const isPurchasingReview = request.status === 'purchasing-review';
         const isPendingApproval = request.status === 'pending-approval';
@@ -392,21 +395,21 @@ export const useRequests = () => {
         const isArchived = request.status === finalArchivedStatus || request.status === 'canceled';
 
         return {
-            canEdit: (isPending || isPurchasingReview || isPendingApproval) && hasPermission('requests:edit:pending'),
-            canReopen: isArchived && hasPermission('requests:reopen'),
-            canSendToReview: isPending && hasPermission('requests:status:review'),
-            canGoBackToPending: isPurchasingReview && hasPermission('requests:status:review'),
-            canSendToApproval: isPurchasingReview && hasPermission('requests:status:pending-approval'),
-            canGoBackToReview: isPendingApproval && hasPermission('requests:status:pending-approval'),
-            canApprove: isPendingApproval && hasPermission('requests:status:approve'),
-            canOrder: isApproved && hasPermission('requests:status:ordered'),
-            canRevertToApproved: isOrdered && hasPermission('requests:status:revert-to-approved'),
-            canReceiveInWarehouse: isOrdered && !!state.requestSettings?.useWarehouseReception && hasPermission('requests:status:received-in-warehouse'),
-            canEnterToErp: isReceivedInWarehouse && !!state.requestSettings?.useErpEntry && hasPermission('requests:status:entered-erp'),
-            canRequestCancel: (isApproved || isOrdered) && hasPermission('requests:status:cancel'),
-            canCancelPending: (isPending || isPurchasingReview || isPendingApproval) && hasPermission('requests:status:cancel'),
-            canRequestUnapproval: (isApproved || isOrdered) && hasPermission('requests:status:unapproval-request'),
-            canAddNote: hasPermission('requests:notes:add'),
+            canEdit: createResult((isPending || isPurchasingReview || isPendingApproval) && hasPermission('requests:edit:pending'), 'Solo se puede editar en estados iniciales.'),
+            canReopen: createResult(isArchived && hasPermission('requests:reopen'), 'Solo para solicitudes archivadas.'),
+            canSendToReview: createResult(isPending && hasPermission('requests:status:review'), 'Solo desde estado Pendiente.'),
+            canGoBackToPending: createResult(isPurchasingReview && hasPermission('requests:status:review'), 'Solo desde Revisión Compras.'),
+            canSendToApproval: createResult(isPurchasingReview && hasPermission('requests:status:pending-approval'), 'Solo desde Revisión Compras.'),
+            canGoBackToReview: createResult(isPendingApproval && hasPermission('requests:status:pending-approval'), 'Solo desde Pendiente Aprobación.'),
+            canApprove: createResult(isPendingApproval && hasPermission('requests:status:approve'), 'Solo desde Pendiente Aprobación.'),
+            canOrder: createResult(isApproved && hasPermission('requests:status:ordered'), 'Solo para solicitudes Aprobadas.'),
+            canRevertToApproved: createResult(isOrdered && hasPermission('requests:status:revert-to-approved'), 'Solo para solicitudes Ordenadas.'),
+            canReceiveInWarehouse: createResult(isOrdered && !!state.requestSettings?.useWarehouseReception && hasPermission('requests:status:received-in-warehouse'), 'Paso no habilitado o estado incorrecto.'),
+            canEnterToErp: createResult(isReceivedInWarehouse && !!state.requestSettings?.useErpEntry && hasPermission('requests:status:entered-erp'), 'Paso no habilitado o estado incorrecto.'),
+            canRequestCancel: createResult((isApproved || isOrdered) && hasPermission('requests:status:cancel'), 'Solo para solicitudes Aprobadas u Ordenadas.'),
+            canCancelPending: createResult((isPending || isPurchasingReview || isPendingApproval) && hasPermission('requests:status:cancel'), 'Solo en estados iniciales.'),
+            canRequestUnapproval: createResult((isApproved || isOrdered) && hasPermission('requests:status:unapproval-request'), 'Solo para solicitudes Aprobadas u Ordenadas.'),
+            canAddNote: createResult(hasPermission('requests:notes:add'), 'Permiso requerido.'),
         };
     }, [hasPermission, state.requestSettings]);
 
@@ -733,8 +736,8 @@ export const useRequests = () => {
 
             updateState({ isSubmitting: true });
             try {
+                const client = customers.find(c => c.id === erpHeader.CLIENTE);
                 for (const line of selectedLines) {
-                    const client = customers.find(c => c.id === erpHeader.CLIENTE);
                     const requestPayload = {
                         requiredDate: new Date(erpHeader.FECHA_PROMETIDA).toISOString().split('T')[0],
                         clientId: erpHeader.CLIENTE,
@@ -985,7 +988,8 @@ export const useRequests = () => {
         setClassificationFilter: (filter: string) => updateState({ classificationFilter: filter }),
         setDateFilter: (range: DateRange | undefined) => updateState({ dateFilter: range }),
         setShowOnlyMyRequests: (show: boolean) => {
-            if (!show && !hasPermission('requests:read:all')) {
+            const hasReadAllPermission = hasPermission('requests:read:all');
+            if (show === false && !hasReadAllPermission) {
                 toast({ title: "Permiso Requerido", description: "No tienes permiso para ver todas las solicitudes.", variant: "destructive"});
                 return;
             }
@@ -1039,14 +1043,10 @@ export const useRequests = () => {
             const searchTerms = normalizeText(debouncedItemSearch).split(' ').filter(Boolean);
             const exactMatchLower = debouncedItemSearch.toLowerCase();
             const results = products.filter(p => {
-                // Exact code match check first
-                if (p.id.toLowerCase() === exactMatchLower) {
-                    return true;
-                }
+                if (p.id.toLowerCase() === exactMatchLower) return true;
                 const targetText = normalizeText(`${p.id} ${p.description}`);
                 return searchTerms.every(term => targetText.includes(term));
             });
-            // Prioritize exact match if found
             results.sort((a, b) => {
                 if (a.id.toLowerCase() === exactMatchLower) return -1;
                 if (b.id.toLowerCase() === exactMatchLower) return 1;
@@ -1067,7 +1067,7 @@ export const useRequests = () => {
                 const statusMatch = state.statusFilter === 'all' || request.status === state.statusFilter;
                 const classificationMatch = state.classificationFilter === 'all' || (product && product.classification === state.classificationFilter);
                 const dateMatch = !state.dateFilter || !state.dateFilter.from || (new Date(request.requiredDate) >= state.dateFilter.from && new Date(request.requiredDate) <= (state.dateFilter.to || state.dateFilter.from));
-                const myRequestsMatch = !state.showOnlyMyRequests || !hasPermission('requests:read:all') || (currentUser?.name && request.requestedBy.toLowerCase() === currentUser.name.toLowerCase()) || (currentUser?.erpAlias && request.erpOrderNumber && request.erpOrderNumber.toLowerCase().includes(currentUser.erpAlias.toLowerCase()));
+                const myRequestsMatch = !state.showOnlyMyRequests || !hasPermission('requests:read:all') || (currentUser && (request.requestedBy.toLowerCase() === currentUser.name.toLowerCase() || (currentUser.erpAlias && request.erpOrderNumber && request.erpOrderNumber.toLowerCase().includes(currentUser.erpAlias.toLowerCase()))));
 
                 return searchMatch && statusMatch && classificationMatch && dateMatch && myRequestsMatch;
             });
@@ -1106,4 +1106,3 @@ export const useRequests = () => {
         isAuthorized
     };
 }
-```
