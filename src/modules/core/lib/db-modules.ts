@@ -1,11 +1,7 @@
-
 /**
  * @fileoverview This file acts as the central registry for all database modules.
- * It defines the static configuration for each module, including its database file,
- * initialization function, and migration function. This structure allows the core
- * `connectDb` function to be completely agnostic of any specific module, promoting
- * true modularity and decoupling. This file should only contain configuration and
- * import function signatures, not implementations, to avoid circular dependencies.
+ * It defines the static configuration for each module, including its database file
+ * and schema, but does NOT contain executable functions, to prevent circular dependencies.
  */
 
 import type { DatabaseModule } from '@/modules/core/types';
@@ -19,8 +15,7 @@ import { mainDbSchema } from './schema';
 
 /**
  * Acts as a registry for all database modules in the application.
- * This is the single source of truth for module definitions, including their schemas.
- * It does NOT contain function references to avoid circular dependencies.
+ * This is the single source of truth for module definitions, containing only configuration data.
  */
 export const DB_MODULES: DatabaseModule[] = [
     { 

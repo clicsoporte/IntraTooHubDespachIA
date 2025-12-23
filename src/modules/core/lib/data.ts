@@ -39,11 +39,11 @@ import {
   Wand2,
   BookUser,
 } from "lucide-react";
+import { mainDbSchema } from './schema';
 import { plannerSchema } from '../../planner/lib/schema';
 import { requestSchema } from '../../requests/lib/schema';
 import { warehouseSchema } from '../../warehouse/lib/schema';
 import { costAssistantSchema } from '../../cost-assistant/lib/schema';
-import { mainDbSchema } from './schema';
 
 /**
  * The default user to be created in the database.
@@ -525,16 +525,3 @@ export const analyticsTools: Tool[] = [
  * A combined list of all tools for easy access.
  */
 export const allTools: Tool[] = [...mainTools, ...adminTools, ...analyticsTools];
-
-/**
- * Acts as a registry for all database modules in the application.
- * This is now the single source of truth for module definitions.
- * It does NOT contain function references to avoid circular dependencies.
- */
-export const DB_MODULES: Omit<DatabaseModule, 'initFn' | 'migrationFn'>[] = [
-    { id: 'clic-tools-main', name: 'Clic-Tools (Sistema Principal)', dbFile: 'intratool.db', schema: mainDbSchema },
-    { id: 'purchase-requests', name: 'Solicitud de Compra', dbFile: 'requests.db', schema: requestSchema },
-    { id: 'production-planner', name: 'Planificador de Producción', dbFile: 'planner.db', schema: plannerSchema },
-    { id: 'warehouse-management', name: 'Gestión de Almacenes', dbFile: 'warehouse.db', schema: warehouseSchema },
-    { id: 'cost-assistant', name: 'Asistente de Costos', dbFile: 'cost_assistant.db', schema: costAssistantSchema },
-];
