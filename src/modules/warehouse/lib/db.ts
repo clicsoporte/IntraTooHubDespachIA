@@ -97,11 +97,11 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
     try {
         const recreateTableWithCascade = (tableName: string, createSql: string, columns: string) => {
             db.transaction(() => {
-                db.exec(`CREATE TABLE ${tableName}_temp AS SELECT * FROM ${tableName};`);
+                db.exec(`CREATE TABLE ${tableName}_temp_migration AS SELECT * FROM ${tableName};`);
                 db.exec(`DROP TABLE ${tableName};`);
                 db.exec(createSql);
-                db.exec(`INSERT INTO ${tableName} (${columns}) SELECT ${columns} FROM ${tableName}_temp;`);
-                db.exec(`DROP TABLE ${tableName}_temp;`);
+                db.exec(`INSERT INTO ${tableName} (${columns}) SELECT ${columns} FROM ${tableName}_temp_migration;`);
+                db.exec(`DROP TABLE ${tableName}_temp_migration;`);
                 console.log(`MIGRATION (warehouse.db): Successfully recreated '${tableName}' table with ON DELETE CASCADE.`);
             })();
         };
@@ -195,7 +195,7 @@ export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Prom
     return newLocation;
 }
 
-export async function addBulkLocations(payload: { type: 'rack' | 'clone', params: any }): Promise<void> {
+export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params: any; }): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { type, params } = payload;
     const settings = await getWarehouseSettings();

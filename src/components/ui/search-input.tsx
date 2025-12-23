@@ -60,6 +60,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
         if (!open) onOpenChange(true);
     };
     
+    // Correctly handle mouse wheel scrolling on the popover list
     const handleWheel = (e: React.WheelEvent) => {
       if (scrollViewportRef.current) {
         scrollViewportRef.current.scrollTop += e.deltaY;

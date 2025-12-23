@@ -115,7 +115,7 @@ function initializeMainDatabase(db: import('better-sqlite3').Database) {
  * This structure allows the core `connectDb` function to be completely agnostic
  * of any specific module, promoting true modularity and decoupling.
  */
-const DB_MODULES: DatabaseModule[] = [
+export const DB_MODULES: DatabaseModule[] = [
     { 
         id: 'clic-tools-main', 
         name: 'Clic-Tools (Sistema Principal)', 
@@ -1252,8 +1252,8 @@ export async function listAllUpdateBackups(): Promise<UpdateBackupInfo[]> {
     return files.map(file => {
         const parts = file.split('_');
         const date = parts[0];
-        const version = parts[1]?.startsWith('v') ? parts[1].substring(1) : null;
-        const dbFile = version ? parts.slice(2).join('_') : parts.slice(1).join('_');
+        const version = parts[1]?.startsWith('v') ? parts[1].substring(1) : 'unknown';
+        const dbFile = version !== 'unknown' ? parts.slice(2).join('_') : parts.slice(1).join('_');
         
         const dbModule = DB_MODULES.find(m => m.dbFile === dbFile);
         return {
