@@ -94,111 +94,116 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
 };
 
 export async function runWarehouseMigrations(db: import('better-sqlite3').Database) {
-    const warehouseConfigTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='warehouse_config'`).get();
-    if (!warehouseConfigTable) {
-        return;
-    }
-
     try {
-        const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
-        if (settingsRow) {
-            const settings = JSON.parse(settingsRow.value);
-            let settingsUpdated = false;
+        const warehouseConfigTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='warehouse_config'`).get();
+        if (warehouseConfigTable) {
+            const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
+            if (settingsRow) {
+                const settings = JSON.parse(settingsRow.value);
+                let settingsUpdated = false;
 
-            if (settings.enablePhysicalInventoryTracking !== undefined) {
-                delete settings.enablePhysicalInventoryTracking;
-                settingsUpdated = true;
-                console.log("MIGRATION (warehouse.db): Removed obsolete 'enablePhysicalInventoryTracking' setting.");
-            }
-            if (typeof settings.unitPrefix !== 'string') {
-                settings.unitPrefix = 'U';
-                settingsUpdated = true;
-            }
-            if (typeof settings.nextUnitNumber !== 'number') {
-                settings.nextUnitNumber = 1;
-                settingsUpdated = true;
-            }
-            if (settingsUpdated) {
-                db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(settings));
-                console.log("MIGRATION (warehouse.db): Cleaned up and added default unit settings.");
+                if (settings.enablePhysicalInventoryTracking !== undefined) {
+                    delete settings.enablePhysicalInventoryTracking;
+                    settingsUpdated = true;
+                    console.log("MIGRATION (warehouse.db): Removed obsolete 'enablePhysicalInventoryTracking' setting.");
+                }
+                if (typeof settings.unitPrefix !== 'string') {
+                    settings.unitPrefix = 'U';
+                    settingsUpdated = true;
+                }
+                if (typeof settings.nextUnitNumber !== 'number') {
+                    settings.nextUnitNumber = 1;
+                    settingsUpdated = true;
+                }
+                if (settingsUpdated) {
+                    db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(settings));
+                    console.log("MIGRATION (warehouse.db): Cleaned up and added default unit settings.");
+                }
             }
         }
-    } catch (error) {
-        console.error("Error during warehouse settings migration:", error);
-    }
-    
-    const itemLocationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='item_locations'`).get();
-    if (!itemLocationsTable) {
-        db.exec(`
-            CREATE TABLE IF NOT EXISTS item_locations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                itemId TEXT NOT NULL,
-                locationId INTEGER NOT NULL,
-                clientId TEXT,
-                FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE,
-                UNIQUE (itemId, locationId, clientId)
-            );
-        `);
-    }
-
-    const recreateTableWithCascade = (tableName: string, createSql: string, columns: string) => {
-        console.log(`MIGRATION (warehouse.db): Recreating '${tableName}' table to update foreign key ON DELETE action to CASCADE.`);
-        db.transaction(() => {
-            db.exec(`CREATE TABLE ${tableName}_new AS SELECT * FROM ${tableName};`);
-            db.exec(`DROP TABLE ${tableName};`);
-            db.exec(createSql);
-            db.exec(`INSERT INTO ${tableName}(${columns}) SELECT ${columns} FROM ${tableName}_new;`);
-            db.exec(`DROP TABLE ${tableName}_new;`);
-        })();
-    };
-
-    const checkAndRecreateForeignKey = (tableName: string, columnName: string, createSql: string, columnsCsv: string) => {
-        const foreignKeyList = db.prepare(`PRAGMA foreign_key_list(${tableName})`).all() as any[];
-        const fk = foreignKeyList.find(f => f.from === columnName);
-        if (fk && fk.on_delete !== 'CASCADE') {
-            recreateTableWithCascade(tableName, createSql, columnsCsv);
+        
+        const itemLocationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='item_locations'`).get();
+        if (!itemLocationsTable) {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS item_locations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    itemId TEXT NOT NULL,
+                    locationId INTEGER NOT NULL,
+                    clientId TEXT,
+                    FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE,
+                    UNIQUE (itemId, locationId, clientId)
+                );
+            `);
         }
-    };
-    
-    // Check and fix ON DELETE for all relevant tables
-    if (db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='locations'`).get()) {
+
+        const recreateTableWithCascade = (tableName: string, createSql: string, columns: string) => {
+             db.transaction(() => {
+                db.exec('PRAGMA foreign_keys=off;');
+                db.exec(`ALTER TABLE ${tableName} RENAME TO ${tableName}_old;`);
+                db.exec(createSql);
+                db.exec(`INSERT INTO ${tableName} (${columns}) SELECT ${columns} FROM ${tableName}_old;`);
+                db.exec(`DROP TABLE ${tableName}_old;`);
+                db.exec('PRAGMA foreign_keys=on;');
+                console.log(`MIGRATION (warehouse.db): Successfully recreated '${tableName}' table with ON DELETE CASCADE.`);
+            })();
+        };
+
+        const checkAndRecreateForeignKey = (tableName: string, columnName: string, createSql: string, columnsCsv: string) => {
+            try {
+                const tableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='${tableName}'`).get();
+                if (!tableExists) return;
+
+                const foreignKeyList = db.prepare(`PRAGMA foreign_key_list(${tableName})`).all() as any[];
+                const fk = foreignKeyList.find(f => f.from === columnName);
+                if (fk && fk.on_delete !== 'CASCADE') {
+                    recreateTableWithCascade(tableName, createSql, columnsCsv);
+                }
+            } catch (err: any) {
+                 if (err.message.includes('no such table')) {
+                    // This can happen if a transaction fails midway. Just log it.
+                    console.warn(`Migration check for ${tableName} skipped, table or its backup may not exist yet.`);
+                 } else {
+                    throw err; // Re-throw other errors
+                 }
+            }
+        };
+
         checkAndRecreateForeignKey('locations', 'parentId', 
             `CREATE TABLE locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT UNIQUE NOT NULL, type TEXT NOT NULL, parentId INTEGER, FOREIGN KEY (parentId) REFERENCES locations(id) ON DELETE CASCADE);`,
             'id, name, code, type, parentId');
-    }
-    if (db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory'`).get()) {
+        
         checkAndRecreateForeignKey('inventory', 'locationId',
             `CREATE TABLE inventory (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, locationId INTEGER NOT NULL, quantity REAL NOT NULL DEFAULT 0, lastUpdated TEXT NOT NULL, updatedBy TEXT, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE, UNIQUE (itemId, locationId));`,
             'id, itemId, locationId, quantity, lastUpdated, updatedBy');
-    }
-    if (db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='item_locations'`).get()) {
+        
         checkAndRecreateForeignKey('item_locations', 'locationId',
             `CREATE TABLE item_locations (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, locationId INTEGER NOT NULL, clientId TEXT, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE, UNIQUE (itemId, locationId, clientId));`,
             'id, itemId, locationId, clientId');
-    }
-    if (db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units'`).get()) {
+        
         checkAndRecreateForeignKey('inventory_units', 'locationId',
             `CREATE TABLE inventory_units (id INTEGER PRIMARY KEY AUTOINCREMENT, unitCode TEXT UNIQUE, productId TEXT NOT NULL, humanReadableId TEXT, locationId INTEGER, notes TEXT, createdAt TEXT NOT NULL, createdBy TEXT NOT NULL, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE);`,
             'id, unitCode, productId, humanReadableId, locationId, notes, createdAt, createdBy');
-    }
 
-    // Special migration for `movements` table with two foreign keys
-    const movementsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='movements'`).get();
-    if (movementsTable) {
-        const fkList = db.prepare(`PRAGMA foreign_key_list(movements)`).all() as any[];
-        const fromFK = fkList.find(fk => fk.from === 'fromLocationId');
-        const toFK = fkList.find(fk => fk.from === 'toLocationId');
-        if ((fromFK && fromFK.on_delete !== 'CASCADE') || (toFK && toFK.on_delete !== 'CASCADE')) {
-             recreateTableWithCascade('movements', 
-                `CREATE TABLE movements (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, quantity REAL NOT NULL, fromLocationId INTEGER, toLocationId INTEGER, timestamp TEXT NOT NULL, userId INTEGER NOT NULL, notes TEXT, FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE CASCADE, FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE CASCADE);`,
-                'id, itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes');
+        const movementsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='movements'`).get();
+        if (movementsTable) {
+            const fkList = db.prepare(`PRAGMA foreign_key_list(movements)`).all() as any[];
+            const fromFK = fkList.find(fk => fk.from === 'fromLocationId');
+            const toFK = fkList.find(fk => fk.from === 'toLocationId');
+            if ((fromFK && fromFK.on_delete !== 'CASCADE') || (toFK && toFK.on_delete !== 'CASCADE')) {
+                 recreateTableWithCascade('movements', 
+                    `CREATE TABLE movements (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, quantity REAL NOT NULL, fromLocationId INTEGER, toLocationId INTEGER, timestamp TEXT NOT NULL, userId INTEGER NOT NULL, notes TEXT, FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE CASCADE, FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE CASCADE);`,
+                    'id, itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes');
+            }
         }
-    }
 
-    const inventoryTableInfo = db.prepare(`PRAGMA table_info(inventory)`).all() as { name: string }[];
-    if (!inventoryTableInfo.some(c => c.name === 'updatedBy')) {
-        console.log("MIGRATION (warehouse.db): Adding 'updatedBy' to 'inventory' table.");
-        db.exec('ALTER TABLE inventory ADD COLUMN updatedBy TEXT');
+        const inventoryTableInfo = db.prepare(`PRAGMA table_info(inventory)`).all() as { name: string }[];
+        if (!inventoryTableInfo.some(c => c.name === 'updatedBy')) {
+            console.log("MIGRATION (warehouse.db): Adding 'updatedBy' to 'inventory' table.");
+            db.exec('ALTER TABLE inventory ADD COLUMN updatedBy TEXT');
+        }
+
+    } catch (error) {
+        console.error("Error during warehouse migrations:", error);
     }
 }
 
@@ -331,7 +336,24 @@ export async function updateLocation(location: WarehouseLocation): Promise<Wareh
 
 export async function deleteLocation(id: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM locations WHERE id = ?').run(id);
+    
+    // Recursive function to find all descendant IDs
+    const getAllDescendantIds = (parentId: number): number[] => {
+        const children = db.prepare('SELECT id FROM locations WHERE parentId = ?').all(parentId) as { id: number }[];
+        let allIds = children.map(c => c.id);
+        children.forEach(child => {
+            allIds = allIds.concat(getAllDescendantIds(child.id));
+        });
+        return allIds;
+    };
+    
+    const transaction = db.transaction((locationId: number) => {
+        const idsToDelete = [locationId, ...getAllDescendantIds(locationId)];
+        const placeholders = idsToDelete.map(() => '?').join(',');
+        db.prepare(`DELETE FROM locations WHERE id IN (${placeholders})`).run(...idsToDelete);
+    });
+    
+    transaction(id);
 }
 
 

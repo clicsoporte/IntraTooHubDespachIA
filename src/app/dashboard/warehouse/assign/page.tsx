@@ -124,10 +124,14 @@ export default function AssignItemPage() {
 
     const locationOptions = useMemo(() => {
         const searchTerm = debouncedLocationSearch.trim().toLowerCase();
+        const childIds = new Set(locations.map(l => l.parentId).filter(Boolean));
+
+        const selectableLocations = locations.filter(l => !childIds.has(l.id));
+
         if (searchTerm === '*' || searchTerm === '') {
-            return locations.map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
+            return selectableLocations.map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
         }
-        return locations
+        return selectableLocations
             .filter(l => renderLocationPathAsString(l.id, locations).toLowerCase().includes(searchTerm))
             .map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, locations) }));
     }, [locations, debouncedLocationSearch]);

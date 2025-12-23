@@ -36,6 +36,26 @@ import {
   QrCode,
   ClipboardCheck,
   BookMarked,
+  Save,
+  Copy,
+  Folder,
+  AlertTriangle,
+  ToggleRight,
+  FilePlusIcon,
+  Send,
+  Loader2,
+  Play,
+  Pause,
+  History,
+  Undo2,
+  Info,
+  BadgeInfo,
+  CreditCard,
+  ListChecks,
+  Hourglass,
+  Layers,
+  UploadCloud,
+  Wand2,
 } from "lucide-react";
 
 /**
@@ -458,7 +478,7 @@ export const adminTools: Tool[] = [
         description: "Revisar los registros y errores del sistema.",
         href: "/dashboard/admin/logs",
         icon: FileTerminal,
-        bgColor: 'bg-gray-500',
+        bgColor: 'bg-slate-500',
       }
 ];
 

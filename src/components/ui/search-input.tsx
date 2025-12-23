@@ -46,6 +46,8 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
     onOpenChange
   }, ref) => {
     
+    // Determine if the popover should be shown based on props and state.
+    // It shows if 'open' is true, there's a search value, and there are options to display.
     const showPopover = open && value.length > 1 && options.length > 0;
     const scrollViewportRef = React.useRef<HTMLDivElement>(null);
     
@@ -58,6 +60,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
         if (!open) onOpenChange(true);
     };
     
+    // Manually handle scroll wheel events to scroll the popover content.
     const handleWheel = (e: React.WheelEvent) => {
       if (scrollViewportRef.current) {
         scrollViewportRef.current.scrollTop += e.deltaY;

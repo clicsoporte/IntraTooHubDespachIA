@@ -28,7 +28,7 @@ const DB_FILE = 'intratool.db';
 const SALT_ROUNDS = 10;
 const CABYS_FILE_PATH = path.join(process.cwd(), 'docs', 'Datos', 'cabys.csv');
 const UPDATE_BACKUP_DIR = 'update_backups';
-const VERSION_FILE_PATH = path.join(process.cwd(), 'docs', 'VERSION.txt');
+const VERSION_FILE_PATH = path.join(process.cwd(), 'package.json');
 
 /**
  * Initializes the main database with all core system tables.
@@ -1215,13 +1215,13 @@ export async function saveStockSettings(settings: StockSettings): Promise<void> 
 export async function getCurrentVersion(): Promise<string | null> {
     try {
         if (fs.existsSync(VERSION_FILE_PATH)) {
-            const content = fs.readFileSync(VERSION_FILE_PATH, 'utf-8');
-            const match = content.match(/v(\d+\.\d+\.\d+)/);
-            return match ? match[1] : content.trim();
+            const packageJsonContent = fs.readFileSync(VERSION_FILE_PATH, 'utf-8');
+            const packageJson = JSON.parse(packageJsonContent);
+            return packageJson.version || null;
         }
         return null;
     } catch (error) {
-        console.error("Could not read VERSION.txt", error);
+        console.error("Could not read package.json for version", error);
         return null;
     }
 }

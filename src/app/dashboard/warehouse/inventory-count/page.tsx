@@ -17,7 +17,7 @@ import { getLocations, updateInventory, logMovement } from '@/modules/warehouse/
 import type { Product, WarehouseLocation } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, List } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -92,7 +92,7 @@ export default function InventoryCountPage() {
     }, [locations, debouncedLocationSearch]);
 
     const handleSelectProduct = (value: string) => {
-        setProductSearchOpen(false);
+        setIsProductSearchOpen(false);
         const product = authProducts.find(p => p.id === value);
         if (product) {
             setSelectedProductId(value);
@@ -137,7 +137,7 @@ export default function InventoryCountPage() {
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
             logInfo('Physical inventory count saved', { itemId: selectedProductId, locationId: selectedLocationId, quantity, user: user.name });
             
-            // Reset for next count, keeping location if user wants to count another item there
+            // Reset product for next count
             setSelectedProductId(null);
             setProductSearchTerm('');
             setCountedQuantity('');
@@ -180,7 +180,12 @@ export default function InventoryCountPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>2. Seleccione una Ubicación</Label>
-                            <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar... ('*' o vacío para ver todas)" open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
+                            <div className="flex items-center gap-2">
+                                <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar... ('*' o vacío para ver todas)" open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
+                                <Button type="button" variant="outline" size="icon" onClick={() => setIsLocationSearchOpen(true)}>
+                                    <List className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                          <div className="space-y-2">
                             <Label>3. Ingrese la Cantidad Contada</Label>

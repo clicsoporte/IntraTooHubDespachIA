@@ -6,12 +6,12 @@
 import { getCompletedOrdersByDateRange, getPlannerSettings } from '@/modules/planner/lib/db';
 import { getAllRoles, getAllSuppliers, getAllStock } from '@/modules/core/lib/db';
 import { getAllUsersForReport } from '@/modules/core/lib/auth';
-import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, PhysicalInventoryComparisonItem } from '@/modules/core/types';
+import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
 import { getAllProducts, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
-import { getLocations as getWarehouseLocations, getInventory as getPhysicalInventory } from '@/modules/warehouse/lib/db';
+import { getLocations as getWarehouseLocations, getInventory as getPhysicalInventory, getAllItemLocations } from '@/modules/warehouse/lib/db';
 import type { TransitReportItem } from '../hooks/useTransitsReport';
 
 
@@ -155,18 +155,35 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
     return JSON.parse(JSON.stringify(reportData));
 }
 
+const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
+    if (!locationId) return "N/A";
+    const path: any[] = [];
+    let current = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
+
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<PhysicalInventoryComparisonItem[]> {
     try {
-        const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
-            getPhysicalInventory(dateRange), // Pass dateRange to the DB function
+        const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations] = await Promise.all([
+            getPhysicalInventory(dateRange),
             getAllStock(),
             getAllProducts(),
             getWarehouseLocations(),
+            getAllItemLocations(),
         ]);
         
         const erpStockMap = new Map(erpStock.map(item => [item.itemId, item.totalStock]));
         const productMap = new Map(allProducts.map(item => [item.id, item.description]));
         const locationMap = new Map(allLocations.map(item => [item.id, item]));
+        const itemLocationMap = new Map<string, string>();
+        allItemLocations.forEach(itemLoc => {
+            itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
+        });
 
         const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map(item => {
             const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
@@ -182,6 +199,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
                 difference: item.quantity - erpQuantity,
                 lastCountDate: item.lastUpdated,
                 updatedBy: item.updatedBy || 'N/A',
+                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
             };
         });
 

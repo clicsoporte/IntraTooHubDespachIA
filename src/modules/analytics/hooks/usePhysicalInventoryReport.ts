@@ -10,7 +10,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getPhysicalInventoryReportData } from '@/modules/analytics/lib/actions';
-import type { PhysicalInventoryComparisonItem, DateRange, Product, UserPreferences } from '@/modules/core/types';
+import type { PhysicalInventoryComparisonItem, DateRange, Product, UserPreferences, ItemLocation } from '@/modules/core/types';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { format, parseISO, startOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -43,7 +43,8 @@ interface State {
 
 export const availableColumns = [
     { id: 'productId', label: 'Producto', sortable: true },
-    { id: 'locationName', label: 'Ubicación', sortable: true },
+    { id: 'locationName', label: 'Ubicación Conteo', sortable: true },
+    { id: 'assignedLocation', label: 'Ubicación Designada', sortable: false },
     { id: 'physicalCount', label: 'Conteo Físico', sortable: true, align: 'right' },
     { id: 'erpStock', label: 'Stock ERP', sortable: true, align: 'right' },
     { id: 'difference', label: 'Diferencia', sortable: true, align: 'right' },
@@ -193,7 +194,8 @@ export function usePhysicalInventoryReport() {
         const dataToExport = sortedData.map(item => ({
             'Código Producto': item.productId,
             'Descripción': item.productDescription,
-            'Ubicación': `${item.locationCode} (${item.locationName})`,
+            'Ubicación Conteo': `${item.locationCode} (${item.locationName})`,
+            'Ubicación Designada': item.assignedLocationPath || 'N/A',
             'Conteo Físico': item.physicalCount,
             'Stock ERP': item.erpStock,
             'Diferencia': item.difference,
@@ -206,16 +208,17 @@ export function usePhysicalInventoryReport() {
             sheetName: 'ConteoFisico',
             headers: Object.keys(dataToExport[0] || {}),
             data: dataToExport.map(item => Object.values(item)),
-            columnWidths: [20, 40, 25, 15, 15, 15, 20, 20],
+            columnWidths: [20, 40, 25, 25, 15, 15, 15, 20, 20],
         });
     };
 
     const handleExportPDF = async () => {
         if (!companyData) return;
-        const tableHeaders = ["Producto", "Ubicación", "Físico", "ERP", "Dif.", "Contado Por", "Fecha"];
+        const tableHeaders = ["Producto", "Ubicación Conteo", "Ubic. Designada", "Físico", "ERP", "Dif.", "Contado Por", "Fecha"];
         const tableRows = sortedData.map(item => [
             `${item.productDescription}\n(${item.productId})`,
             `${item.locationName} (${item.locationCode})`,
+            item.assignedLocationPath || 'N/A',
             item.physicalCount.toLocaleString(),
             item.erpStock.toLocaleString(),
             item.difference.toLocaleString(),
@@ -226,7 +229,7 @@ export function usePhysicalInventoryReport() {
             docTitle: "Reporte de Comparación de Inventario", docId: '', companyData,
             meta: [{ label: 'Generado', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
             blocks: [],
-            table: { columns: tableHeaders, rows: tableRows, columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } } },
+            table: { columns: tableHeaders, rows: tableRows, columnStyles: { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } } },
             totals: [], orientation: 'landscape'
         });
         doc.save('reporte_inventario_fisico.pdf');

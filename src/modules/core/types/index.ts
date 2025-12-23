@@ -779,6 +779,7 @@ export interface PhysicalInventoryComparisonItem {
     difference: number;
     lastCountDate: string;
     updatedBy: string;
+    assignedLocationPath: string;
 }
 
 // --- User Preferences ---
