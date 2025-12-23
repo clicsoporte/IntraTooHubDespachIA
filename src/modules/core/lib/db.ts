@@ -8,8 +8,9 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import { DB_MODULES, initialCompany, initialRoles } from './data';
-import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig } from '@/modules/core/types';
+import { initialCompany, initialRoles } from './data';
+import { DB_MODULES } from './db-modules'; // Import from the new central location
+import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig, ProductionOrder } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
@@ -1546,6 +1547,6 @@ export async function runSingleModuleMigration(moduleId: string): Promise<void> 
 
 
 // --- Planner-specific functions moved from core ---
-export async function confirmPlannerModification(orderId: number, updatedBy: string) {
+export async function confirmPlannerModification(orderId: number, updatedBy: string): Promise<ProductionOrder> {
     return confirmPlannerModificationServer(orderId, updatedBy);
 }
