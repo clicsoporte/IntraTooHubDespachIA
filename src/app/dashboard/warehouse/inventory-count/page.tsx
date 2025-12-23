@@ -20,6 +20,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Loader2, Save, List } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
     if (!locationId) return '';

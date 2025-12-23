@@ -330,7 +330,7 @@ export default function AssignItemPage() {
                                         <div className="space-y-2">
                                             <Label>1. Seleccione un Producto <span className="text-destructive">*</span></Label>
                                             <SearchInput options={productOptions} onSelect={handleSelectProduct} value={productSearchTerm} onValueChange={setProductSearchTerm} placeholder="Buscar producto..." open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} />
-                                             <div className="flex items-center space-x-2 pt-1">
+                                            <div className="flex items-center space-x-2 pt-1">
                                                 <Checkbox id="exact-product-match" checked={exactProductMatch} onCheckedChange={(checked) => setExactProductMatch(checked as boolean)} />
                                                 <Label htmlFor="exact-product-match" className="text-xs font-normal">Buscar coincidencia exacta de código</Label>
                                             </div>
