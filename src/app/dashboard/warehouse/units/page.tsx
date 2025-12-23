@@ -38,7 +38,9 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
     let current: WarehouseLocation | undefined = locations.find(l => l.id === locationId);
     while (current) {
         path.unshift(current);
-        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+        // Safely access parentId, as `current` is guaranteed to be defined here.
+        const parentId = current.parentId;
+        current = parentId ? locations.find(l => l.id === parentId) : undefined;
     }
     return path.map(l => l.name).join(' > ');
 };
@@ -113,7 +115,7 @@ export default function ManageUnitsPage() {
     }, [locations, debouncedLocationSearch]);
 
     const handleSelectProduct = (value: string) => {
-        setProductSearchOpen(false);
+        setIsProductSearchOpen(false);
         const product = products.find(p => p.id === value);
         if (product) {
             setNewUnit(prev => ({ ...prev, productId: value }));
