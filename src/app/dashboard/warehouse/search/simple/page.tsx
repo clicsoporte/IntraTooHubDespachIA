@@ -8,10 +8,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { useAuth } from '@/modules/core/hooks/useAuth';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getWarehouseData, getInventoryUnitById, addInventoryUnit } from '@/modules/warehouse/lib/actions';
+import { getWarehouseData, addInventoryUnit } from '@/modules/warehouse/lib/actions';
 import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit, WarehouseSettings } from '@/modules/core/types';
 import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, Loader2, Info, User, ChevronRight, Printer, LogOut } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
@@ -19,15 +18,15 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { SearchInput } from '@/components/ui/search-input';
 import jsPDF from "jspdf";
 import QRCode from 'qrcode';
 import { format } from 'date-fns';
 
 type SearchableItem = {
   id: string;
-  type: 'product' | 'customer';
+  type: 'product' | 'unit';
   searchText: string;
 };
 
@@ -111,7 +110,9 @@ export default function SimpleWarehouseSearchPage() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [exactMatch, setExactMatch] = useState(true);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<SearchableItem | null>(null);
+
     const [debouncedSearchTerm] = useDebounce(searchTerm, companyData?.searchDebounceTime ?? 500);
     
     const [locations, setLocations] = useState<WarehouseLocation[]>([]);
@@ -120,8 +121,6 @@ export default function SimpleWarehouseSearchPage() {
     const [stock, setStock] = useState<StockInfo[]>([]);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
     const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
-
-    const [unitSearchResult, setUnitSearchResult] = useState<InventoryUnit | null>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -145,77 +144,54 @@ export default function SimpleWarehouseSearchPage() {
         setTitle("Búsqueda Rápida de Almacén");
         loadData();
     }, [setTitle, loadData]);
-    
-    useEffect(() => {
-        const performUnitSearch = async () => {
-            const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
-            if (exactMatch && warehouseSettings?.unitPrefix && normalizedSearch.startsWith(warehouseSettings.unitPrefix)) {
-                setIsLoading(true);
-                try {
-                    const unit = await getInventoryUnitById(normalizedSearch);
-                    setUnitSearchResult(unit);
-                } catch(e) {
-                    setUnitSearchResult(null);
-                } finally {
-                    setIsLoading(false);
-                }
-            } else {
-                setUnitSearchResult(null);
-            }
-        };
-        performUnitSearch();
-    }, [debouncedSearchTerm, exactMatch, warehouseSettings?.unitPrefix]);
+
+    const searchOptions = useMemo(() => {
+        if (debouncedSearchTerm.length < 2) return [];
+
+        const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
+        if (searchTerms.length === 0) return [];
+        
+        const productResults = products
+            .filter(p => searchTerms.every(term => normalizeText(`${p.id} ${p.description}`).includes(term)))
+            .map(p => ({ value: `product-${p.id}`, label: `[ARTÍCULO] ${p.id} - ${p.description}` }));
+
+        const unitCodePrefix = warehouseSettings?.unitPrefix?.toUpperCase();
+        const unitResults = unitCodePrefix && debouncedSearchTerm.toUpperCase().startsWith(unitCodePrefix)
+            ? [{ value: `unit-${debouncedSearchTerm.toUpperCase()}`, label: `[UNIDAD] ${debouncedSearchTerm.toUpperCase()}` }]
+            : [];
+            
+        return [...unitResults, ...productResults];
+
+    }, [debouncedSearchTerm, products, warehouseSettings]);
+
+    const handleSelectSearchItem = (value: string) => {
+        const [type, id] = value.split('-');
+        setIsSearchOpen(false);
+
+        if (type === 'product') {
+            const product = products.find(p => p.id === id);
+            if (product) setSelectedItem({ id: product.id, type: 'product', searchText: '' });
+        } else if (type === 'unit') {
+            setSelectedItem({ id, type: 'unit', searchText: '' });
+        }
+    };
 
 
     const filteredItems = useMemo((): CombinedItem[] => {
-        if (unitSearchResult) {
-            const product = products.find(p => p.id === unitSearchResult.productId);
-            const erpStock = stock.find(s => s.itemId === unitSearchResult.productId);
-            return [{
-                isUnit: true,
-                unit: unitSearchResult,
-                product: product || { id: unitSearchResult.productId, description: `Artículo ${unitSearchResult.productId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
-                physicalLocations: [{
-                    path: renderLocationPath(unitSearchResult.locationId, locations),
-                    location: locations.find(l => l.id === unitSearchResult.locationId),
-                }],
-                erpStock: erpStock || null,
-            }]
-        }
-        
-        if (!debouncedSearchTerm) return [];
-        const normalizedSearch = normalizeText(debouncedSearchTerm);
-        
-        let matchedIndexItems: SearchableItem[] = [];
-        
-        if (exactMatch) {
-             if (warehouseSettings?.unitPrefix && normalizedSearch.toUpperCase().startsWith(warehouseSettings.unitPrefix)) return [];
-             const exactMatchLower = normalizedSearch.toLowerCase();
-             matchedIndexItems = products.filter(p => normalizeText(p.id).toLowerCase() === exactMatchLower).map(p => ({ id: p.id, type: 'product', searchText: '' }));
-        } else {
-            const searchTerms = normalizedSearch.split(' ').filter(Boolean);
-            if (searchTerms.length === 0) return [];
-            matchedIndexItems = products.filter(p => {
-                const targetText = normalizeText(`${p.id} ${p.description}`);
-                return searchTerms.every(term => targetText.includes(term));
-            }).map(p => ({ id: p.id, type: 'product', searchText: '' }));
-        }
+        if (!selectedItem) return [];
 
-        const relevantProductIds = new Set(matchedIndexItems.map(i => i.id));
         const groupedByItem: { [key: string]: SearchResultItem } = {};
 
-        relevantProductIds.forEach(productId => {
-            if (!groupedByItem[productId]) {
-                const product = products.find(p => p.id === productId);
-                groupedByItem[productId] = {
-                    isUnit: false,
-                    unit: null,
-                    product: product || null,
+        if (selectedItem.type === 'product') {
+            const product = products.find(p => p.id === selectedItem.id);
+            if (product) {
+                groupedByItem[product.id] = {
+                    isUnit: false, unit: null, product,
                     physicalLocations: [],
-                    erpStock: stock.find(s => s.itemId === productId) || null,
+                    erpStock: stock.find(s => s.itemId === product.id) || null,
                 };
             }
-        });
+        }
         
         inventory.forEach(item => {
             if (groupedByItem[item.itemId]) {
@@ -228,18 +204,17 @@ export default function SimpleWarehouseSearchPage() {
         });
         
         itemLocations.forEach(itemLoc => {
-            if (groupedByItem[itemLoc.itemId]) {
+            if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
                 groupedByItem[itemLoc.itemId].physicalLocations.push({
                     path: renderLocationPath(itemLoc.locationId, locations),
                     clientId: itemLoc.clientId || undefined,
                     location: locations.find(l => l.id === itemLoc.locationId),
                 });
-            } 
+            }
         });
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
-
-    }, [debouncedSearchTerm, products, inventory, itemLocations, stock, warehouseSettings, locations, exactMatch, unitSearchResult]);
+    }, [selectedItem, products, inventory, itemLocations, stock, locations]);
     
     const handlePrintLabel = async (product: Product, location: WarehouseLocation) => {
         if (!user) return;
@@ -278,21 +253,17 @@ export default function SimpleWarehouseSearchPage() {
             </header>
             <main className="flex-1 overflow-y-auto">
                 <div className="space-y-4">
-                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Escanear o buscar código..."
-                            className="w-full pl-10 text-lg h-14"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="exact-match-simple" checked={exactMatch} onCheckedChange={(checked) => setExactMatch(checked as boolean)} />
-                        <Label htmlFor="exact-match-simple">Buscar coincidencia exacta de código / ID</Label>
-                    </div>
-
+                     <SearchInput
+                        options={searchOptions || []}
+                        onSelect={handleSelectSearchItem}
+                        value={searchTerm}
+                        onValueChange={setSearchTerm}
+                        onOpenChange={setIsSearchOpen}
+                        open={isSearchOpen}
+                        placeholder="Escanear o buscar código..."
+                        className="text-lg h-14"
+                     />
+                    
                     <div className="space-y-4 pt-4">
                          {filteredItems.length > 0 ? (
                             filteredItems.map((item, itemIndex) => {

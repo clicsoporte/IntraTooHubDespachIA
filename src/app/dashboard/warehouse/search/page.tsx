@@ -10,10 +10,9 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { useAuth } from '@/modules/core/hooks/useAuth';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getWarehouseData, getInventoryUnitById, addInventoryUnit } from '@/modules/warehouse/lib/actions';
+import { getWarehouseData, addInventoryUnit } from '@/modules/warehouse/lib/actions';
 import { syncAllData } from '@/modules/core/lib/actions';
 import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit, WarehouseSettings } from '@/modules/core/types';
 import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, RefreshCw, Loader2, Info, User, ChevronRight, Printer } from 'lucide-react';
@@ -24,17 +23,17 @@ import { logError, logInfo } from '@/modules/core/lib/logger';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { SearchInput } from '@/components/ui/search-input';
 import jsPDF from "jspdf";
 import QRCode from 'qrcode';
 import { format } from 'date-fns';
 
 type SearchableItem = {
   id: string;
-  type: 'product' | 'customer';
+  type: 'product' | 'customer' | 'unit';
   searchText: string;
 };
 
-// Base type for product-centric or customer-centric results
 type SearchResultItem = {
     isUnit: false;
     unit: null;
@@ -49,14 +48,13 @@ type SearchResultItem = {
     client?: Customer | null;
 }
 
-// Type specifically for unit search results
 type UnitResultItem = {
     isUnit: true;
     unit: InventoryUnit;
     product: Product | null;
     physicalLocations: {
         path: React.ReactNode;
-        quantity?: undefined; // Units don't have separate quantities in this view
+        quantity?: undefined;
         clientId?: undefined;
         location: WarehouseLocation | undefined;
     }[];
@@ -118,8 +116,11 @@ export default function WarehouseSearchPage() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    
     const [searchTerm, setSearchTerm] = useState('');
-    const [exactMatch, setExactMatch] = useState(true);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<SearchableItem | null>(null);
+
     const [debouncedSearchTerm] = useDebounce(searchTerm, companyData?.searchDebounceTime ?? 500);
     
     const [locations, setLocations] = useState<WarehouseLocation[]>([]);
@@ -128,8 +129,6 @@ export default function WarehouseSearchPage() {
     const [stock, setStock] = useState<StockInfo[]>([]);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
     const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
-
-    const [unitSearchResult, setUnitSearchResult] = useState<InventoryUnit | null>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -176,93 +175,61 @@ export default function WarehouseSearchPage() {
         }
     };
 
-    const searchIndex = useMemo(() => {
-        const productIndex: SearchableItem[] = products.map(p => ({
-            id: p.id,
-            type: 'product',
-            searchText: normalizeText(`${p.id} ${p.description}`)
-        }));
-        const customerIndex: SearchableItem[] = customers.map(c => ({
-            id: c.id,
-            type: 'customer',
-            searchText: normalizeText(`${c.id} ${c.name}`)
-        }));
-        return [...productIndex, ...customerIndex];
-    }, [products, customers]);
-    
-     useEffect(() => {
-        const performUnitSearch = async () => {
-            const normalizedSearch = debouncedSearchTerm.trim().toUpperCase();
-            if (exactMatch && warehouseSettings?.unitPrefix && normalizedSearch.startsWith(warehouseSettings.unitPrefix)) {
-                setIsLoading(true);
-                try {
-                    const unit = await getInventoryUnitById(normalizedSearch);
-                    setUnitSearchResult(unit);
-                } catch(e) {
-                    setUnitSearchResult(null);
-                } finally {
-                    setIsLoading(false);
-                }
-            } else {
-                setUnitSearchResult(null);
-            }
-        };
-        performUnitSearch();
-    }, [debouncedSearchTerm, exactMatch, warehouseSettings?.unitPrefix]);
+    const searchOptions = useMemo(() => {
+        if (debouncedSearchTerm.length < 2) return [];
+
+        const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
+        if (searchTerms.length === 0) return [];
+        
+        const productResults = products
+            .filter(p => searchTerms.every(term => normalizeText(`${p.id} ${p.description}`).includes(term)))
+            .map(p => ({ value: `product-${p.id}`, label: `[ARTÍCULO] ${p.id} - ${p.description}` }));
+
+        const customerResults = customers
+            .filter(c => searchTerms.every(term => normalizeText(`${c.id} ${c.name}`).includes(term)))
+            .map(c => ({ value: `customer-${c.id}`, label: `[CLIENTE] ${c.id} - ${c.name}` }));
+
+        const unitCodePrefix = warehouseSettings?.unitPrefix?.toUpperCase();
+        const unitResults = unitCodePrefix && debouncedSearchTerm.toUpperCase().startsWith(unitCodePrefix)
+            ? [{ value: `unit-${debouncedSearchTerm.toUpperCase()}`, label: `[UNIDAD] ${debouncedSearchTerm.toUpperCase()}` }]
+            : [];
+            
+        return [...unitResults, ...productResults, ...customerResults];
+
+    }, [debouncedSearchTerm, products, customers, warehouseSettings]);
+
+    const handleSelectSearchItem = (value: string) => {
+        const [type, id] = value.split('-');
+        setIsSearchOpen(false);
+
+        if (type === 'product') {
+            const product = products.find(p => p.id === id);
+            if (product) setSelectedItem({ id: product.id, type: 'product', searchText: '' });
+        } else if (type === 'customer') {
+            const customer = customers.find(c => c.id === id);
+            if (customer) setSelectedItem({ id: customer.id, type: 'customer', searchText: '' });
+        } else if (type === 'unit') {
+            setSelectedItem({ id, type: 'unit', searchText: '' });
+        }
+    };
 
 
     const filteredItems = useMemo((): CombinedItem[] => {
-        if (unitSearchResult) {
-            const product = products.find(p => p.id === unitSearchResult.productId);
-            const erpStock = stock.find(s => s.itemId === unitSearchResult.productId);
-            return [{
-                isUnit: true,
-                unit: unitSearchResult,
-                product: product || { id: unitSearchResult.productId, description: `Artículo ${unitSearchResult.productId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
-                physicalLocations: [{
-                    path: renderLocationPath(unitSearchResult.locationId, locations),
-                    location: locations.find(l => l.id === unitSearchResult.locationId),
-                }],
-                erpStock: erpStock || null,
-            }]
-        }
-        
-        if (!debouncedSearchTerm) return [];
-        const normalizedSearch = normalizeText(debouncedSearchTerm);
-        
-        let matchedIndexItems: SearchableItem[];
-        
-        if (exactMatch) {
-             if (warehouseSettings?.unitPrefix && normalizedSearch.toUpperCase().startsWith(warehouseSettings.unitPrefix)) return [];
-             const exactMatchLower = normalizedSearch.toLowerCase();
-             matchedIndexItems = searchIndex.filter(item => normalizeText(item.id).toLowerCase() === exactMatchLower);
-        } else {
-            const searchTerms = normalizedSearch.split(' ').filter(Boolean);
-            if (searchTerms.length === 0) return [];
-            matchedIndexItems = searchIndex.filter(item => 
-                searchTerms.every(term => item.searchText.includes(term))
-            );
-        }
-
-        const relevantProductIds = new Set(matchedIndexItems.filter(i => i.type === 'product').map(i => i.id));
-        const relevantCustomerIds = new Set(matchedIndexItems.filter(i => i.type === 'customer').map(i => i.id));
+        if (!selectedItem) return [];
 
         const groupedByItem: { [key: string]: SearchResultItem } = {};
 
-        relevantProductIds.forEach(productId => {
-            if (!groupedByItem[productId]) {
-                const product = products.find(p => p.id === productId);
-                groupedByItem[productId] = {
-                    isUnit: false,
-                    unit: null,
-                    product: product || null,
+        if(selectedItem.type === 'product') {
+            const product = products.find(p => p.id === selectedItem.id);
+            if (product) {
+                groupedByItem[product.id] = {
+                    isUnit: false, unit: null, product,
                     physicalLocations: [],
-                    erpStock: stock.find(s => s.itemId === productId) || null,
+                    erpStock: stock.find(s => s.itemId === product.id) || null,
                 };
             }
-        });
+        }
         
-        // This logic is now unified. We always show physical counts.
         inventory.forEach(item => {
             if (groupedByItem[item.itemId]) {
                 groupedByItem[item.itemId].physicalLocations.push({
@@ -274,27 +241,24 @@ export default function WarehouseSearchPage() {
         });
         
         itemLocations.forEach(itemLoc => {
-            const product = products.find(p => p.id === itemLoc.itemId);
-            
-            if (groupedByItem[itemLoc.itemId]) {
+            if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
                 groupedByItem[itemLoc.itemId].physicalLocations.push({
                     path: renderLocationPath(itemLoc.locationId, locations),
                     clientId: itemLoc.clientId || undefined,
                     location: locations.find(l => l.id === itemLoc.locationId),
                 });
-            } 
-            else if (itemLoc.clientId && relevantCustomerIds.has(itemLoc.clientId)) {
-                if (!groupedByItem[itemLoc.itemId]) {
+            } else if (selectedItem.type === 'customer' && itemLoc.clientId === selectedItem.id) {
+                 const product = products.find(p => p.id === itemLoc.itemId);
+                 if (!groupedByItem[itemLoc.itemId]) {
                      groupedByItem[itemLoc.itemId] = {
-                        isUnit: false,
-                        unit: null,
+                        isUnit: false, unit: null,
                         product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
                         physicalLocations: [],
                         erpStock: stock.find(s => s.itemId === itemLoc.itemId) || null,
                         client: customers.find(c => c.id === itemLoc.clientId)
                     };
-                }
-                groupedByItem[itemLoc.itemId].physicalLocations.push({
+                 }
+                 groupedByItem[itemLoc.itemId].physicalLocations.push({
                     path: renderLocationPath(itemLoc.locationId, locations),
                     clientId: itemLoc.clientId || undefined,
                     location: locations.find(l => l.id === itemLoc.locationId),
@@ -304,7 +268,7 @@ export default function WarehouseSearchPage() {
         
         return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
-    }, [debouncedSearchTerm, searchIndex, products, customers, inventory, itemLocations, stock, warehouseSettings, locations, exactMatch, unitSearchResult]);
+    }, [selectedItem, products, customers, inventory, itemLocations, stock, locations]);
     
     const handlePrintLabel = async (product: Product, location: WarehouseLocation) => {
         if (!user) {
@@ -381,24 +345,16 @@ export default function WarehouseSearchPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Escribe el código/descripción del artículo, cliente o ID de unidad..."
-                                    className="w-full pl-10 text-lg h-14"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox 
-                                    id="exact-match" 
-                                    checked={exactMatch} 
-                                    onCheckedChange={(checked) => setExactMatch(checked as boolean)}
-                                />
-                                <Label htmlFor="exact-match">Buscar coincidencia exacta de código / ID de unidad</Label>
-                            </div>
+                            <SearchInput
+                                options={searchOptions || []}
+                                onSelect={handleSelectSearchItem}
+                                value={searchTerm}
+                                onValueChange={setSearchTerm}
+                                onOpenChange={setIsSearchOpen}
+                                open={isSearchOpen}
+                                placeholder="Escribe el código/descripción del artículo, cliente o ID de unidad..."
+                                className="text-lg h-14"
+                            />
                         </div>
                         
                         <div className="space-y-4">
