@@ -9,13 +9,13 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { initialCompany, initialRoles } from './data';
-import { DB_MODULES } from './db-modules'; // Import from the new central location
+import { DB_MODULES } from './db-modules';
 import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig, ProductionOrder } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
 import { logInfo, logWarn, logError } from './logger';
-import { confirmPlannerModification as confirmPlannerModificationServer } from '../../planner/lib/db';
+import { confirmModification as confirmPlannerModificationServer } from '../../planner/lib/db';
 
 const DB_FILE = 'intratool.db';
 const SALT_ROUNDS = 10;
@@ -1548,5 +1548,5 @@ export async function runSingleModuleMigration(moduleId: string): Promise<void> 
 
 // --- Planner-specific functions moved from core ---
 export async function confirmPlannerModification(orderId: number, updatedBy: string): Promise<ProductionOrder> {
-    return confirmPlannerModificationServer(orderId, updatedBy);
+    return await confirmPlannerModificationServer(orderId, updatedBy);
 }

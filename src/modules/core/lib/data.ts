@@ -4,7 +4,7 @@
  * Spanish is used for UI-facing strings like names and descriptions.
  */
 
-import type { Tool, User, Role, Company, DatabaseModule } from "@/modules/core/types";
+import type { Tool, User, Role, Company } from "@/modules/core/types";
 import {
   Users,
   Sheet,
@@ -35,9 +35,8 @@ import {
   Truck,
   QrCode,
   ClipboardCheck,
-  Wand2,
+  BookMarked,
 } from "lucide-react";
-
 
 /**
  * The default user to be created in the database.
@@ -294,6 +293,8 @@ export const initialRoles: Role[] = [
         "dashboard:access",
         "planner:read",
         "planner:create",
+        "planner:status:review",
+        "planner:status:pending-approval",
         "planner:status:approve",
         "planner:status:in-progress",
         "planner:status:on-hold",
