@@ -844,7 +844,7 @@ export default function HelpPage() {
                         <strong>Incidente de Iconos (Resuelto):</strong> Se diagnosticó y corrigió un problema visual donde los iconos de las tarjetas de herramientas perdieron sus colores únicos después de un cambio de arquitectura. <strong>Causa:</strong> Al refactorizar el componente `ToolCard` para asegurar la renderización de un icono faltante, se omitió la lógica que asignaba los colores de fondo dinámicos. <strong>Solución:</strong> Se actualizó `ToolCard` para aceptar nuevamente una propiedad `bgColor` y se restauraron las definiciones de color en el archivo `data.ts`, devolviendo la identidad visual a cada herramienta.
                     </li>
                     <li>
-                        <strong>Solución de Icono Blanco (Resuelto):</strong> Se identificó y solucionó un problema recurrente donde el icono de una nueva herramienta ("Gestionar Bloqueos") aparecía en blanco. La causa era que la clase de color de fondo (`bg-slate-500`) no estaba incluida en la `safelist` del archivo `tailwind.config.ts`, provocando que Tailwind la eliminara durante la compilación. Se añadió la clase a la lista para asegurar su disponibilidad.
+                        <strong>Solución de Icono Blanco (Resuelto):</strong> Se identificó y solucionó un problema recurrente donde el icono de una nueva herramienta (&quot;Gestionar Bloqueos&quot;) aparecía en blanco. La causa era que la clase de color de fondo (`bg-slate-500`) no estaba incluida en la `safelist` del archivo `tailwind.config.ts`, provocando que Tailwind la eliminara durante la compilación. Se añadió la clase a la lista para asegurar su disponibilidad.
                     </li>
                 </ul>
             </div>
