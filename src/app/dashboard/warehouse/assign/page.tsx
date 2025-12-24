@@ -269,27 +269,29 @@ export default function AssignItemPage() {
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(150);
             const productCodeLines = doc.splitTextToSize(product.id, pageWidth - 80);
-            doc.text(productCodeLines, pageWidth / 2, pageHeight / 2 - 60, { align: "center" });
+            let currentY = pageHeight / 2 - 80;
+            doc.text(productCodeLines, pageWidth / 2, currentY, { align: "center" });
+            currentY += (productCodeLines.length * 100);
     
             doc.setFont("Helvetica", "normal");
-            doc.setFontSize(24);
+            doc.setFontSize(36);
             const descriptionLines = doc.splitTextToSize(product.description, pageWidth - 80);
-            doc.text(descriptionLines, pageWidth / 2, pageHeight / 2 + (productCodeLines.length * 50), { align: "center" });
+            doc.text(descriptionLines, pageWidth / 2, currentY + 40, { align: "center" });
     
             const bottomY = pageHeight - 40;
-            doc.setFontSize(12);
+            doc.setFontSize(18);
             
             if (client) {
               doc.setFont("Helvetica", "bold");
-              doc.text("Cliente:", 40, bottomY - 40);
+              doc.text("Cliente:", 40, bottomY - 60);
               doc.setFont("Helvetica", "normal");
-              doc.text(client.name, 95, bottomY - 40);
+              doc.text(client.name, 120, bottomY - 60);
             }
             
             doc.setFont("Helvetica", "bold");
-            doc.text("Ubicación:", 40, bottomY - 20);
+            doc.text("Ubicación:", 40, bottomY - 30);
             doc.setFont("Helvetica", "normal");
-            doc.text(locationString, 105, bottomY - 20);
+            doc.text(locationString, 130, bottomY - 30);
     
             doc.setFontSize(9);
             doc.setTextColor(150);
