@@ -12,4 +12,5 @@ export const warehouseSchema: ExpectedSchema = {
     'inventory_units': ['id', 'unitCode', 'productId', 'humanReadableId', 'locationId', 'notes', 'createdAt', 'createdBy'],
     'movements': ['id', 'itemId', 'quantity', 'fromLocationId', 'toLocationId', 'timestamp', 'userId', 'notes'],
     'warehouse_config': ['key', 'value'],
+    'active_wizard_sessions': ['id', 'userId', 'userName', 'lockedEntityId', 'lockedEntityType', 'lockedEntityName', 'expiresAt'],
 };

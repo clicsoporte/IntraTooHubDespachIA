@@ -17,7 +17,7 @@ import { mainDbSchema } from './schema';
  * Acts as a registry for all database modules in the application.
  * This is the single source of truth for module definitions, containing only configuration data.
  */
-export const DB_MODULES: DatabaseModule[] = [
+export const DB_MODULES: Omit<DatabaseModule, 'initFn' | 'migrationFn'>[] = [
     { 
         id: 'clic-tools-main', 
         name: 'Clic-Tools (Sistema Principal)', 

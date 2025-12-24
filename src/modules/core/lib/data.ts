@@ -38,6 +38,7 @@ import {
   ClipboardList,
   Wand2,
   BookUser,
+  Lock,
 } from "lucide-react";
 import { mainDbSchema } from './schema';
 import { plannerSchema } from '../../planner/lib/schema';
@@ -160,9 +161,17 @@ export const warehouseTools: Tool[] = [
         icon: QrCode,
         bgColor: 'bg-sky-600',
     },
+    {
+        id: 'population-wizard',
+        name: 'Asistente de Poblado',
+        description: 'Poblar masivamente las ubicaciones de un rack de forma guiada.',
+        href: '/dashboard/warehouse/population-wizard',
+        icon: Wand2,
+        bgColor: 'bg-indigo-500',
+    },
      {
         id: "assign-item",
-        name: "Asignar Ubicación a Producto",
+        name: "Catálogo de Ubicaciones",
         description: "Asociar productos a clientes y ubicaciones de forma permanente.",
         href: "/dashboard/warehouse/assign",
         icon: PackagePlus,
@@ -191,6 +200,14 @@ export const warehouseTools: Tool[] = [
         href: "/dashboard/warehouse/locations",
         icon: Map,
         bgColor: 'bg-purple-600',
+    },
+    {
+        id: 'lock-management',
+        name: 'Gestionar Bloqueos',
+        description: 'Ver y liberar racks o niveles que están siendo editados.',
+        href: '/dashboard/warehouse/locks',
+        icon: Lock,
+        bgColor: 'bg-slate-500',
     }
 ];
 
@@ -284,6 +301,7 @@ export const initialRoles: Role[] = [
         "warehouse:access",
         "warehouse:inventory:assign",
         "warehouse:locations:manage",
+        "warehouse:locks:manage",
         "warehouse:units:manage",
         "hacienda:query",
     ],
