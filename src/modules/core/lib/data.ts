@@ -35,9 +35,7 @@ import {
   Truck,
   QrCode,
   ClipboardCheck,
-  ClipboardList,
   Wand2,
-  BookUser,
   Lock,
 } from "lucide-react";
 import { mainDbSchema } from './schema';
@@ -418,7 +416,7 @@ export const adminTools: Tool[] = [
         name: "Config. Cotizador",
         description: "Gestionar prefijos y consecutivos del cotizador.",
         href: "/dashboard/admin/quoter", 
-        icon: BookUser,
+        icon: Sheet,
         bgColor: 'bg-blue-600',
       },
       {
