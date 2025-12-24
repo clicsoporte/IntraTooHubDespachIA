@@ -29,6 +29,7 @@ import {
     lockEntity as lockEntityServer,
     releaseLock as releaseLockServer,
     forceReleaseLock as forceReleaseLockServer,
+    getChildLocations as getChildLocationsServer,
 } from './db';
 import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, WizardSession } from '@/modules/core/types';
 import { logInfo, logWarn } from '@/modules/core/lib/logger';
@@ -100,3 +101,4 @@ export const getActiveLocks = async (): Promise<WizardSession[]> => getActiveLoc
 export const lockEntity = async (payload: Omit<WizardSession, 'id' | 'lockedEntityName' | 'expiresAt'> & { entityIds: number[]; entityName: string }): Promise<{ sessionId: number, locked: boolean }> => lockEntityServer(payload);
 export const releaseLock = async (sessionId: number): Promise<void> => releaseLockServer(sessionId);
 export const forceReleaseLock = async (sessionId: number): Promise<void> => forceReleaseLockServer(sessionId);
+export const getChildLocations = async (parentIds: number[]): Promise<WarehouseLocation[]> => getChildLocationsServer(parentIds);

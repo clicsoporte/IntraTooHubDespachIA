@@ -66,7 +66,7 @@ const permissionGroups = {
         "planner:priority:update", "planner:machine:assign", "planner:schedule"
     ],
     "Asistente de Costos": ["cost-assistant:access", "cost-assistant:drafts:read-write"],
-    "Gestión de Almacenes": ["warehouse:access", "warehouse:inventory:assign", "warehouse:locations:manage", "warehouse:units:manage"],
+    "Gestión de Almacenes": ["warehouse:access", "warehouse:inventory:assign", "warehouse:locations:manage", "warehouse:units:manage", "warehouse:locks:manage"],
     "Consultas Hacienda": ["hacienda:query"],
     "Analíticas y Reportes": ["analytics:read", "analytics:purchase-suggestions:read", "analytics:production-report:read", "analytics:user-permissions:read"],
     "Gestión de Usuarios": ["users:create", "users:read", "users:update", "users:delete"],
@@ -125,6 +125,7 @@ const permissionTranslations: { [key: string]: string } = {
     "warehouse:inventory:assign": "Almacén: Asignar Inventario",
     "warehouse:locations:manage": "Almacén: Gestionar Ubicaciones",
     "warehouse:units:manage": "Almacén: Gestionar Unidades (QR)",
+    "warehouse:locks:manage": "Almacén: Gestionar Bloqueos",
     "hacienda:query": "Hacienda: Realizar Consultas",
     "analytics:read": "Analíticas: Acceso",
     "analytics:purchase-suggestions:read": "Analíticas: Ver Sugerencias Compra",

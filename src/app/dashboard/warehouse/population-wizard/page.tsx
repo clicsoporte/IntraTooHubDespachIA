@@ -152,7 +152,7 @@ export default function PopulationWizardPage() {
         const currentLocation = locationsToPopulate[currentIndex];
         if (productId && user) {
             try {
-                await assignItemToLocation(productId, currentLocation.id, null);
+                await assignItemToLocation(productId, currentLocation.id, null, user.name);
                 const productName = authProducts.find(p => p.id === productId)?.description || productId;
                 setLastAssignment({ location: renderLocationPathAsString(currentLocation.id, allLocations), product: productName });
             } catch (err: any) {

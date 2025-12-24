@@ -498,6 +498,8 @@ export type ItemLocation = {
     itemId: string;
     locationId: number;
     clientId?: string | null;
+    updatedBy?: string;
+    updatedAt?: string;
 };
 
 /** Represents a single physical unit of inventory (pallet, box, etc.) */
@@ -655,6 +657,16 @@ export type AuditResult = {
     dbFile: string;
     status: 'OK' | 'ERROR';
     issues: string[];
+};
+
+export type WizardSession = {
+    id: number;
+    userId: number;
+    userName: string;
+    lockedEntityId: number;
+    lockedEntityType: 'rack' | 'level';
+    lockedEntityName: string;
+    expiresAt: string;
 };
 
 // --- Suggestion Box Types ---
