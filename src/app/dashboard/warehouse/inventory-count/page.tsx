@@ -21,6 +21,7 @@ import { Loader2, Save, List } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
     if (!locationId) return '';
@@ -56,6 +57,8 @@ export default function InventoryCountPage() {
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [locationSearchTerm, setLocationSearchTerm] = useState('');
     const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
+
+    const [keepLocation, setKeepLocation] = useState(false);
 
     const [debouncedProductSearch] = useDebounce(productSearchTerm, companyData?.searchDebounceTime ?? 500);
     const [debouncedLocationSearch] = useDebounce(locationSearchTerm, 300);
@@ -142,10 +145,15 @@ export default function InventoryCountPage() {
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
             logInfo('Physical inventory count saved', { itemId: selectedProductId, locationId: selectedLocationId, quantity, user: user.name });
             
-            // Reset product for next count
+            // Reset fields for next count
             setSelectedProductId(null);
             setProductSearchTerm('');
             setCountedQuantity('');
+
+            if (!keepLocation) {
+                setSelectedLocationId(null);
+                setLocationSearchTerm('');
+            }
 
         } catch(e: any) {
             logError('Failed to save inventory count', { error: e.message });
@@ -158,14 +166,7 @@ export default function InventoryCountPage() {
     if (isLoading) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
-                 <div className="grid gap-8 md:grid-cols-3">
-                    <div className="md:col-span-1 space-y-6">
-                        <Skeleton className="h-64 w-full" />
-                    </div>
-                    <div className="md:col-span-2">
-                        <Skeleton className="h-80 w-full" />
-                    </div>
-                </div>
+                 <Skeleton className="h-96 w-full max-w-2xl mx-auto" />
             </main>
         )
     }
@@ -177,20 +178,24 @@ export default function InventoryCountPage() {
                     <CardHeader>
                         <CardTitle>Toma de Inventario Físico</CardTitle>
                         <CardDescription>Selecciona un producto y una ubicación para registrar la cantidad contada físicamente.</CardDescription>
+                         <div className="flex items-center space-x-2 pt-4">
+                            <Switch id="keep-location" checked={keepLocation} onCheckedChange={setKeepLocation} />
+                            <Label htmlFor="keep-location">Mantener Ubicación Seleccionada</Label>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label>1. Seleccione un Producto</Label>
-                            <SearchInput options={productOptions} onSelect={handleSelectProduct} value={productSearchTerm} onValueChange={setProductSearchTerm} placeholder="Buscar producto..." open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>2. Seleccione una Ubicación</Label>
+                            <Label>1. Seleccione una Ubicación</Label>
                             <div className="flex items-center gap-2">
                                 <SearchInput options={locationOptions} onSelect={handleSelectLocation} value={locationSearchTerm} onValueChange={setLocationSearchTerm} placeholder="Buscar... ('*' o vacío para ver todas)" open={isLocationSearchOpen} onOpenChange={setIsLocationSearchOpen} />
                                 <Button type="button" variant="outline" size="icon" onClick={() => {setLocationSearchTerm('*'); setIsLocationSearchOpen(true);}}>
                                     <List className="h-4 w-4" />
                                 </Button>
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>2. Seleccione un Producto</Label>
+                            <SearchInput options={productOptions} onSelect={handleSelectProduct} value={productSearchTerm} onValueChange={setProductSearchTerm} placeholder="Buscar producto..." open={isProductSearchOpen} onOpenChange={setIsProductSearchOpen} />
                         </div>
                          <div className="space-y-2">
                             <Label>3. Ingrese la Cantidad Contada</Label>

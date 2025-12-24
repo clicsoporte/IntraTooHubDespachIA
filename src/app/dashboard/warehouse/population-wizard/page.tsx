@@ -33,7 +33,8 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
     while (current) {
         path.unshift(current);
         const parentId = current.parentId;
-        current = parentId ? locations.find(l => l.id === parentId) : undefined;
+        if (!parentId) break;
+        current = locations.find(l => l.id === parentId);
     }
     return path.map(l => l.name).join(' > ');
 };
