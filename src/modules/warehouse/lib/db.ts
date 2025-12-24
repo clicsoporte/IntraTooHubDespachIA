@@ -517,3 +517,10 @@ export async function forceReleaseLock(sessionId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('DELETE FROM active_wizard_sessions WHERE id = ?').run(sessionId);
 }
+
+export async function getChildLocations(parentIds: number[]): Promise<WarehouseLocation[]> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    if (parentIds.length === 0) return [];
+    const placeholders = parentIds.map(() => '?').join(',');
+    return db.prepare(`SELECT * FROM locations WHERE parentId IN (${placeholders})`).all(...parentIds) as WarehouseLocation[];
+}
