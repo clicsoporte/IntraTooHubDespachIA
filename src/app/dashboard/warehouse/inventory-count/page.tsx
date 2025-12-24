@@ -183,7 +183,7 @@ export default function InventoryCountPage() {
                             <Label htmlFor="keep-location">Mantener Ubicación Seleccionada</Label>
                         </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
                         <div className="space-y-2">
                             <Label>1. Seleccione una Ubicación</Label>
                             <div className="flex items-center gap-2">

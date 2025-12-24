@@ -311,12 +311,12 @@ export default function ManageLocationsPage() {
                                     <CardDescription>
                                         Usa los niveles que definiste para construir la estructura de tu almacén.
                                     </CardDescription>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <Button onClick={() => openLocationForm()}>
+                                    <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+                                        <Button onClick={() => openLocationForm()} className="flex-1 sm:flex-grow-0">
                                             <PlusCircle className="mr-2"/> Añadir Manual
                                         </Button>
-                                        <Button variant="secondary" onClick={() => setWizardOpen(true)}>
-                                            <Wand2 className="mr-2"/> Asistente de Racks
+                                        <Button variant="secondary" onClick={() => setWizardOpen(true)} className="flex-1 sm:flex-grow-0">
+                                            <Wand2 className="mr-2"/> Asistente
                                         </Button>
                                     </div>
                                 </div>

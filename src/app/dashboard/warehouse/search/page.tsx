@@ -15,15 +15,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getWarehouseData, addInventoryUnit } from '@/modules/warehouse/lib/actions';
 import { syncAllData } from '@/modules/core/lib/actions';
 import type { WarehouseLocation, WarehouseInventoryItem, Product, StockInfo, StockSettings, ItemLocation, Customer, InventoryUnit, WarehouseSettings } from '@/modules/core/types';
-import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, RefreshCw, Loader2, Info, User, ChevronRight, Printer } from 'lucide-react';
+import { Search, MapPin, Package, Building, Waypoints, Box, Layers, Warehouse as WarehouseIcon, RefreshCw, Loader2, Info, User, ChevronRight, Printer, Filter } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { SearchInput } from '@/components/ui/search-input';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import jsPDF from "jspdf";
 import QRCode from 'qrcode';
 import { format } from 'date-fns';
@@ -33,20 +33,6 @@ type SearchableItem = {
   type: 'product' | 'customer' | 'unit';
   searchText: string;
 };
-
-type SearchResultItem = {
-    isUnit: false;
-    unit: null;
-    product: Product | null;
-    physicalLocations: {
-        path: React.ReactNode;
-        quantity?: number;
-        clientId?: string;
-        location: WarehouseLocation | undefined;
-    }[];
-    erpStock: StockInfo | null;
-    client?: Customer | null;
-}
 
 type UnitResultItem = {
     isUnit: true;
@@ -62,8 +48,21 @@ type UnitResultItem = {
     client?: undefined;
 }
 
-type CombinedItem = SearchResultItem | UnitResultItem;
+type SearchResultItem = {
+    isUnit: false;
+    unit: null;
+    product: Product | null;
+    physicalLocations: {
+        path: React.ReactNode;
+        quantity?: number;
+        clientId?: string;
+        location: WarehouseLocation | undefined;
+    }[];
+    erpStock: StockInfo | null;
+    client?: Customer | null;
+}
 
+type CombinedItem = SearchResultItem | UnitResultItem;
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -129,6 +128,8 @@ export default function WarehouseSearchPage() {
     const [stock, setStock] = useState<StockInfo[]>([]);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
     const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
+    
+    const [classificationFilter, setClassificationFilter] = useState<string[]>([]);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -177,25 +178,21 @@ export default function WarehouseSearchPage() {
 
     const searchOptions = useMemo(() => {
         if (debouncedSearchTerm.length < 2) return [];
-
         const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
         if (searchTerms.length === 0) return [];
         
         const productResults = products
             .filter(p => searchTerms.every(term => normalizeText(`${p.id} ${p.description}`).includes(term)))
             .map(p => ({ value: `product-${p.id}`, label: `[ARTÍCULO] ${p.id} - ${p.description}` }));
-
         const customerResults = customers
             .filter(c => searchTerms.every(term => normalizeText(`${c.id} ${c.name}`).includes(term)))
             .map(c => ({ value: `customer-${c.id}`, label: `[CLIENTE] ${c.id} - ${c.name}` }));
-
         const unitCodePrefix = warehouseSettings?.unitPrefix?.toUpperCase();
         const unitResults = unitCodePrefix && debouncedSearchTerm.toUpperCase().startsWith(unitCodePrefix)
             ? [{ value: `unit-${debouncedSearchTerm.toUpperCase()}`, label: `[UNIDAD] ${debouncedSearchTerm.toUpperCase()}` }]
             : [];
             
         return [...unitResults, ...productResults, ...customerResults];
-
     }, [debouncedSearchTerm, products, customers, warehouseSettings]);
 
     const handleSelectSearchItem = (value: string) => {
@@ -216,81 +213,60 @@ export default function WarehouseSearchPage() {
 
     const filteredItems = useMemo((): CombinedItem[] => {
         if (!selectedItem) return [];
+        let results: CombinedItem[] = [];
 
-        const groupedByItem: { [key: string]: SearchResultItem } = {};
+        if (selectedItem.type === 'unit') {
+            // Unit search logic can be implemented here if needed, or redirect.
+            // For now, let's assume it's handled by redirecting or isn't part of this view.
+        } else {
+            const groupedByItem: { [key: string]: SearchResultItem } = {};
 
-        if(selectedItem.type === 'product') {
-            const product = products.find(p => p.id === selectedItem.id);
-            if (product) {
-                groupedByItem[product.id] = {
-                    isUnit: false, unit: null, product,
-                    physicalLocations: [],
-                    erpStock: stock.find(s => s.itemId === product.id) || null,
-                };
+            if (selectedItem.type === 'product') {
+                const product = products.find(p => p.id === selectedItem.id);
+                if (product) {
+                    groupedByItem[product.id] = { isUnit: false, unit: null, product, physicalLocations: [], erpStock: stock.find(s => s.itemId === product.id) || null };
+                }
             }
+            
+            inventory.forEach(item => {
+                if (groupedByItem[item.itemId]) {
+                    groupedByItem[item.itemId].physicalLocations.push({ path: renderLocationPath(item.locationId, locations), quantity: item.quantity, location: locations.find(l => l.id === item.locationId) });
+                }
+            });
+            
+            itemLocations.forEach(itemLoc => {
+                if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
+                    groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
+                } else if (selectedItem.type === 'customer' && itemLoc.clientId === selectedItem.id) {
+                     const product = products.find(p => p.id === itemLoc.itemId);
+                     if (!groupedByItem[itemLoc.itemId]) {
+                         groupedByItem[itemLoc.itemId] = { isUnit: false, unit: null, product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' }, physicalLocations: [], erpStock: stock.find(s => s.itemId === itemLoc.itemId) || null, client: customers.find(c => c.id === itemLoc.clientId) };
+                     }
+                     groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
+                }
+            });
+            results = Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
         }
-        
-        inventory.forEach(item => {
-            if (groupedByItem[item.itemId]) {
-                groupedByItem[item.itemId].physicalLocations.push({
-                    path: renderLocationPath(item.locationId, locations),
-                    quantity: item.quantity,
-                    location: locations.find(l => l.id === item.locationId),
-                });
-            }
-        });
-        
-        itemLocations.forEach(itemLoc => {
-            if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
-                groupedByItem[itemLoc.itemId].physicalLocations.push({
-                    path: renderLocationPath(itemLoc.locationId, locations),
-                    clientId: itemLoc.clientId || undefined,
-                    location: locations.find(l => l.id === itemLoc.locationId),
-                });
-            } else if (selectedItem.type === 'customer' && itemLoc.clientId === selectedItem.id) {
-                 const product = products.find(p => p.id === itemLoc.itemId);
-                 if (!groupedByItem[itemLoc.itemId]) {
-                     groupedByItem[itemLoc.itemId] = {
-                        isUnit: false, unit: null,
-                        product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' },
-                        physicalLocations: [],
-                        erpStock: stock.find(s => s.itemId === itemLoc.itemId) || null,
-                        client: customers.find(c => c.id === itemLoc.clientId)
-                    };
-                 }
-                 groupedByItem[itemLoc.itemId].physicalLocations.push({
-                    path: renderLocationPath(itemLoc.locationId, locations),
-                    clientId: itemLoc.clientId || undefined,
-                    location: locations.find(l => l.id === itemLoc.locationId),
-                });
-            }
-        });
-        
-        return Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
-    }, [selectedItem, products, customers, inventory, itemLocations, stock, locations]);
+        if (classificationFilter.length > 0) {
+            return results.filter(item => item.product && classificationFilter.includes(item.product.classification));
+        }
+
+        return results;
+
+    }, [selectedItem, products, customers, inventory, itemLocations, stock, locations, classificationFilter]);
     
     const handlePrintLabel = async (product: Product, location: WarehouseLocation) => {
-        if (!user) {
-            toast({ title: 'Error', description: 'No se pudo identificar al usuario.', variant: 'destructive' });
-            return;
-        }
+        if (!user) return;
         try {
-            const newUnit = await addInventoryUnit({
-                productId: product.id,
-                locationId: location.id,
-                createdBy: user.name,
-                notes: 'Etiqueta generada desde búsqueda.'
-            });
-
+            const newUnit = await addInventoryUnit({ productId: product.id, locationId: location.id, createdBy: user.name, notes: 'Etiqueta generada desde búsqueda.' });
             const scanUrl = `${window.location.origin}/dashboard/scanner?unitId=${newUnit.unitCode}`;
             const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
 
             const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
             doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.5, 1.5);
             doc.setFontSize(14).setFont('Helvetica', 'bold').text(`Producto: ${product.id}`, 1.8, 0.4);
-            doc.setFontSize(10).setFont('Helvetica', 'normal');
-            doc.text(doc.splitTextToSize(product.description, 1.9), 1.8, 0.6);
+            doc.setFontSize(10).setFont('Helvetica', 'normal').text(doc.splitTextToSize(product.description, 1.9), 1.8, 0.6);
             doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Ubicación: ${location.code}`, 1.8, 1.3);
             doc.setFontSize(8).text(`ID Interno: ${newUnit.unitCode}`, 0.2, 2.8);
             doc.text(`Creado: ${format(new Date(), 'dd/MM/yyyy')}`, 1.8, 2.8);
@@ -303,12 +279,14 @@ export default function WarehouseSearchPage() {
             toast({ title: 'Error al Imprimir', description: err.message, variant: 'destructive' });
         }
     };
+    
+    const classifications = useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]);
 
 
     if (!warehouseSettings) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
-                 <Card className="max-w-4xl mx-auto">
+                <Card>
                     <CardHeader>
                         <Skeleton className="h-8 w-64" />
                         <Skeleton className="h-6 w-full max-w-md mt-2" />
@@ -317,140 +295,145 @@ export default function WarehouseSearchPage() {
                         <Skeleton className="h-12 w-full" />
                         <Skeleton className="h-40 w-full" />
                     </CardContent>
-                 </Card>
+                </Card>
             </main>
         )
     }
 
     return (
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <div className="max-w-4xl mx-auto">
-                <Card>
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-cyan-600 text-white">
-                                    <WarehouseIcon className="h-6 w-6" />
+        <div className="flex flex-col h-full">
+            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm p-4 border-b">
+                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 max-w-5xl mx-auto">
+                    <div className="w-full flex-1">
+                        <SearchInput
+                            options={searchOptions || []}
+                            onSelect={handleSelectSearchItem}
+                            value={searchTerm}
+                            onValueChange={setSearchTerm}
+                            onOpenChange={setIsSearchOpen}
+                            open={isSearchOpen}
+                            placeholder="Buscar artículo, cliente o unidad..."
+                            className="text-lg h-12"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                         <Sheet>
+                            <SheetTrigger asChild>
+                                <Button variant="outline" className="w-full sm:w-auto">
+                                    <Filter className="mr-2 h-4 w-4" /> Filtros
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent>
+                                <SheetHeader>
+                                    <SheetTitle>Filtros Adicionales</SheetTitle>
+                                    <SheetDescription>Refina tu búsqueda con estas opciones.</SheetDescription>
+                                </SheetHeader>
+                                <div className="py-4 space-y-4">
+                                     <MultiSelectFilter
+                                        title="Clasificación"
+                                        options={classifications.map(c => ({ value: c, label: c }))}
+                                        selectedValues={classificationFilter}
+                                        onSelectedChange={setClassificationFilter}
+                                    />
+                                    <Button onClick={handleRefresh} disabled={isRefreshing} className="w-full">
+                                        {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                                        Refrescar Datos del ERP
+                                    </Button>
                                 </div>
-                                <div>
-                                    <CardTitle className="text-2xl">Búsqueda en Almacén</CardTitle>
-                                    <CardDescription>Busca un artículo, cliente o ID de unidad para encontrar su ubicación y existencias.</CardDescription>
-                                </div>
-                            </div>
-                            <Button onClick={handleRefresh} disabled={isRefreshing} className="w-full sm:w-auto">
-                                {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                                Refrescar Datos del ERP
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-4">
-                            <SearchInput
-                                options={searchOptions || []}
-                                onSelect={handleSelectSearchItem}
-                                value={searchTerm}
-                                onValueChange={setSearchTerm}
-                                onOpenChange={setIsSearchOpen}
-                                open={isSearchOpen}
-                                placeholder="Escribe el código/descripción del artículo, cliente o ID de unidad..."
-                                className="text-lg h-14"
-                            />
-                        </div>
-                        
-                        <div className="space-y-4">
-                            {isLoading ? (
-                                 <div className="flex justify-center items-center h-40">
-                                    <Loader2 className="animate-spin h-8 w-8 text-muted-foreground"/>
-                                </div>
-                            ) : filteredItems.length > 0 ? (
-                                filteredItems.map((item, itemIndex) => {
-                                    const warehouseEntries = (item.erpStock?.stockByWarehouse) 
-                                        ? Object.entries(item.erpStock.stockByWarehouse)
-                                            .filter(([, qty]) => qty > 0)
-                                            .map(([whId, qty]) => ({
-                                                whId,
-                                                qty,
-                                                warehouse: stockSettings?.warehouses.find(w => w.id === whId)
-                                            }))
-                                            .filter(entry => entry.warehouse?.isVisible)
-                                        : [];
-
-                                    return (
-                                        <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
-                                            <CardHeader>
-                                                <CardTitle className="text-xl flex items-center gap-2">
-                                                    <Package className="h-6 w-6 text-primary" />
-                                                    {item.isUnit ? `Unidad ${item.unit.unitCode} - ${item.product?.description}` : item.product?.description || 'Producto no encontrado'}
-                                                </CardTitle>
-                                                <CardDescription>
-                                                    {item.isUnit ? `ID legible: ${item.unit.humanReadableId || 'N/A'}` : `Código: ${item.product?.id}`}
-                                                </CardDescription>
-                                                 {!item.isUnit && item.client && (
-                                                    <div className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
-                                                        <User className="h-4 w-4"/>
-                                                        <span>Inventario de Cliente: <strong>{item.client.name}</strong> ({item.client.id})</span>
-                                                    </div>
-                                                )}
-                                            </CardHeader>
-                                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                                <div>
-                                                    <h4 className="font-semibold mb-2">Ubicaciones y Cantidades Físicas</h4>
-                                                    <div className="space-y-2">
-                                                    {item.physicalLocations.length > 0 ? item.physicalLocations.map((loc, index) => (
-                                                        <div key={index} className="flex justify-between items-center p-2 border rounded-md">
-                                                            <span>{loc.path}</span>
-                                                            <div className='flex items-center gap-1'>
-                                                                {loc.quantity !== undefined && (
-                                                                    <span className="font-bold text-lg">{loc.quantity.toLocaleString()}</span>
-                                                                )}
-                                                                {item.product && loc.location && (
-                                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}>
-                                                                        <Printer className="h-4 w-4" />
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )) : <p className="text-sm text-muted-foreground">Sin ubicaciones físicas registradas.</p>}
-                                                    </div>
-                                                    {item.isUnit && item.unit?.notes && <p className="text-xs italic text-muted-foreground mt-2">&quot;{item.unit.notes}&quot;</p>}
-                                                </div>
-                                                <div>
-                                                     <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
-                                                     {warehouseEntries.length > 0 ? (
-                                                         <div className="space-y-2">
-                                                            {warehouseEntries.map(entry => (
-                                                                <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
-                                                                    <span>{entry.warehouse?.name} ({entry.whId})</span>
-                                                                    <span className="font-bold text-lg">{entry.qty.toLocaleString()}</span>
-                                                                </div>
-                                                            ))}
-                                                             <Separator />
-                                                             <div className="flex justify-between items-center p-2 font-bold">
-                                                                <span>Total ERP</span>
-                                                                <span className="text-xl">{item.erpStock?.totalStock.toLocaleString()}</span>
-                                                             </div>
-                                                         </div>
-                                                     ) : (
-                                                         <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
-                                                     )}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })
-                            ) : debouncedSearchTerm ? (
-                                <div className="text-center py-10 text-muted-foreground">
-                                    <p>No se encontraron resultados para &quot;{debouncedSearchTerm}&quot;.</p>
-                                </div>
-                            ) : (
-                                 <div className="text-center py-10 text-muted-foreground">
-                                    <p>Comienza a escribir para buscar un artículo o cliente.</p>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
+                </div>
             </div>
-        </main>
+            <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+                <div className="max-w-5xl mx-auto space-y-4">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-40">
+                            <Loader2 className="animate-spin h-8 w-8 text-muted-foreground"/>
+                        </div>
+                    ) : filteredItems.length > 0 ? (
+                        filteredItems.map((item, itemIndex) => {
+                            const warehouseEntries = (item.erpStock?.stockByWarehouse) 
+                                ? Object.entries(item.erpStock.stockByWarehouse)
+                                    .filter(([, qty]) => qty > 0)
+                                    .map(([whId, qty]) => ({
+                                        whId,
+                                        qty,
+                                        warehouse: stockSettings?.warehouses.find(w => w.id === whId)
+                                    }))
+                                    .filter(entry => entry.warehouse?.isVisible)
+                                : [];
+
+                            return (
+                                <Card key={item.product?.id || item.unit?.id || itemIndex} className="w-full">
+                                    <CardHeader>
+                                        <CardTitle className="text-xl flex items-center gap-2">
+                                            <Package className="h-6 w-6 text-primary" />
+                                            {item.isUnit ? `Unidad ${item.unit.unitCode} - ${item.product?.description}` : item.product?.description || 'Producto no encontrado'}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {item.isUnit ? `ID legible: ${item.unit.humanReadableId || 'N/A'}` : `Código: ${item.product?.id}`}
+                                        </CardDescription>
+                                         {!item.isUnit && item.client && (
+                                            <div className="text-sm text-muted-foreground flex items-center gap-2 pt-1">
+                                                <User className="h-4 w-4"/>
+                                                <span>Inventario de Cliente: <strong>{item.client.name}</strong> ({item.client.id})</span>
+                                            </div>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Ubicaciones y Cantidades Físicas</h4>
+                                            <div className="space-y-2">
+                                            {item.physicalLocations.length > 0 ? item.physicalLocations.map((loc, index) => (
+                                                <div key={index} className="flex justify-between items-center p-2 border rounded-md">
+                                                    <span>{loc.path}</span>
+                                                    <div className='flex items-center gap-1'>
+                                                        {loc.quantity !== undefined && (
+                                                            <span className="font-bold text-lg">{loc.quantity.toLocaleString()}</span>
+                                                        )}
+                                                        {item.product && loc.location && (
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintLabel(item.product!, loc.location!)}>
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )) : <p className="text-sm text-muted-foreground">Sin ubicaciones físicas registradas.</p>}
+                                            </div>
+                                            {item.isUnit && item.unit?.notes && <p className="text-xs italic text-muted-foreground mt-2">&quot;{item.unit.notes}&quot;</p>}
+                                        </div>
+                                        <div>
+                                             <h4 className="font-semibold mb-2">Existencias por Bodega (ERP)</h4>
+                                             {warehouseEntries.length > 0 ? (
+                                                 <div className="space-y-2">
+                                                    {warehouseEntries.map(entry => (
+                                                        <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
+                                                            <span>{entry.warehouse?.name} ({entry.whId})</span>
+                                                            <span className="font-bold text-lg">{entry.qty.toLocaleString()}</span>
+                                                        </div>
+                                                    ))}
+                                                     <Separator />
+                                                     <div className="flex justify-between items-center p-2 font-bold">
+                                                        <span>Total ERP</span>
+                                                        <span className="text-xl">{item.erpStock?.totalStock.toLocaleString()}</span>
+                                                     </div>
+                                                 </div>
+                                             ) : (
+                                                 <p className="text-sm text-muted-foreground">Sin datos de existencias en el ERP.</p>
+                                             )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-16 text-muted-foreground">
+                            {debouncedSearchTerm ? <p>No se encontraron resultados para &quot;{debouncedSearchTerm}&quot;.</p> : <p>Comienza a escribir para buscar un artículo, cliente o unidad.</p>}
+                        </div>
+                    )}
+                </div>
+            </main>
+        </div>
     );
 }
