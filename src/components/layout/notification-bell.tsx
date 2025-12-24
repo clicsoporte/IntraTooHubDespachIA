@@ -28,33 +28,14 @@ const statusTranslations: { [key: string]: string } = {
 };
 
 export function NotificationBell() {
-    const { user, unreadNotificationsCount, notifications, fetchUnreadNotifications, unreadSuggestions, updateUnreadSuggestionsCount } = useAuth();
+    const { user, unreadNotificationsCount, notifications, fetchUnreadNotifications, unreadSuggestionsCount, updateUnreadSuggestionsCount } = useAuth();
     const { toast } = useToast();
     const [isActionLoading, setIsActionLoading] = useState<number | null>(null);
-    const totalUnread = unreadNotificationsCount + unreadSuggestions.length;
-
-    const combinedNotifications = [
-        ...notifications,
-        ...unreadSuggestions.map(s => ({
-            id: `sugg-${s.id}`,
-            userId: s.userId,
-            message: `Nueva sugerencia de ${s.userName}`,
-            href: '/dashboard/admin/suggestions',
-            isRead: 0,
-            timestamp: s.timestamp,
-            isSuggestion: true,
-            suggestionId: s.id,
-        }) as Notification)
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
+    const totalUnread = unreadNotificationsCount + unreadSuggestionsCount;
 
     const handleMarkAsRead = async (notification: Notification) => {
         if (!user || notification.isRead) return;
-
-        if (notification.isSuggestion && notification.suggestionId) {
-            await markSuggestionAsRead(notification.suggestionId);
-            await updateUnreadSuggestionsCount();
-        } else if (!notification.isSuggestion && typeof notification.id === 'number') {
+        if (!notification.isSuggestion && typeof notification.id === 'number') {
             await markNotificationAsRead(notification.id, user.id);
         }
         await fetchUnreadNotifications();
@@ -99,8 +80,6 @@ export function NotificationBell() {
                 </div>
             );
         }
-
-        // Add other task types here in the future
         return null;
     };
 
@@ -125,11 +104,10 @@ export function NotificationBell() {
                 </div>
                 <ScrollArea className="h-80">
                     <div className="p-2 space-y-1">
-                        {combinedNotifications.length > 0 ? combinedNotifications.map(n => (
+                        {notifications.length > 0 ? notifications.map(n => (
                              <Link key={n.id} href={n.href} passHref>
                                 <div className="p-2 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleMarkAsRead(n)}>
                                     <div className="flex items-start gap-2">
-                                        {n.isSuggestion && <MessageSquare className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />}
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start">
                                                 <p className={cn("text-sm", n.isRead === 0 && "font-bold")}>{n.message}</p>

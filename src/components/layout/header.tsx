@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview The main header component for the application's authenticated layout.
  * It displays the current page title, global actions (sync, suggestions, exchange rate),
@@ -15,7 +14,7 @@ import { useAuthorization } from "@/modules/core/hooks/useAuthorization";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { logError, logInfo } from "@/modules/core/lib/logger";
 import { syncAllData } from "@/modules/core/lib/actions";
-import { addSuggestion } from "@/modules/core/lib/suggestions-mutations";
+import { addSuggestion } from "@/modules/core/lib/suggestions-actions";
 import { format, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

@@ -1,6 +1,7 @@
+
 /**
  * @fileoverview This file defines a central authentication context and hook.
- * It provides a single source of truth for the current user, their role, companyData,
+ * It provides a single source of truth for the current user, their role, company data,
  * and loading status, preventing redundant data fetching and component re-renders.
  */
 'use client';
@@ -32,6 +33,7 @@ interface AuthContextType {
       rate: number | null;
       date: string | null;
   };
+  unreadSuggestions: Suggestion[];
   unreadSuggestionsCount: number;
   notifications: Notification[];
   unreadNotificationsCount: number;
@@ -63,6 +65,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [allExemptions, setAllExemptions] = useState<Exemption[]>([]);
   const [exemptionLaws, setExemptionLaws] = useState<ExemptionLaw[]>([]);
   const [exchangeRateData, setExchangeRateData] = useState<{ rate: number | null; date: string | null }>({ rate: null, date: null });
+  const [unreadSuggestions, setUnreadSuggestions] = useState<Suggestion[]>([]);
   const [unreadSuggestionsCount, setUnreadSuggestionsCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
@@ -113,6 +116,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           return;
       }
       
+      // We have a user, now load the rest of the app data
       const data = await getInitialAuthData();
       
       setUser(currentUser);
@@ -123,15 +127,8 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setAllExemptions(data.exemptions);
       setExemptionLaws(data.exemptionLaws);
       setExchangeRateData(data.exchangeRate);
-      
-      // Fetch initial counts and data
-      const initialSuggestionsCount = await getUnreadSuggestionsCountAction();
-      setUnreadSuggestionsCount(initialSuggestionsCount);
-      
-      const initialNotifications = await getNotificationsForUser(currentUser.id);
-      setNotifications(initialNotifications);
-      setUnreadNotificationsCount(initialNotifications.filter(n => !n.isRead).length);
-
+      setUnreadSuggestions(data.unreadSuggestions);
+      setUnreadSuggestionsCount(data.unreadSuggestions.length);
 
       if (currentUser && data.roles.length > 0) {
         const role = data.roles.find((r: Role) => r.id === currentUser.role);
@@ -145,15 +142,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setUserRole(null);
       setCompanyData(null);
     } finally {
-      setIsReady(true);
+      setIsReady(true); // Signal that loading is complete, successfully or not.
     }
   }, []);
 
   const refreshAuthAndRedirect = async (path?: string) => {
-    setIsReady(false); 
+    setIsReady(false); // Reset readiness to show loading screen during transition
     await loadAuthData();
     const redirectUrl = sessionStorage.getItem(REDIRECT_URL_KEY);
-    sessionStorage.removeItem(REDIRECT_URL_KEY); 
+    sessionStorage.removeItem(REDIRECT_URL_KEY); // Clean up after reading
     router.push(redirectUrl || path || '/dashboard');
   };
   
@@ -171,14 +168,15 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     if (user && isReady) {
-      // Periodically poll only for the suggestion count, which is lightweight.
+      fetchUnreadNotifications();
+      updateUnreadSuggestionsCount();
       const interval = setInterval(() => {
+        fetchUnreadNotifications();
         updateUnreadSuggestionsCount();
-        fetchUnreadNotifications(); // This should be lightweight as well
-      }, 30000);
+      }, 30000); // Poll every 30 seconds
       return () => clearInterval(interval);
     }
-  }, [user, isReady, updateUnreadSuggestionsCount, fetchUnreadNotifications]);
+  }, [user, isReady, fetchUnreadNotifications, updateUnreadSuggestionsCount]);
 
   const contextValue: AuthContextType = {
     user,
@@ -191,6 +189,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     exemptionLaws,
     isReady,
     exchangeRateData,
+    unreadSuggestions,
     unreadSuggestionsCount,
     notifications,
     unreadNotificationsCount,

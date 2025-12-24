@@ -4,14 +4,18 @@
  */
 "use server";
 
+import { revalidatePath } from 'next/cache';
 import { 
     getSuggestions as dbGetSuggestions, 
     markSuggestionAsRead as dbMarkSuggestionAsRead, 
     deleteSuggestion as dbDeleteSuggestion, 
     getUnreadSuggestions as dbGetUnreadSuggestions,
     getUnreadSuggestionsCount as dbGetUnreadSuggestionsCount,
+    connectDb,
 } from '@/modules/core/lib/db';
 import type { Suggestion } from '@/modules/core/types';
+import { logInfo, logError } from '@/modules/core/lib/logger';
+import { createNotificationForPermission } from '@/modules/core/lib/notifications-actions';
 
 /**
  * Retrieves all suggestions from the database.
@@ -51,4 +55,45 @@ export async function getUnreadSuggestions(): Promise<Suggestion[]> {
  */
 export async function getUnreadSuggestionsCount(): Promise<number> {
     return dbGetUnreadSuggestionsCount();
+}
+
+/**
+ * Inserts a new suggestion into the database.
+ * @param content - The text of the suggestion.
+ * @param userId - The ID of the user submitting the suggestion.
+ * @param userName - The name of the user submitting the suggestion.
+ */
+export async function addSuggestion(content: string, userId: number, userName: string): Promise<void> {
+    const db = await connectDb();
+    let newSuggestionId;
+    try {
+        const info = db.prepare(`
+            INSERT INTO suggestions (content, userId, userName, isRead, timestamp)
+            VALUES (?, ?, ?, 0, ?)
+        `).run(content, userId, userName, new Date().toISOString());
+        newSuggestionId = info.lastInsertRowid;
+        
+        await logInfo('New suggestion submitted', { user: userName });
+        
+        revalidatePath('/dashboard/admin/suggestions');
+
+    } catch (error: any) {
+        logError("Failed to add suggestion to DB", { error: error.message });
+        throw error;
+    }
+
+    if (newSuggestionId) {
+        try {
+            await createNotificationForPermission(
+                'admin:suggestions:read',
+                `Nueva sugerencia enviada por ${userName}`,
+                '/dashboard/admin/suggestions',
+                Number(newSuggestionId),
+                'suggestion',
+                'new-suggestion'
+            );
+        } catch (notificationError: any) {
+            logError("Failed to create notification for new suggestion", { error: notificationError.message, suggestionId: newSuggestionId });
+        }
+    }
 }
