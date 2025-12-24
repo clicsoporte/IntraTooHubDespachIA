@@ -187,6 +187,13 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
                     expiresAt TEXT NOT NULL
                 );
              `);
+        } else {
+            const wizardTableInfo = db.prepare(`PRAGMA table_info(active_wizard_sessions)`).all() as { name: string }[];
+            const wizardColumns = new Set(wizardTableInfo.map(c => c.name));
+            if (!wizardColumns.has('entityName')) {
+                console.log("MIGRATION (warehouse.db): Adding 'entityName' to 'active_wizard_sessions' table.");
+                db.exec('ALTER TABLE active_wizard_sessions ADD COLUMN entityName TEXT NOT NULL DEFAULT \'unknown\'');
+            }
         }
     } catch (error) {
         console.error("Error during warehouse migrations:", error);
@@ -481,15 +488,15 @@ export async function lockEntity(payload: Omit<WizardSession, 'id' | 'expiresAt'
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { entityIds, entityName, userId, userName } = payload;
     
-    const allLocks = await getActiveLocks(); // This already cleans up expired locks
-    const requestedIds = new Set(entityIds);
-    
-    for (const lock of allLocks) {
-        for (const lockedId of lock.lockedEntityIds) {
-            if (requestedIds.has(lockedId)) {
-                return { sessionId: lock.id, locked: true }; // Found an overlap
-            }
-        }
+    // This SQL query finds if any of the requested IDs are already present in any active session.
+    const conflictingLock = db.prepare(`
+        SELECT DISTINCT s.id
+        FROM active_wizard_sessions s, json_each(s.lockedEntityIds) as item
+        WHERE item.value IN (${entityIds.map(() => '?').join(',')}) AND s.expiresAt > datetime('now')
+    `).get(...entityIds) as { id: number } | undefined;
+
+    if (conflictingLock) {
+        return { sessionId: conflictingLock.id, locked: true };
     }
 
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
