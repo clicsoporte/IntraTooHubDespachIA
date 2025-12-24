@@ -29,7 +29,8 @@ const config: Config = {
     'bg-sky-600',
     'bg-teal-600',
     'bg-lime-600',
-    'bg-gray-500'
+    'bg-gray-500',
+    'bg-slate-500'
   ],
   theme: {
     extend: {
