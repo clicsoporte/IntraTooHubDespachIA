@@ -5,7 +5,7 @@
  */
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 
@@ -21,6 +21,12 @@ export function useAuthorization(requiredPermissions: string[] = []): UseAuthori
 
     const userPermissions = useMemo(() => userRole?.permissions || [], [userRole]);
 
+    const hasPermission = useCallback((permission: string): boolean => {
+        if (!isReady || !userRole) return false;
+        if (userRole.id === 'admin') return true;
+        return userPermissions.includes(permission);
+    }, [isReady, userRole, userPermissions]);
+
     const isAuthorized = useMemo(() => {
         if (!isReady) return null; // Wait until all auth data is ready before making a decision.
         if (!user || !userRole) return false; // No user or role, not authorized.
@@ -28,12 +34,9 @@ export function useAuthorization(requiredPermissions: string[] = []): UseAuthori
         // If no specific permissions are required, being logged in and ready is enough.
         if (requiredPermissions.length === 0) return true;
         
-        // Admin has all permissions, always.
-        if (userRole.id === 'admin') return true;
-        
-        // Check if the user has at least one of the required permissions.
-        return requiredPermissions.some(p => userPermissions.includes(p));
-    }, [isReady, user, userRole, requiredPermissions, userPermissions]);
+        // Use the memoized hasPermission function for checking.
+        return requiredPermissions.some(p => hasPermission(p));
+    }, [isReady, user, userRole, requiredPermissions, hasPermission]);
 
     useEffect(() => {
         // This effect is now simplified. The main redirect logic is in DashboardLayout.
@@ -43,12 +46,6 @@ export function useAuthorization(requiredPermissions: string[] = []): UseAuthori
             // Optional: Log an access attempt or handle specific page logic
         }
     }, [isAuthorized, isReady]);
-
-    const hasPermission = (permission: string) => {
-        if (!isReady || !userRole) return false;
-        if (userRole.id === 'admin') return true;
-        return userPermissions.includes(permission);
-    };
 
     return { isAuthorized, hasPermission, userPermissions };
 }

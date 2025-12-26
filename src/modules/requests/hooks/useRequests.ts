@@ -226,7 +226,7 @@ export const useRequests = () => {
         statusFilter: "all",
         classificationFilter: "all",
         dateFilter: undefined,
-        showOnlyMyRequests: true,
+        showOnlyMyRequests: !hasPermission('requests:read:all'),
         clientSearchTerm: "",
         isClientSearchOpen: false,
         itemSearchTerm: "",
@@ -742,7 +742,7 @@ export const useRequests = () => {
                         requiredDate: new Date(erpHeader.FECHA_PROMETIDA).toISOString().split('T')[0],
                         clientId: erpHeader.CLIENTE,
                         clientName: client?.name || erpHeader.CLIENTE_NOMBRE || '',
-                        clientTaxId: client?.taxId || '',
+                        clientTaxId: customers.find(c => c.id === erpHeader.CLIENTE)?.taxId || '',
                         itemId: line.ARTICULO,
                         itemDescription: line.product.description,
                         quantity: parseFloat(line.displayQuantity) || 0,
@@ -1063,7 +1063,7 @@ export const useRequests = () => {
                 const statusMatch = state.statusFilter === 'all' || request.status === state.statusFilter;
                 const classificationMatch = state.classificationFilter === 'all' || (product && product.classification === state.classificationFilter);
                 const dateMatch = !state.dateFilter || !state.dateFilter.from || (new Date(request.requiredDate) >= state.dateFilter.from && new Date(request.requiredDate) <= (state.dateFilter.to || state.dateFilter.from));
-                const myRequestsMatch = !state.showOnlyMyRequests || !hasPermission('requests:read:all') || (currentUser && request.requestedBy.toLowerCase() === currentUser.name.toLowerCase()) || (currentUser?.erpAlias && request.erpOrderNumber && request.erpOrderNumber.toLowerCase().includes(currentUser.erpAlias.toLowerCase()));
+                const myRequestsMatch = !state.showOnlyMyRequests || (currentUser && request.requestedBy.toLowerCase() === currentUser.name.toLowerCase()) || (currentUser?.erpAlias && request.erpOrderNumber && request.erpOrderNumber.toLowerCase().includes(currentUser.erpAlias.toLowerCase()));
 
                 return searchMatch && statusMatch && classificationMatch && dateMatch && myRequestsMatch;
             });

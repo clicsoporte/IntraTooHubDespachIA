@@ -150,10 +150,16 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   }, []);
 
   const refreshAuthAndRedirect = async (path?: string) => {
-    setIsReady(false); 
-    await loadAuthData();
+    setIsReady(false);
+    await loadAuthData(); // This reloads all auth context data
     const redirectUrl = sessionStorage.getItem(REDIRECT_URL_KEY);
-    sessionStorage.removeItem(REDIRECT_URL_KEY); 
+    
+    // Clear the redirect URL from session storage after using it
+    if (redirectUrl) {
+        sessionStorage.removeItem(REDIRECT_URL_KEY);
+    }
+    
+    // Prioritize the redirect URL from session storage, then the provided path, then default to dashboard.
     router.push(redirectUrl || path || '/dashboard');
   };
   

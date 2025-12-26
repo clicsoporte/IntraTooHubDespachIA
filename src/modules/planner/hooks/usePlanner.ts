@@ -113,7 +113,7 @@ export const usePlanner = () => {
         searchTerm: "",
         statusFilter: [] as string[],
         classificationFilter: [] as string[],
-        showOnlyMyOrders: true,
+        showOnlyMyOrders: !hasPermission('planner:read:all'),
         dateFilter: undefined as DateRange | undefined,
         customerSearchTerm: "",
         isCustomerSearchOpen: false,
