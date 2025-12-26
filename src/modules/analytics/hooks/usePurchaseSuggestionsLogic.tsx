@@ -65,7 +65,7 @@ interface State {
 }
 
 export function usePurchaseSuggestionsLogic() {
-    const { isAuthorized, hasPermission } = useAuthorization(['requests:create', 'analytics:purchase-suggestions:read', 'requests:create:duplicate']);
+    const { isAuthorized, hasPermission } = useAuthorization(['analytics:purchase-report:read']);
     const { toast } = useToast();
     const { user: currentUser, products } = useAuth();
     const router = useRouter();
@@ -233,12 +233,16 @@ export function usePurchaseSuggestionsLogic() {
 
 
     const toggleItemSelection = (itemId: string) => {
+        if (!hasPermission('requests:create')) {
+            toast({ title: "Permiso Requerido", description: "No tienes permiso para crear solicitudes de compra.", variant: "destructive" });
+            return;
+        }
+
         const item = state.suggestions.find(s => s.itemId === itemId);
         if (!item) return;
 
         const isDuplicate = item.existingActiveRequests.length > 0;
-        const canCreateDuplicates = hasPermission('requests:create:duplicate');
-        if (isDuplicate && !canCreateDuplicates) {
+        if (isDuplicate && !hasPermission('requests:create:duplicate')) {
             toast({ title: "Permiso Requerido", description: "No tienes permiso para crear solicitudes duplicadas para este artículo.", variant: "destructive" });
             return;
         }
@@ -253,13 +257,13 @@ export function usePurchaseSuggestionsLogic() {
     };
 
     const toggleSelectAll = (checked: boolean) => {
-        const canCreateDuplicates = hasPermission('requests:create:duplicate');
+        if (!hasPermission('requests:create')) {
+            toast({ title: "Permiso Requerido", description: "No tienes permiso para crear solicitudes de compra.", variant: "destructive" });
+            return;
+        }
         
         const itemsToSelect = filteredSuggestions
-            .filter(s => {
-                const isDuplicate = s.existingActiveRequests.length > 0;
-                return !isDuplicate || canCreateDuplicates;
-            })
+            .filter(s => !s.existingActiveRequests.length || hasPermission('requests:create:duplicate'))
             .map(s => s.itemId);
 
         updateState({
@@ -277,6 +281,10 @@ export function usePurchaseSuggestionsLogic() {
     const handleCreateRequests = async (confirmedItems?: PurchaseSuggestion[]) => {
         if (!currentUser) {
             toast({ title: "Error de autenticación", variant: "destructive" });
+            return;
+        }
+        if (!hasPermission('requests:create')) {
+             toast({ title: "Permiso Requerido", description: "No tienes permiso para crear solicitudes de compra.", variant: "destructive" });
             return;
         }
         
