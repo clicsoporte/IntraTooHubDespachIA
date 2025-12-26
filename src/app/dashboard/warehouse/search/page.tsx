@@ -113,7 +113,7 @@ export default function WarehouseSearchPage() {
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const router = useRouter();
-    const { user, companyData, products, customers } = useAuth();
+    const { user, companyData, products, customers, isReady } = useAuth();
 
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -154,8 +154,10 @@ export default function WarehouseSearchPage() {
     
     useEffect(() => {
         setTitle("Búsqueda en Almacén");
-        loadData();
-    }, [setTitle, loadData]);
+        if (isReady) {
+            loadData();
+        }
+    }, [setTitle, loadData, isReady]);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -203,10 +205,16 @@ export default function WarehouseSearchPage() {
 
         if (type === 'product') {
             const product = products.find(p => p.id === id);
-            if (product) setSelectedItem({ id: product.id, type: 'product', searchText: '' });
+            if (product) {
+                 setSelectedItem({ id: product.id, type: 'product', searchText: '' });
+                 setSearchTerm(`[ARTÍCULO] ${product.id} - ${product.description}`);
+            }
         } else if (type === 'customer') {
             const customer = customers.find(c => c.id === id);
-            if (customer) setSelectedItem({ id: customer.id, type: 'customer', searchText: '' });
+            if (customer) {
+                setSelectedItem({ id: customer.id, type: 'customer', searchText: '' });
+                setSearchTerm(`[CLIENTE] ${customer.id} - ${customer.name}`);
+            }
         } else if (type === 'unit') {
             router.push(`/dashboard/scanner?unitId=${id}`);
         }
@@ -258,10 +266,13 @@ export default function WarehouseSearchPage() {
     }, [selectedItem, products, customers, inventory, itemLocations, stock, locations, classificationFilter]);
     
     const handlePrintLabel = async (product: Product, location: WarehouseLocation) => {
-        if (!user) return;
+        if (!user || !companyData) return;
         try {
             const newUnit = await addInventoryUnit({ productId: product.id, locationId: location.id, createdBy: user.name, notes: 'Etiqueta generada desde búsqueda.' });
-            const scanUrl = `${window.location.origin}/dashboard/scanner?unitId=${newUnit.unitCode}`;
+            
+            const baseUrl = companyData.publicUrl || window.location.origin;
+            const scanUrl = `${baseUrl}/dashboard/scanner?unitId=${newUnit.unitCode}`;
+
             const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
 
             const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
@@ -283,11 +294,10 @@ export default function WarehouseSearchPage() {
     
     const classifications = useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]);
 
-
-    if (!warehouseSettings) {
+    if (!isReady || !warehouseSettings) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
-                <Card>
+                <Card className="max-w-5xl mx-auto">
                     <CardHeader>
                         <Skeleton className="h-8 w-64" />
                         <Skeleton className="h-6 w-full max-w-md mt-2" />
@@ -313,7 +323,7 @@ export default function WarehouseSearchPage() {
                             onValueChange={setSearchTerm}
                             onOpenChange={setIsSearchOpen}
                             open={isSearchOpen}
-                            placeholder="Buscar artículo, cliente o unidad..."
+                            placeholder="Buscar artículo, cliente o escanear unidad..."
                             className="text-lg h-12"
                         />
                     </div>

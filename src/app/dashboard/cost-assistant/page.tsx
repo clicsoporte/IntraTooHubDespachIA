@@ -22,12 +22,16 @@ import type { CostAnalysisDraft } from '@/modules/core/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
+import { useAuth } from '@/modules/core/hooks/useAuth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CostAssistantPage() {
     const {
         state,
         actions,
     } = useCostAssistant();
+    
+    const { isReady } = useAuth();
     
     const columns = [
         { id: 'cabysCode', label: 'Cabys', defaultVisible: true, className: 'min-w-[150px]' },
@@ -43,6 +47,19 @@ export default function CostAssistantPage() {
         { id: 'finalSellPrice', label: 'P.V.P Unitario Sugerido', defaultVisible: true, className: 'min-w-[180px] text-right', tooltip: 'Precio de Venta al Público final por unidad (con IVA incluido).' },
         { id: 'profitPerLine', label: 'Ganancia por Línea', defaultVisible: true, className: 'min-w-[180px] text-right', tooltip: 'Ganancia total para esta línea de productos (Cantidad x Ganancia por unidad).' },
     ];
+
+    if (!isReady) {
+        return (
+            <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
+                <Skeleton className="h-40 w-full" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Skeleton className="h-64 lg:col-span-1" />
+                    <Skeleton className="h-64 lg:col-span-2" />
+                </div>
+                <Skeleton className="h-96 w-full" />
+            </main>
+        );
+    }
 
     return (
         <TooltipProvider>
