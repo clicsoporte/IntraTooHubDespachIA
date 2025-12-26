@@ -1,3 +1,4 @@
+
 // This file was restored to its stable version.
 // The previous content was causing compilation issues.
 'use client';
@@ -30,6 +31,8 @@ import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/modules/core/hooks/useAuth';
+import { Separator } from '@/components/ui/separator';
 
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
@@ -55,6 +58,7 @@ const HighlightedText = ({ text, highlight }: { text: string; highlight: string 
 
 export default function PurchaseRequestPage() {
     const { state, actions, selectors, isAuthorized } = useRequests();
+    const { isReady } = useAuth();
 
     const {
         isLoading, isSubmitting, isNewRequestDialogOpen, isEditRequestDialogOpen, viewingArchived,
@@ -77,12 +81,12 @@ export default function PurchaseRequestPage() {
     } = state;
 
 
-    if (isAuthorized === null || (isAuthorized && isLoading)) {
+    if (!isReady) {
         return (
             <main className="flex-1 p-4 md:p-6">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-bold">Solicitudes de Compra</h1>
-                    <Button disabled><Loader2 className="mr-2 animate-spin" /> Cargando...</Button>
+                    <Skeleton className="h-10 w-32" />
                 </div>
                  <div className="space-y-4">
                     <Skeleton className="h-40 w-full" />
@@ -400,15 +404,17 @@ export default function PurchaseRequestPage() {
                 {/* Desktop Filters */}
                 <Card className="hidden md:block">
                     <CardContent className="p-4">
-                        {renderFilters()}
+                        <div className="flex flex-wrap gap-4 items-center">
+                            {renderFilters()}
+                        </div>
                     </CardContent>
                 </Card>
                 {/* Mobile Filters */}
-                <div className="md:hidden">
+                 <div className="md:hidden">
                     <Sheet>
                         <SheetTrigger asChild>
                             <Button variant="outline" className="w-full">
-                                <Filter className="mr-2 h-4 w-4" />
+                                <Filter className="mr-2 h-4 w-4"/>
                                 Filtros y Acciones
                             </Button>
                         </SheetTrigger>
@@ -429,7 +435,7 @@ export default function PurchaseRequestPage() {
                             </div>
                         </SheetContent>
                     </Sheet>
-                </div>
+                 </div>
             </div>
             
             <div className="flex-1 overflow-auto pt-2 space-y-4">
@@ -470,5 +476,6 @@ export default function PurchaseRequestPage() {
     
 
     
+
 
 
