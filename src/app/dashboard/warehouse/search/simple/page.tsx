@@ -106,7 +106,7 @@ export default function SimpleWarehouseSearchPage() {
     useAuthorization(['warehouse:access']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user, companyData, products, customers, logout } = useAuth();
+    const { user, companyData, products, customers, logout, isReady } = useAuth();
 
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -142,8 +142,10 @@ export default function SimpleWarehouseSearchPage() {
     
     useEffect(() => {
         setTitle("Búsqueda Rápida de Almacén");
-        loadData();
-    }, [setTitle, loadData]);
+        if (isReady) {
+            loadData();
+        }
+    }, [setTitle, loadData, isReady]);
 
     const searchOptions = useMemo(() => {
         if (debouncedSearchTerm.length < 2) return [];
@@ -217,10 +219,10 @@ export default function SimpleWarehouseSearchPage() {
     }, [selectedItem, products, inventory, itemLocations, stock, locations]);
     
     const handlePrintLabel = async (product: Product, location: WarehouseLocation) => {
-        if (!user) return;
+        if (!user || !companyData) return;
         try {
             const newUnit = await addInventoryUnit({ productId: product.id, locationId: location.id, createdBy: user.name, notes: 'Etiqueta generada desde búsqueda simple.' });
-            const scanUrl = `${window.location.origin}/dashboard/scanner?unitId=${newUnit.unitCode}`;
+            const scanUrl = `${companyData.publicUrl || window.location.origin}/dashboard/scanner?unitId=${newUnit.unitCode}`;
             const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
 
             const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
@@ -238,7 +240,7 @@ export default function SimpleWarehouseSearchPage() {
     };
 
 
-    if (isLoading || !warehouseSettings || !stockSettings) {
+    if (!isReady || isLoading || !warehouseSettings || !stockSettings) {
         return <div className="flex h-screen w-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
     }
 
