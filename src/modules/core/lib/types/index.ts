@@ -23,6 +23,7 @@ export type User = {
   securityQuestion?: string;
   securityAnswer?: string;
   forcePasswordChange?: boolean | number;
+  activeWizardSession?: string | null;
 };
 
 /**
@@ -480,6 +481,8 @@ export type WarehouseLocation = {
     code: string; // A unique, human-readable code, e.g., R01-S03-B05
     type: string; // Corresponds to WarehouseLocationLevel['type']
     parentId?: number | null; // For hierarchical structure
+    isLocked?: 0 | 1;
+    lockedBy?: string | null;
 };
 
 /** Tracks physical quantity in a specific location */
@@ -660,14 +663,11 @@ export type AuditResult = {
 };
 
 export type WizardSession = {
-    id: number;
-    userId: number;
-    userName: string;
-    lockedEntityId: number;
-    lockedEntityType: 'rack' | 'level';
-    lockedEntityName: string;
-    expiresAt: string;
+    rackId: number;
+    levelIds: number[];
+    currentIndex: number;
 };
+
 
 // --- Suggestion Box Types ---
 export type Suggestion = {

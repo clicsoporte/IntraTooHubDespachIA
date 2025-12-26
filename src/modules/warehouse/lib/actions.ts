@@ -30,14 +30,21 @@ import {
     releaseLock as releaseLockServer,
     forceReleaseLock as forceReleaseLockServer,
     getChildLocations as getChildLocationsServer,
+    getStockSettings as getStockSettingsServer,
+    saveStockSettings as saveStockSettingsServer,
 } from './db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings } from '@/modules/core/types';
 import { logInfo, logWarn } from '@/modules/core/lib/logger';
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
 export async function saveWarehouseSettings(settings: WarehouseSettings): Promise<void> {
     await logInfo("Warehouse settings updated.");
     return saveWarehouseSettingsServer(settings);
+}
+export const getStockSettings = async (): Promise<StockSettings> => getStockSettingsServer();
+export async function saveStockSettings(settings: StockSettings): Promise<void> {
+    await logInfo("Stock settings updated.");
+    return saveStockSettingsServer(settings);
 }
 export const getLocations = async (): Promise<WarehouseLocation[]> => getLocationsServer();
 

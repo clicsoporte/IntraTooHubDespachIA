@@ -10,7 +10,7 @@ import path from 'path';
 import fs from 'fs';
 import { initialCompany, initialRoles } from './data';
 import { DB_MODULES } from './db-modules';
-import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig, ProductionOrder } from '@/modules/core/types';
+import type { Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, Supplier, ErpOrderHeader, ErpOrderLine, Notification, UserPreferences, AuditResult, ErpPurchaseOrderHeader, ErpPurchaseOrderLine, SqlConfig, ProductionOrder, WizardSession } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
@@ -92,6 +92,7 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
         CREATE TABLE IF NOT EXISTS erp_order_lines (PEDIDO TEXT, PEDIDO_LINEA INTEGER, ARTICULO TEXT, CANTIDAD_PEDIDA REAL, PRECIO_UNITARIO REAL, PRIMARY KEY (PEDIDO, PEDIDO_LINEA));
         CREATE TABLE IF NOT EXISTS erp_purchase_order_headers (ORDEN_COMPRA TEXT PRIMARY KEY, PROVEEDOR TEXT, FECHA_HORA TEXT, ESTADO TEXT, CreatedBy TEXT);
         CREATE TABLE IF NOT EXISTS erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY(ORDEN_COMPRA, ARTICULO));
+        CREATE TABLE IF NOT EXISTS stock_settings (key TEXT PRIMARY KEY, value TEXT);
     `;
     db.exec(schema);
 
@@ -415,6 +416,10 @@ async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
                  db.exec(`DROP TABLE erp_purchase_order_lines;`);
                  db.exec(`CREATE TABLE erp_purchase_order_lines (ORDEN_COMPRA TEXT, ARTICULO TEXT, CANTIDAD_ORDENADA REAL, PRIMARY KEY (ORDEN_COMPRA, ARTICULO));`);
              }
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='stock_settings'`).get()) {
+            console.log("MIGRATION: Creating stock_settings table.");
+            db.exec(`CREATE TABLE stock_settings (key TEXT PRIMARY KEY, value TEXT);`);
         }
 
     } catch (error) {
@@ -1175,14 +1180,20 @@ export async function saveAllStock(stockData: { itemId: string, warehouseId: str
 
 export async function getStockSettings(): Promise<StockSettings> {
     const db = await connectDb();
-    const rows = db.prepare('SELECT * FROM stock_settings').all() as { key: string; value: string }[];
-    const settings: StockSettings = { warehouses: [] };
-    for (const row of rows) {
-        if (row.key === 'warehouses') {
-            settings.warehouses = JSON.parse(row.value);
+    try {
+        await runMainDbMigrations(db); // Ensure table exists
+        const rows = db.prepare('SELECT * FROM stock_settings').all() as { key: string; value: string }[];
+        const settings: StockSettings = { warehouses: [] };
+        for (const row of rows) {
+            if (row.key === 'warehouses') {
+                settings.warehouses = JSON.parse(row.value);
+            }
         }
+        return settings;
+    } catch (error) {
+        console.error("Error getting stock settings:", error);
+        return { warehouses: [] }; // Return default on error
     }
-    return settings;
 }
 
 export async function saveStockSettings(settings: StockSettings): Promise<void> {
@@ -1611,7 +1622,7 @@ export async function confirmPlannerModification(orderId: number, updatedBy: str
     return await confirmPlannerModificationServer(orderId, updatedBy);
 }
 
-export async function saveWizardSession(userId: number, sessionData: any): Promise<void> {
+export async function saveWizardSession(userId: number, sessionData: WizardSession): Promise<void> {
     const db = await connectDb();
     db.prepare(`UPDATE users SET activeWizardSession = ? WHERE id = ?`).run(JSON.stringify(sessionData), userId);
 }
@@ -1621,7 +1632,7 @@ export async function clearWizardSession(userId: number): Promise<void> {
     db.prepare(`UPDATE users SET activeWizardSession = NULL WHERE id = ?`).run(userId);
 }
 
-export async function getActiveWizardSession(userId: number): Promise<any | null> {
+export async function getActiveWizardSession(userId: number): Promise<WizardSession | null> {
     const db = await connectDb();
     const row = db.prepare(`SELECT activeWizardSession FROM users WHERE id = ?`).get(userId) as { activeWizardSession: string | null } | undefined;
     return row?.activeWizardSession ? JSON.parse(row.activeWizardSession) : null;

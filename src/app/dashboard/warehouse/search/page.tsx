@@ -7,6 +7,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { useAuth } from '@/modules/core/hooks/useAuth';
@@ -111,6 +112,7 @@ export default function WarehouseSearchPage() {
     useAuthorization(['warehouse:access']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
+    const router = useRouter();
     const { user, companyData, products, customers } = useAuth();
 
     const [isLoading, setIsLoading] = useState(true);
@@ -206,7 +208,7 @@ export default function WarehouseSearchPage() {
             const customer = customers.find(c => c.id === id);
             if (customer) setSelectedItem({ id: customer.id, type: 'customer', searchText: '' });
         } else if (type === 'unit') {
-            setSelectedItem({ id, type: 'unit', searchText: '' });
+            router.push(`/dashboard/scanner?unitId=${id}`);
         }
     };
 
@@ -216,8 +218,7 @@ export default function WarehouseSearchPage() {
         let results: CombinedItem[] = [];
 
         if (selectedItem.type === 'unit') {
-            // Unit search logic can be implemented here if needed, or redirect.
-            // For now, let's assume it's handled by redirecting or isn't part of this view.
+            // This case is now handled by redirecting in handleSelectSearchItem.
         } else {
             const groupedByItem: { [key: string]: SearchResultItem } = {};
 
