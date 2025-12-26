@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Page for proactive purchase suggestions.
  * This component now correctly uses the centralized `usePurchaseSuggestionsLogic` hook

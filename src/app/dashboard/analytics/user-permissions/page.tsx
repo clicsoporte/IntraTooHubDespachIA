@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Page for the User Permissions Report.
  * It displays a filterable and sortable list of all users, their assigned roles,
