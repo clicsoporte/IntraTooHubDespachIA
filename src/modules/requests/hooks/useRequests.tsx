@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -9,7 +8,7 @@
 import React from 'react';
 import { useState, useEffect, useCallback, useMemo, FormEvent } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
-import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
+import { ToastAction } from "@/components/ui/toast";
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { 
@@ -342,7 +341,7 @@ export const useRequests = () => {
         if (!isAuthReady || state.isLoading) return;
         loadInitialData(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.viewingArchived, state.archivedPage, state.pageSize, isAuthReady]);
+    }, [state.viewingArchived, state.archivedPage, state.pageSize]);
 
     // Effect to pre-fill form from URL parameters
     useEffect(() => {
@@ -727,6 +726,7 @@ export const useRequests = () => {
         handleCreateRequestsFromErp: async () => {
             if (!state.selectedErpOrderHeader || !currentUser) return;
             const erpHeader = state.selectedErpOrderHeader;
+            const client = customers.find(c => c.id === erpHeader.CLIENTE);
 
             const selectedLines = state.erpOrderLines.filter(line => line.selected);
             if (selectedLines.length === 0) {
@@ -737,16 +737,18 @@ export const useRequests = () => {
             updateState({ isSubmitting: true });
             try {
                 for (const line of selectedLines) {
-                    const requestPayload = {
+                    const requestPayload: Omit<PurchaseRequest, 'id'|'consecutive'|'requestDate'|'status'|'reopened'|'requestedBy'|'deliveredQuantity'|'receivedInWarehouseBy'|'receivedDate'|'previousStatus'|'lastModifiedAt'|'lastModifiedBy'|'hasBeenModified'|'approvedBy'|'lastStatusUpdateBy'|'lastStatusUpdateNotes'> = {
                         requiredDate: new Date(erpHeader.FECHA_PROMETIDA).toISOString().split('T')[0],
                         clientId: erpHeader.CLIENTE,
-                        clientName: erpHeader.CLIENTE_NOMBRE || '',
+                        clientName: client?.name || erpHeader.CLIENTE_NOMBRE || '',
                         clientTaxId: customers.find(c => c.id === erpHeader.CLIENTE)?.taxId || '',
                         itemId: line.ARTICULO,
                         itemDescription: line.product.description,
                         quantity: parseFloat(line.displayQuantity) || 0,
                         notes: `Generado desde Pedido ERP: ${erpHeader.PEDIDO}`,
                         unitSalePrice: parseFloat(line.displayPrice) || 0,
+                        salePriceCurrency: (erpHeader.MONEDA_PEDIDO === 'DOL' ? 'USD' : 'CRC') as 'CRC' | 'USD',
+                        requiresCurrency: true,
                         purchaseOrder: erpHeader.ORDEN_COMPRA || '',
                         erpOrderNumber: erpHeader.PEDIDO,
                         erpOrderLine: line.PEDIDO_LINEA,
@@ -755,9 +757,11 @@ export const useRequests = () => {
                         route: '',
                         shippingMethod: '',
                         inventory: 0,
+                        inventoryErp: line.stock?.totalStock || 0,
                         manualSupplier: '',
                         arrivalDate: '',
                         pendingAction: 'none' as const,
+                        analysis: undefined,
                     };
                     await savePurchaseRequest(requestPayload, currentUser.name);
                 }
@@ -1096,5 +1100,3 @@ export const useRequests = () => {
         isAuthorized
     };
 }
-
-    

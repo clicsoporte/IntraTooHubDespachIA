@@ -4,7 +4,7 @@
  * Spanish is used for UI-facing strings like names and descriptions.
  */
 
-import type { Tool, User, Role, Company } from "@/modules/core/types";
+import type { Tool, User, Role, Company, DatabaseModule } from "@/modules/core/types";
 import {
   Users,
   Sheet,

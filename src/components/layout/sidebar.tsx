@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Sidebar component for the main application layout.
  * It handles navigation, displays user and company information, and adapts
