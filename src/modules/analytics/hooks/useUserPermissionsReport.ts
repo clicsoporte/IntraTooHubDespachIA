@@ -15,6 +15,7 @@ import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { format } from 'date-fns';
+import { permissionTranslations } from '@/modules/core/lib/data';
 
 export interface UserPermissionRow {
     userId: number;
@@ -27,25 +28,6 @@ export interface UserPermissionRow {
 
 export type SortKey = 'userName' | 'roleName';
 export type SortDirection = 'asc' | 'desc';
-
-const permissionTranslations: { [key: string]: string } = {
-    "dashboard:access": "Acceso al Panel", "quotes:create": "Cotizador: Crear", "quotes:generate": "Cotizador: Generar PDF", "quotes:drafts:create": "Borradores: Crear", "quotes:drafts:read": "Borradores: Cargar", "quotes:drafts:delete": "Borradores: Eliminar",
-    "requests:read": "Compras: Leer", "requests:read:all": "Compras: Leer Todo", "requests:create": "Compras: Crear", "requests:create:duplicate": "Compras: Crear Duplicados", "requests:edit:pending": "Compras: Editar (Pendientes)", "requests:edit:approved": "Compras: Editar (Aprobadas)", "requests:reopen": "Compras: Reabrir", "requests:notes:add": "Compras: Añadir Notas",
-    "requests:status:review": "Compras: Enviar a Revisión", "requests:status:pending-approval": "Compras: Enviar a Aprobación", "requests:status:approve": "Compras: Aprobar", "requests:status:ordered": "Compras: Marcar como Ordenada", "requests:status:received-in-warehouse": "Compras: Recibir en Bodega", "requests:status:entered-erp": "Compras: Ingresar a ERP", "requests:status:cancel": "Compras: Cancelar", "requests:status:unapproval-request": "Compras: Solicitar Desaprobación", "requests:status:unapproval-request:approve": "Compras: Aprobar Desaprobación", "requests:status:revert-to-approved": "Compras: Revertir a Aprobada",
-    "planner:read": "Plan.: Leer", "planner:read:all": "Plan.: Leer Todo", "planner:create": "Plan.: Crear", "planner:edit:pending": "Plan.: Editar (Pendientes)", "planner:edit:approved": "Plan.: Editar (Aprobadas)", "planner:reopen": "Plan.: Reabrir", "planner:receive": "Plan.: Recibir en Bodega", "planner:status:review": "Plan.: Enviar a Revisión", "planner:status:pending-approval": "Plan.: Enviar a Aprobación", "planner:status:approve": "Plan.: Cambiar a Aprobada", "planner:status:in-progress": "Plan.: Cambiar a En Progreso", "planner:status:on-hold": "Plan.: Cambiar a En Espera", "planner:status:completed": "Plan.: Cambiar a Completada", "planner:status:cancel": "Plan.: Cancelar (Pendientes)", "planner:status:cancel-approved": "Plan.: Cancelar (Aprobadas)", "planner:priority:update": "Plan.: Cambiar Prioridad", "planner:machine:assign": "Plan.: Asignar Máquina", "planner:status:unapprove-request": "Plan.: Solicitar Desaprobación", "planner:schedule": "Plan.: Programar Fechas",
-    "cost-assistant:access": "Asist. Costos: Acceso", "cost-assistant:drafts:read-write": "Asist. Costos: Guardar Borradores",
-    "warehouse:access": "Almacén: Acceso", "warehouse:inventory:assign": "Almacén: Asignar Inventario", "warehouse:locations:manage": "Almacén: Gestionar Ubicaciones", "warehouse:units:manage": "Almacén: Gestionar Unidades (QR)",
-    "hacienda:query": "Hacienda: Consultas",
-    "analytics:read": "Analíticas: Acceso", "analytics:purchase-suggestions:read": "Analíticas: Sugerencias Compra", "analytics:production-report:read": "Analíticas: Reporte Producción", "analytics:user-permissions:read": "Analíticas: Reporte Permisos", "analytics:purchase-report:read": "Analíticas: Reporte Compras", "analytics:transits-report:read": "Analíticas: Reporte Tránsitos", "analytics:physical-inventory-report:read": "Analíticas: Reporte Inv. Físico",
-    "users:create": "Usuarios: Crear", "users:read": "Usuarios: Leer", "users:update": "Usuarios: Actualizar", "users:delete": "Usuarios: Eliminar",
-    "roles:create": "Roles: Crear", "roles:read": "Roles: Leer", "roles:update": "Roles: Actualizar", "roles:delete": "Roles: Eliminar",
-    "admin:settings:general": "Admin: Config. General", "admin:settings:api": "Admin: Config. API", "admin:settings:planner": "Admin: Config. Planificador", "admin:settings:requests": "Admin: Config. Compras", "admin:settings:warehouse": "Admin: Config. Almacenes", "admin:settings:stock": "Admin: Config. Inventario", "admin:settings:cost-assistant": "Admin: Config. Asist. Costos",
-    "admin:suggestions:read": "Admin: Leer Sugerencias",
-    "admin:import:run": "Admin: Ejecutar Sincronización", "admin:import:files": "Admin: Importar (Archivos)", "admin:import:sql": "Admin: Importar (SQL)", "admin:import:sql-config": "Admin: Configurar SQL",
-    "admin:logs:read": "Admin: Ver Logs", "admin:logs:clear": "Admin: Limpiar Logs",
-    "admin:maintenance:backup": "Admin: Mantenimiento (Backup)", "admin:maintenance:restore": "Admin: Mantenimiento (Restaurar)", "admin:maintenance:reset": "Admin: Mantenimiento (Resetear)",
-};
-
 
 const normalizeText = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -142,7 +124,7 @@ export function useUserPermissionsReport() {
         updateState({ sortKey: key, sortDirection: direction });
     };
     
-    const translatePermission = (perm: string) => permissionTranslations[perm] || perm;
+    const translatePermission = (perm: string) => (permissionTranslations as Record<string, string>)[perm] || perm;
 
     const handleExportExcel = () => {
         const headers = ["Usuario", "Correo", "Rol", "Permisos"];
