@@ -17,7 +17,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { getLocations, getAllItemLocations, assignItemToLocation, unassignItemFromLocation, getSelectableLocations } from '@/modules/warehouse/lib/actions';
-import type { Product, Customer, WarehouseLocation, ItemLocation } from '@/modules/core/types';
+import type { Product, Customer, WarehouseLocation, ItemLocation, Company } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
 import { Loader2, Trash2, Printer, List, PlusCircle, Search } from 'lucide-react';
@@ -251,13 +251,14 @@ export default function AssignItemPage() {
         const client = authCustomers.find(c => c.id === assignment.clientId);
         const locationString = renderLocationPathAsString(assignment.locationId, allLocations);
     
-        if (!product) {
-          toast({ title: "Error", description: "No se encontró el producto para esta asignación.", variant: "destructive" });
+        if (!product || !companyData) {
+          toast({ title: "Error", description: "No se encontró el producto o la configuración de la empresa para esta asignación.", variant: "destructive" });
           return;
         }
     
         try {
-            const scanUrl = `${window.location.origin}/dashboard/scanner?locationId=${assignment.locationId}&productId=${product.id}`;
+            const baseUrl = companyData.publicUrl || window.location.origin;
+            const scanUrl = `${baseUrl}/dashboard/scanner?locationId=${assignment.locationId}&productId=${product.id}`;
             const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
             
             const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });

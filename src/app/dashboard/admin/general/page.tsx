@@ -23,7 +23,7 @@ import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
 import { useAuthorization } from "@/modules/core/hooks/useAuthorization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useDropzone } from "react-dropzone";
-import { Camera } from "lucide-react";
+import { Camera, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const getInitials = (name: string) => {
@@ -249,7 +249,7 @@ export default function GeneralSettingsPage() {
             <Card className="mt-6">
                 <CardHeader>
                     <CardTitle>Ajustes de Interfaz y Rendimiento</CardTitle>
-                    <CardDescription>Configuración global para la experiencia de usuario.</CardDescription>
+                    <CardDescription>Configuración global para la experiencia de usuario y el acceso a la aplicación.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <div className="space-y-2">
@@ -277,12 +277,28 @@ export default function GeneralSettingsPage() {
                           Después de cuánto tiempo sin sincronizar se mostrará la alerta. Formato HH:MM o decimal (ej: 0.5 para 30 min).
                        </p>
                   </div>
+                  <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="publicUrl">URL Pública de la Aplicación</Label>
+                      <Input 
+                          id="publicUrl"
+                          type="url"
+                          value={companyData.publicUrl || ''}
+                          onChange={handleChange}
+                          placeholder="Ej: https://intranet.miempresa.com"
+                      />
+                       <p className="text-xs text-muted-foreground pt-1">
+                          Importante para generar códigos QR correctos si la aplicación está detrás de un proxy. Dejar en blanco si se accede por IP.
+                       </p>
+                  </div>
                 </CardContent>
             </Card>
 
             <Card className="mt-6">
                 <CardFooter className="border-t px-6 py-4">
-                  <Button>Guardar Todos los Cambios</Button>
+                  <Button>
+                    <Save className="mr-2 h-4 w-4"/>
+                    Guardar Todos los Cambios
+                  </Button>
                 </CardFooter>
             </Card>
           </form>

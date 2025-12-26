@@ -61,7 +61,7 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
         CREATE TABLE IF NOT EXISTS company_settings (
             id INTEGER PRIMARY KEY,
             name TEXT, taxId TEXT, address TEXT, phone TEXT, email TEXT, logoUrl TEXT,
-            systemName TEXT, quotePrefix TEXT, nextQuoteNumber INTEGER, decimalPlaces INTEGER, quoterShowTaxId BOOLEAN,
+            systemName TEXT, publicUrl TEXT, quotePrefix TEXT, nextQuoteNumber INTEGER, decimalPlaces INTEGER, quoterShowTaxId BOOLEAN,
             searchDebounceTime INTEGER, syncWarningHours REAL, lastSyncTimestamp TEXT,
             importMode TEXT, customerFilePath TEXT, productFilePath TEXT, exemptionFilePath TEXT, stockFilePath TEXT, locationFilePath TEXT, cabysFilePath TEXT, supplierFilePath TEXT,
             erpPurchaseOrderHeaderFilePath TEXT, erpPurchaseOrderLineFilePath TEXT
@@ -101,8 +101,8 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
     const insertRolesTransaction = db.transaction((roles) => { for (const role of roles) insertRole.run({ ...role, permissions: JSON.stringify(role.permissions) }); });
     insertRolesTransaction(initialRoles);
     
-    const insertCompany = db.prepare('INSERT OR IGNORE INTO company_settings (id, name, taxId, address, phone, email, systemName, quotePrefix, nextQuoteNumber, decimalPlaces, quoterShowTaxId, searchDebounceTime, syncWarningHours, importMode) VALUES (1, @name, @taxId, @address, @phone, @email, @systemName, @quotePrefix, @nextQuoteNumber, @decimalPlaces, @quoterShowTaxId, @searchDebounceTime, @syncWarningHours, @importMode)');
-    insertCompany.run({ ...initialCompany, quoterShowTaxId: initialCompany.quoterShowTaxId ? 1 : 0 });
+    const insertCompany = db.prepare('INSERT OR IGNORE INTO company_settings (id, name, taxId, address, phone, email, systemName, publicUrl, quotePrefix, nextQuoteNumber, decimalPlaces, quoterShowTaxId, searchDebounceTime, syncWarningHours, importMode) VALUES (1, @name, @taxId, @address, @phone, @email, @systemName, @publicUrl, @quotePrefix, @nextQuoteNumber, @decimalPlaces, @quoterShowTaxId, @searchDebounceTime, @syncWarningHours, @importMode)');
+    insertCompany.run({ ...initialCompany, publicUrl: null, quoterShowTaxId: initialCompany.quoterShowTaxId ? 1 : 0 });
     
     db.prepare(`INSERT OR IGNORE INTO api_settings (id, exchangeRateApi, haciendaExemptionApi, haciendaTributariaApi) VALUES (1, 'https://api.hacienda.go.cr/indicadores/tc/dolar', 'https://api.hacienda.go.cr/fe/ex?autorizacion=', 'https://api.hacienda.go.cr/fe/ae?identificacion=')`).run();
     
@@ -306,6 +306,7 @@ async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
         if (!companyColumns.has('decimalPlaces')) db.exec(`ALTER TABLE company_settings ADD COLUMN decimalPlaces INTEGER DEFAULT 2`);
         if (!companyColumns.has('quoterShowTaxId')) db.exec(`ALTER TABLE company_settings ADD COLUMN quoterShowTaxId BOOLEAN DEFAULT TRUE`);
         if (!companyColumns.has('syncWarningHours')) db.exec(`ALTER TABLE company_settings ADD COLUMN syncWarningHours REAL DEFAULT 12`);
+        if (!companyColumns.has('publicUrl')) db.exec(`ALTER TABLE company_settings ADD COLUMN publicUrl TEXT`);
         
         if (companyColumns.has('importPath')) {
             console.log("MIGRATION: Dropping importPath column from company_settings.");
@@ -469,7 +470,7 @@ export async function saveCompanySettings(settings: Company): Promise<void> {
         const stmt = db.prepare(`
             UPDATE company_settings SET 
                 name = @name, taxId = @taxId, address = @address, phone = @phone, email = @email,
-                logoUrl = @logoUrl, systemName = @systemName, quotePrefix = @quotePrefix, nextQuoteNumber = @nextQuoteNumber, 
+                logoUrl = @logoUrl, systemName = @systemName, publicUrl = @publicUrl, quotePrefix = @quotePrefix, nextQuoteNumber = @nextQuoteNumber, 
                 decimalPlaces = @decimalPlaces, searchDebounceTime = @searchDebounceTime,
                 customerFilePath = @customerFilePath, productFilePath = @productFilePath, exemptionFilePath = @exemptionFilePath,
                 stockFilePath = @stockFilePath, locationFilePath = @locationFilePath, cabysFilePath = @cabysFilePath,

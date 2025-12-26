@@ -37,6 +37,7 @@ export type Company = {
     email: string;
     logoUrl?: string;
     systemName?: string;
+    publicUrl?: string; // Base URL for public access (e.g., QR codes)
     quotePrefix: string;
     nextQuoteNumber: number;
     decimalPlaces: number;
