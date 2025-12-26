@@ -282,25 +282,21 @@ export default function PurchaseRequestPage() {
     }
     
     const renderFilters = () => (
-        <div className="space-y-4">
-            <Input placeholder="Buscar por Nº solicitud, cliente, producto o pedido ERP..." value={searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full" />
-            <Select value={statusFilter} onValueChange={actions.setStatusFilter}><SelectTrigger className="w-full"><SelectValue placeholder="Filtrar por estado..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{Object.entries(selectors.statusConfig).map(([key, { label }]: [string, { label: string }]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}</SelectContent></Select>
-            <Select value={classificationFilter} onValueChange={actions.setClassificationFilter}><SelectTrigger className="w-full"><SelectValue placeholder="Filtrar por clasificación..." /></SelectTrigger><SelectContent><SelectItem value="all">Todas las Clasificaciones</SelectItem>{selectors.classifications.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
-            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateFilter && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateFilter?.from ? (dateFilter.to ? (`${format(dateFilter.from, "LLL dd, y")} - ${format(dateFilter.to, "LLL dd, y")}`) : (format(dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="range" selected={dateFilter} onSelect={actions.setDateFilter} /></PopoverContent></Popover>
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+            <Input placeholder="Buscar por Nº solicitud, cliente, producto o pedido ERP..." value={searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full md:w-64" />
+            <Select value={statusFilter} onValueChange={actions.setStatusFilter}><SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filtrar por estado..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{Object.entries(selectors.statusConfig).map(([key, { label }]: [string, { label: string }]) => (<SelectItem key={key} value={key}>{label}</SelectItem>))}</SelectContent></Select>
+            <Select value={classificationFilter} onValueChange={actions.setClassificationFilter}><SelectTrigger className="w-full md:w-[240px]"><SelectValue placeholder="Filtrar por clasificación..." /></SelectTrigger><SelectContent><SelectItem value="all">Todas las Clasificaciones</SelectItem>{selectors.classifications.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+            <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full md:w-auto justify-start text-left font-normal", !dateFilter && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dateFilter?.from ? (dateFilter.to ? (`${format(dateFilter.from, "LLL dd, y")} - ${format(dateFilter.to, "LLL dd, y")}`) : (format(dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="range" selected={dateFilter} onSelect={actions.setDateFilter} /></PopoverContent></Popover>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full"><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
+                    <Button variant="outline" className="w-full md:w-auto"><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => actions.handleExportPDF('portrait')}><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
                     <DropdownMenuItem onSelect={actions.handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar a Excel</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" onClick={() => { actions.setSearchTerm(''); actions.setStatusFilter('all'); actions.setClassificationFilter('all'); actions.setDateFilter(undefined); actions.setShowOnlyMyRequests(true); }} className="w-full"><FilterX className="mr-2 h-4 w-4" />Limpiar</Button>
-            <div className="flex items-center space-x-2 pt-4">
-                <Checkbox id="show-only-my-requests" checked={showOnlyMyRequests} onCheckedChange={(checked) => actions.setShowOnlyMyRequests(checked as boolean)} disabled={!showOnlyMyRequests && !selectors.hasPermission('requests:read:all')}/>
-                <Label htmlFor="show-only-my-requests" className="font-normal">Mostrar solo mis solicitudes</Label>
-            </div>
+            <Button variant="ghost" onClick={() => { actions.setSearchTerm(''); actions.setStatusFilter('all'); actions.setClassificationFilter('all'); actions.setDateFilter(undefined); actions.setShowOnlyMyRequests(true); }} className="w-full md:w-auto"><FilterX className="mr-2 h-4 w-4" />Limpiar</Button>
         </div>
     );
 
@@ -404,9 +400,7 @@ export default function PurchaseRequestPage() {
                 {/* Desktop Filters */}
                 <Card className="hidden md:block">
                     <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row gap-4">
-                           {renderFilters()}
-                        </div>
+                        {renderFilters()}
                     </CardContent>
                 </Card>
                 {/* Mobile Filters */}
@@ -425,8 +419,13 @@ export default function PurchaseRequestPage() {
                                     Aplica filtros para refinar tu búsqueda de solicitudes.
                                 </SheetDescription>
                             </SheetHeader>
-                            <div className="py-4">
+                            <div className="py-4 space-y-4">
                                {renderFilters()}
+                               <Separator />
+                                <div className="flex items-center space-x-2 pt-4">
+                                    <Checkbox id="show-only-my-requests" checked={showOnlyMyRequests} onCheckedChange={(checked) => actions.setShowOnlyMyRequests(checked as boolean)} disabled={!showOnlyMyRequests && !selectors.hasPermission('requests:read:all')}/>
+                                    <Label htmlFor="show-only-my-requests" className="font-normal">Mostrar solo mis solicitudes</Label>
+                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>
@@ -471,4 +470,5 @@ export default function PurchaseRequestPage() {
     
 
     
+
 

@@ -282,23 +282,25 @@ export default function PlannerPage() {
     }
     
     const renderFilters = () => (
-        <div className="space-y-4">
-            <Input placeholder="Buscar por Nº orden, cliente o producto..." value={state.searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full" />
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+            <Input placeholder="Buscar por Nº orden, cliente o producto..." value={state.searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full md:w-64" />
             <MultiSelectFilter
                 title="Estado"
                 options={Object.entries(selectors.statusConfig).map(([key, { label }]) => ({ value: key, label }))}
                 selectedValues={state.statusFilter}
                 onSelectedChange={actions.setStatusFilter}
+                className="w-full md:w-auto"
             />
             <MultiSelectFilter
                 title="Clasificación"
                 options={selectors.classifications.map(c => ({ value: c, label: c }))}
                 selectedValues={state.classificationFilter}
                 onSelectedChange={actions.setClassificationFilter}
+                className="w-full md:w-auto"
             />
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !state.dateFilter && "text-muted-foreground")}>
+                    <Button variant={"outline"} className={cn("w-full md:w-auto justify-start text-left font-normal", !state.dateFilter && "text-muted-foreground")}>
                         <CalendarIcon className="mr-2 h-4 w-4" />{state.dateFilter?.from ? (state.dateFilter.to ? (`${format(state.dateFilter.from, "LLL dd, y")} - ${format(state.dateFilter.to, "LLL dd, y")}`) : (format(state.dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}
                     </Button>
                 </PopoverTrigger>
@@ -314,25 +316,16 @@ export default function PlannerPage() {
             />
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full"><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
+                    <Button variant="outline" className="w-full md:w-auto"><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => actions.handleExportPDF('portrait')}><FileDown className="mr-2 h-4 w-4" /> Exportar a PDF</DropdownMenuItem>
                     <DropdownMenuItem onSelect={actions.handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar a Excel</DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" onClick={() => { actions.setSearchTerm(''); actions.setStatusFilter([]); actions.setClassificationFilter([]); actions.setDateFilter(undefined); actions.setShowOnlyMyOrders(true); }} className="w-full">
+            <Button variant="ghost" onClick={() => { actions.setSearchTerm(''); actions.setStatusFilter([]); actions.setClassificationFilter([]); actions.setDateFilter(undefined); actions.setShowOnlyMyOrders(true); }} className="w-full md:w-auto">
                 <FilterX className="mr-2 h-4 w-4" />Limpiar
             </Button>
-            <div className="flex items-center space-x-2 pt-4">
-                <Checkbox 
-                    id="show-only-my-orders" 
-                    checked={state.showOnlyMyOrders} 
-                    onCheckedChange={(checked) => actions.setShowOnlyMyOrders(checked as boolean)}
-                    disabled={!state.showOnlyMyOrders && !selectors.hasPermission('planner:read:all')}
-                />
-                <Label htmlFor="show-only-my-orders" className="font-normal">Mostrar solo mis órdenes</Label>
-            </div>
         </div>
     );
     
@@ -437,9 +430,7 @@ export default function PlannerPage() {
                 {/* Desktop Filters */}
                 <Card className="hidden md:block">
                     <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row gap-4">
-                            {renderFilters()}
-                        </div>
+                        {renderFilters()}
                     </CardContent>
                 </Card>
                  {/* Mobile Filters */}
@@ -458,8 +449,18 @@ export default function PlannerPage() {
                                     Aplica filtros para refinar tu búsqueda de órdenes.
                                 </SheetDescription>
                             </SheetHeader>
-                            <div className="py-4">
+                            <div className="py-4 space-y-4">
                                 {renderFilters()}
+                                <Separator />
+                                <div className="flex items-center space-x-2 pt-4">
+                                    <Checkbox 
+                                        id="show-only-my-orders" 
+                                        checked={state.showOnlyMyOrders} 
+                                        onCheckedChange={(checked) => actions.setShowOnlyMyOrders(checked as boolean)}
+                                        disabled={!state.showOnlyMyOrders && !selectors.hasPermission('planner:read:all')}
+                                    />
+                                    <Label htmlFor="show-only-my-orders" className="font-normal">Mostrar solo mis órdenes</Label>
+                                </div>
                             </div>
                         </SheetContent>
                     </Sheet>
