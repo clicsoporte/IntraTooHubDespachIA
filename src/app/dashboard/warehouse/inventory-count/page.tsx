@@ -13,14 +13,13 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getLocations, updateInventory, logMovement, getSelectableLocations } from '@/modules/warehouse/lib/actions';
-import type { Product, WarehouseLocation } from '@/modules/core/types';
+import { getLocations, updateInventory, getSelectableLocations } from '@/modules/warehouse/lib/actions';
+import type { Product, WarehouseLocation, User } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
 import { Loader2, Save, List } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
@@ -38,7 +37,7 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
 };
 
 export default function InventoryCountPage() {
-    useAuthorization(['warehouse:inventory:assign']); // Reusing permission, can be changed
+    const { isAuthorized, hasPermission } = useAuthorization(['warehouse:inventory:assign']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user, companyData, products: authProducts } = useAuth();
@@ -65,6 +64,9 @@ export default function InventoryCountPage() {
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
+        if (isAuthorized) {
+             await logInfo(`User ${user?.name} accessed Inventory Count page.`);
+        }
         try {
             const locs = await getLocations();
             setAllLocations(locs);
@@ -75,7 +77,7 @@ export default function InventoryCountPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, [toast, isAuthorized, user]);
     
     useEffect(() => {
         setTitle("Toma de Inventario Físico");
@@ -132,18 +134,9 @@ export default function InventoryCountPage() {
 
         setIsSubmitting(true);
         try {
-            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user.name);
-            await logMovement({
-                itemId: selectedProductId,
-                quantity: quantity,
-                fromLocationId: null,
-                toLocationId: parseInt(selectedLocationId, 10),
-                userId: user.id,
-                notes: 'Conteo de inventario físico'
-            });
+            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user);
             
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
-            logInfo('Physical inventory count saved', { itemId: selectedProductId, locationId: selectedLocationId, quantity, user: user.name });
             
             // Reset fields for next count
             setSelectedProductId(null);

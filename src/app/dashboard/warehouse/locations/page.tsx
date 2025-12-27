@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/modules/core/hooks/useAuth';
 
 const emptyLocation: Omit<WarehouseLocation, 'id'> = { name: '', code: '', type: 'building', parentId: null };
 
@@ -90,9 +91,10 @@ function LocationTree({ locations, onEdit, onDelete }: { locations: WarehouseLoc
 }
 
 export default function ManageLocationsPage() {
-    useAuthorization(['warehouse:locations:manage']);
+    const { isAuthorized, hasPermission } = useAuthorization(['warehouse:locations:manage']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
+    const { user } = useAuth();
     const router = useRouter();
     
     const [settings, setSettings] = useState<WarehouseSettings | null>(null);
@@ -112,6 +114,9 @@ export default function ManageLocationsPage() {
 
     const fetchAllData = useCallback(async () => {
         setIsLoading(true);
+        if (isAuthorized) {
+            await logInfo(`User ${user?.name} accessed Manage Locations page.`);
+        }
         try {
             const [settingsData, locationsData] = await Promise.all([
                 getWarehouseSettings(),
@@ -125,7 +130,7 @@ export default function ManageLocationsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, [toast, isAuthorized, user]);
     
     useEffect(() => {
         setTitle("Gestión de Ubicaciones de Almacén");
@@ -181,9 +186,9 @@ export default function ManageLocationsPage() {
     };
     
     const handleDeleteLocationAction = useCallback(async () => {
-        if (!locationToDelete) return;
+        if (!locationToDelete || !user) return;
         try {
-            await deleteLocation(locationToDelete.id);
+            await deleteLocation(locationToDelete.id, user.name);
             const locationsData = await getLocations();
             setLocations(locationsData);
             toast({ title: "Ubicación Eliminada" });
@@ -192,7 +197,7 @@ export default function ManageLocationsPage() {
              logError("Failed to delete location", { error: error.message });
             toast({ title: "Error", description: error.message, variant: "destructive" });
         }
-    }, [locationToDelete, toast]);
+    }, [locationToDelete, toast, user]);
     
     const openLocationForm = (loc?: WarehouseLocation) => {
         if (loc) {
