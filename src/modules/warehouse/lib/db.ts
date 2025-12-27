@@ -308,20 +308,17 @@ export async function getInventory(dateRange?: DateRange): Promise<WarehouseInve
     return db.prepare('SELECT * FROM inventory ORDER BY lastUpdated DESC').all() as WarehouseInventoryItem[];
 }
 
-export async function updateInventory(itemId: string, locationId: number, newQuantity: number, updatedBy: string): Promise<void> {
-    const mainDb = await connectDb(); // Connect to the main database
-    const userResult = mainDb.prepare('SELECT id FROM users WHERE name = ?').get(updatedBy) as { id: number } | undefined;
-
-    if (!userResult) {
-        throw new Error(`User '${updatedBy}' not found in main database.`);
-    }
-    const userId = userResult.id;
-    
-    // Now, connect to the warehouse database for the transaction
+export async function updateInventory(itemId: string, locationId: number, newQuantity: number, userId: number): Promise<void> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
     try {
         const transaction = warehouseDb.transaction(() => {
+            const userResult = warehouseDb.prepare(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main; SELECT name FROM main.users WHERE id = ?`).get(userId) as { name: string } | undefined;
+            if(!userResult) {
+                throw new Error(`User with ID ${userId} not found.`);
+            }
+            const updatedBy = userResult.name;
+
             const currentInventory = warehouseDb.prepare('SELECT quantity FROM inventory WHERE itemId = ? AND locationId = ?').get(itemId, locationId) as { quantity: number } | undefined;
             const oldQuantity = currentInventory?.quantity ?? 0;
             const difference = newQuantity - oldQuantity;
@@ -338,6 +335,7 @@ export async function updateInventory(itemId: string, locationId: number, newQua
                     'INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) VALUES (?, ?, ?, ?, datetime(\'now\'), ?, ?)'
                 ).run(itemId, difference, null, locationId, userId, `Ajuste de inventario físico. Conteo: ${newQuantity}`);
             }
+             warehouseDb.exec('DETACH DATABASE main;');
         });
 
         transaction();

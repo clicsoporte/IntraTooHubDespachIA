@@ -32,7 +32,7 @@ import {
     getChildLocations as getChildLocationsServer,
 } from './db';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User } from '@/modules/core/types';
 import { logInfo, logWarn } from '@/modules/core/lib/logger';
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
@@ -74,13 +74,17 @@ export async function updateLocation(location: WarehouseLocation): Promise<Wareh
     await logInfo(`Warehouse location updated: ${updatedLocation.name} (${updatedLocation.code})`);
     return updatedLocation;
 }
-export async function deleteLocation(id: number): Promise<void> {
-    await logWarn(`Warehouse location with ID ${id} deleted by user.`);
+export async function deleteLocation(id: number, userName: string): Promise<void> {
+    await logWarn(`Warehouse location with ID ${id} deleted by user ${userName}.`);
     return deleteLocationServer(id);
 }
 export const getInventoryForItem = async (itemId: string): Promise<WarehouseInventoryItem[]> => getInventoryForItemServer(itemId);
 export const logMovement = async (movement: Omit<MovementLog, 'id'|'timestamp'>): Promise<void> => logMovementServer(movement);
-export const updateInventory = async(itemId: string, locationId: number, quantity: number, updatedBy: string): Promise<void> => updateInventoryServer(itemId, locationId, quantity, updatedBy);
+
+export const updateInventory = async(itemId: string, locationId: number, quantity: number, user: User): Promise<void> => {
+    if (!user) throw new Error("User must be authenticated to update inventory.");
+    return updateInventoryServer(itemId, locationId, quantity, user.id);
+};
 
 // --- Simple Mode Actions ---
 export const getItemLocations = async (itemId: string): Promise<ItemLocation[]> => getItemLocationsServer(itemId);
