@@ -37,7 +37,7 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
 };
 
 export default function InventoryCountPage() {
-    const { isAuthorized, hasPermission } = useAuthorization(['warehouse:inventory:assign']);
+    useAuthorization(['warehouse:inventory:assign']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user, companyData, products: authProducts } = useAuth();
@@ -64,8 +64,8 @@ export default function InventoryCountPage() {
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
-        if (isAuthorized) {
-             await logInfo(`User ${user?.name} accessed Inventory Count page.`);
+        if (isAuthorized && user) {
+             await logInfo(`User ${user.name} accessed Inventory Count page.`);
         }
         try {
             const locs = await getLocations();
@@ -134,7 +134,7 @@ export default function InventoryCountPage() {
 
         setIsSubmitting(true);
         try {
-            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user.id);
+            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user);
             
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
             

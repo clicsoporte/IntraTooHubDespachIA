@@ -470,7 +470,7 @@ export default function ManageLocationsPage() {
                   <AlertDialog open={!!locationToDelete} onOpenChange={(open) => !open && setLocationToDelete(null)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>¿Eliminar &quot;{locationToDelete?.name}&quot;?</AlertDialogTitle>
+                            <AlertDialogTitle>¿Eliminar "{locationToDelete?.name}"?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Esta acción no se puede deshacer. Se eliminará la ubicación y TODAS las ubicaciones hijas que contenga. 
                                 El inventario asociado no se eliminará, pero quedará sin ubicación.

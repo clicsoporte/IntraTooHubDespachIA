@@ -308,7 +308,7 @@ export async function getInventory(dateRange?: DateRange): Promise<WarehouseInve
     return db.prepare('SELECT * FROM inventory ORDER BY lastUpdated DESC').all() as WarehouseInventoryItem[];
 }
 
-export async function updateInventory(itemId: string, locationId: number, newQuantity: number, user: User): Promise<void> {
+export async function updateInventory(itemId: string, locationId: number, newQuantity: number, userId: number, userName: string): Promise<void> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
     try {
@@ -323,17 +323,17 @@ export async function updateInventory(itemId: string, locationId: number, newQua
                      VALUES (?, ?, ?, datetime('now'), ?)
                      ON CONFLICT(itemId, locationId) 
                      DO UPDATE SET quantity = ?, updatedBy = ?, lastUpdated = datetime('now')`
-                ).run(itemId, locationId, newQuantity, user.name, newQuantity, user.name);
+                ).run(itemId, locationId, newQuantity, userName, newQuantity, userName);
 
                 warehouseDb.prepare(
                     'INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) VALUES (?, ?, ?, ?, datetime(\'now\'), ?, ?)'
-                ).run(itemId, difference, null, locationId, user.id, `Ajuste de inventario físico. Conteo: ${newQuantity}`);
+                ).run(itemId, difference, null, locationId, userId, `Ajuste de inventario físico. Conteo: ${newQuantity}`);
             }
         });
 
         transaction();
     } catch(error) {
-        logError('Error in updateInventory transaction', { error: (error as Error).message, user: user.name });
+        logError('Error in updateInventory transaction', { error: (error as Error).message, user: userName });
         throw error;
     }
 }
