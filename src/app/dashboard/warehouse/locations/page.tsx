@@ -445,7 +445,7 @@ export default function ManageLocationsPage() {
                                      <div className="space-y-2">
                                         <Label htmlFor="clone-source">Rack de Origen a Clonar</Label>
                                         <Select value={cloneData.sourceRackId} onValueChange={val => setCloneData(p => ({...p, sourceRackId: val}))}>
-                                            <SelectTrigger><SelectValue placeholder="Busca un rack de origen para clonar..."/></SelectTrigger>
+                                            <SelectTrigger><SelectValue placeholder="Busca un rack de origen para clonar (ej: 'Rack 01')"/></SelectTrigger>
                                             <SelectContent>
                                                 {rackOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                                             </SelectContent>
