@@ -116,9 +116,6 @@ export default function ManageLocationsPage() {
 
     const fetchAllData = useCallback(async () => {
         setIsLoading(true);
-        if (isAuthorized && user) {
-            await logInfo(`User ${user.name} accessed Manage Locations page.`);
-        }
         try {
             const [settingsData, locationsData] = await Promise.all([
                 getWarehouseSettings(),
@@ -132,7 +129,7 @@ export default function ManageLocationsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, isAuthorized, user]);
+    }, [toast]);
     
     useEffect(() => {
         setTitle("Gestión de Ubicaciones de Almacén");
@@ -448,7 +445,7 @@ export default function ManageLocationsPage() {
                                      <div className="space-y-2">
                                         <Label htmlFor="clone-source">Rack de Origen a Clonar</Label>
                                         <Select value={cloneData.sourceRackId} onValueChange={val => setCloneData(p => ({...p, sourceRackId: val}))}>
-                                            <SelectTrigger><SelectValue placeholder="Busca un rack de origen para clonar (ej: 'Rack 01')"/></SelectTrigger>
+                                            <SelectTrigger><SelectValue placeholder="Busca un rack de origen para clonar..."/></SelectTrigger>
                                             <SelectContent>
                                                 {rackOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                                             </SelectContent>
