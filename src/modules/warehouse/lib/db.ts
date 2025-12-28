@@ -5,7 +5,7 @@
 
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User } from '@/modules/core/types';
-import { logError } from '@/modules/core/lib/logger';
+import { logError, logInfo } from '@/modules/core/lib/logger';
 import path from 'path';
 
 const WAREHOUSE_DB_FILE = 'warehouse.db';
@@ -308,9 +308,14 @@ export async function getInventory(dateRange?: DateRange): Promise<WarehouseInve
     return db.prepare('SELECT * FROM inventory ORDER BY lastUpdated DESC').all() as WarehouseInventoryItem[];
 }
 
-export async function updateInventory(itemId: string, locationId: number, newQuantity: number, userId: number, userName: string): Promise<void> {
+export async function updateInventory(itemId: string, locationId: number, newQuantity: number, userId: number): Promise<void> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
+    // Get user name from main DB first
+    const mainDb = await connectDb();
+    const user = mainDb.prepare('SELECT name FROM users WHERE id = ?').get(userId) as User | undefined;
+    const userName = user?.name || 'Sistema';
+
     try {
         const transaction = warehouseDb.transaction(() => {
             const currentInventory = warehouseDb.prepare('SELECT quantity FROM inventory WHERE itemId = ? AND locationId = ?').get(itemId, locationId) as { quantity: number } | undefined;

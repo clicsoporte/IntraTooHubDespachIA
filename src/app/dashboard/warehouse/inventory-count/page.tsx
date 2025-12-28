@@ -37,7 +37,7 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
 };
 
 export default function InventoryCountPage() {
-    useAuthorization(['warehouse:inventory:assign']);
+    const { isAuthorized } = useAuthorization(['warehouse:inventory:assign']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user, companyData, products: authProducts } = useAuth();
@@ -64,9 +64,6 @@ export default function InventoryCountPage() {
 
     const loadInitialData = useCallback(async () => {
         setIsLoading(true);
-        if (isAuthorized && user) {
-             await logInfo(`User ${user.name} accessed Inventory Count page.`);
-        }
         try {
             const locs = await getLocations();
             setAllLocations(locs);
@@ -77,12 +74,17 @@ export default function InventoryCountPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [toast, isAuthorized, user]);
+    }, [toast]);
     
     useEffect(() => {
         setTitle("Toma de Inventario Físico");
-        loadInitialData();
-    }, [setTitle, loadInitialData]);
+        if (isAuthorized) {
+            if (user) {
+                logInfo(`User ${user.name} accessed Inventory Count page.`);
+            }
+            loadInitialData();
+        }
+    }, [setTitle, loadInitialData, isAuthorized, user]);
 
     const productOptions = useMemo(() =>
         debouncedProductSearch.length < 2 ? [] : authProducts
@@ -134,7 +136,7 @@ export default function InventoryCountPage() {
 
         setIsSubmitting(true);
         try {
-            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user);
+            await updateInventory(selectedProductId, parseInt(selectedLocationId, 10), quantity, user.id);
             
             toast({ title: "Conteo Guardado", description: `Se registró un inventario de ${quantity} para el producto.` });
             

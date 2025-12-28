@@ -91,7 +91,7 @@ function LocationTree({ locations, onEdit, onDelete }: { locations: WarehouseLoc
 }
 
 export default function ManageLocationsPage() {
-    const { isAuthorized, hasPermission } = useAuthorization(['warehouse:locations:manage']);
+    const { isAuthorized } = useAuthorization(['warehouse:locations:manage']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user } = useAuth();
@@ -134,8 +134,10 @@ export default function ManageLocationsPage() {
     
     useEffect(() => {
         setTitle("Gestión de Ubicaciones de Almacén");
-        fetchAllData();
-    }, [setTitle, fetchAllData]);
+        if(isAuthorized){
+            fetchAllData();
+        }
+    }, [setTitle, fetchAllData, isAuthorized]);
 
     const handleAddLevel = () => {
         if (!settings || !newLevelName.trim()) return;
