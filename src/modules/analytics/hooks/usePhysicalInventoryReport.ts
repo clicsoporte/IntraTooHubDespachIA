@@ -121,11 +121,11 @@ export function usePhysicalInventoryReport() {
     }, [setTitle, isAuthorized, user, updateState]);
 
     const sortedData = useMemo(() => {
-        let data = [...state.reportData];
+        let data: PhysicalInventoryComparisonItem[] = [...state.reportData];
 
         if (state.differenceFilter === 'empty-locations') {
             const countedLocationIds = new Set(state.reportData.map(item => item.locationId));
-            const emptyLocations = state.allSelectableLocations
+            const emptyLocations = (state.allSelectableLocations || [])
                 .filter(loc => !countedLocationIds.has(loc.id))
                 .map(loc => ({
                     productId: 'N/A',
