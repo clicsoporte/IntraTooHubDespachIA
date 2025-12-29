@@ -154,13 +154,10 @@ export default function PopulationWizardPage() {
         setIsLoading(true);
 
         try {
-            const levelNames = Array.from(selectedLevelIds).map(id => rackLevels.find(l => l.id === id)?.name || '').join(', ');
-            const rackName = allLocations.find(l => l.id === selectedRackId)?.name || 'Rack desconocido';
-
             const { locked } = await lockEntity({
                 entityIds: Array.from(selectedLevelIds),
                 userName: user.name,
-                lockedEntityName: `${rackName} > ${levelNames}`
+                userId: user.id
             });
 
             if (locked) {
@@ -238,7 +235,7 @@ export default function PopulationWizardPage() {
     const handleFinishWizard = async () => {
         if (user) {
             await clearWizardSession(user.id);
-            await releaseLock(Array.from(selectedLevelIds));
+            await releaseLock(Array.from(selectedLevelIds), user.id);
         }
         setWizardStep('finished');
     };
@@ -258,7 +255,7 @@ export default function PopulationWizardPage() {
     const abandonSession = async () => {
         if(user && existingSession) {
             await clearWizardSession(user.id);
-            await releaseLock(existingSession.levelIds);
+            await releaseLock(existingSession.levelIds, user.id);
         }
         resetWizard();
     };

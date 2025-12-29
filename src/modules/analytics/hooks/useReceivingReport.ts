@@ -165,7 +165,11 @@ export function useReceivingReport() {
         let current: WarehouseLocation | undefined = state.allLocations.find(l => l.id === locationId);
         while(current) {
             path.unshift(current.name);
-            current = current.parentId ? state.allLocations.find(l => l.id === current.parentId) : undefined;
+            if (current.parentId) {
+                current = state.allLocations.find(l => l.id === current.parentId);
+            } else {
+                current = undefined;
+            }
         }
         return path.join(' > ');
     }, [state.allLocations]);
@@ -234,7 +238,7 @@ export function useReceivingReport() {
             docTitle: "Reporte de Recepciones y Movimientos", docId: '', companyData,
             meta: [{ label: 'Generado', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
             blocks: [],
-            table: { columns: tableHeaders, rows: tableRows },
+            table: { columns: tableHeaders, rows: tableRows.map(row => row.map(cell => cell || '')) },
             totals: [], orientation: 'landscape'
         });
         doc.save('reporte_recepciones.pdf');
