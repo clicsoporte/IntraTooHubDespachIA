@@ -15,6 +15,7 @@ import { useDebounce } from 'use-debounce';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import QRCode from 'qrcode';
 import jsbarcode from 'jsbarcode';
+import jsPDF from "jspdf";
 import { format } from 'date-fns';
 
 type WizardStep = 'select_product' | 'select_location' | 'confirm_suggested' | 'confirm_new' | 'finished';
