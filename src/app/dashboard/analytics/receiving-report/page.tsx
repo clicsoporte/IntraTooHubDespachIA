@@ -9,7 +9,7 @@ import { useReceivingReport } from '@/modules/analytics/hooks/useReceivingReport
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX } from 'lucide-react';
+import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, Columns3 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { SearchInput } from '@/components/ui/search-input';
+import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 
 export default function ReceivingReportPage() {
     const {
@@ -29,8 +30,8 @@ export default function ReceivingReportPage() {
         isInitialLoading,
     } = useReceivingReport();
 
-    const { isLoading, dateRange, searchTerm, userFilter, locationFilter } = state;
-    const { sortedData } = selectors;
+    const { isLoading, dateRange, searchTerm, userFilter, locationFilter, visibleColumns } = state;
+    const { sortedData, availableColumns, visibleColumnsData } = selectors;
 
     if (isInitialLoading) {
         return (
@@ -48,9 +49,17 @@ export default function ReceivingReportPage() {
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Reporte de Recepciones y Movimientos</CardTitle>
-                    <CardDescription>Audita las recepciones de mercadería y movimientos de inventario registrados en el sistema.</CardDescription>
+                 <CardHeader>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <CardTitle>Reporte de Recepciones y Movimientos</CardTitle>
+                            <CardDescription>Audita las recepciones de mercadería y movimientos de inventario registrados en el sistema.</CardDescription>
+                        </div>
+                        <Button onClick={actions.fetchData} disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                            Generar Reporte
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-wrap items-center gap-4">
@@ -88,6 +97,12 @@ export default function ReceivingReportPage() {
                             <CardDescription>Se encontraron {sortedData.length} registros que coinciden con tus filtros.</CardDescription>
                         </div>
                          <div className="flex items-center gap-2">
+                             <DialogColumnSelector
+                                allColumns={availableColumns}
+                                visibleColumns={visibleColumns}
+                                onColumnChange={actions.handleColumnVisibilityChange}
+                                onSave={actions.handleSavePreferences}
+                            />
                             <Button variant="outline" onClick={actions.handleExportPDF} disabled={isLoading || sortedData.length === 0}><FileDown className="mr-2"/>Exportar PDF</Button>
                             <Button variant="outline" onClick={actions.handleExportExcel} disabled={isLoading || sortedData.length === 0}><FileSpreadsheet className="mr-2"/>Exportar Excel</Button>
                         </div>
@@ -98,35 +113,29 @@ export default function ReceivingReportPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Fecha</TableHead>
-                                    <TableHead>Producto</TableHead>
-                                    <TableHead>Nº Lote / ID</TableHead>
-                                    <TableHead>Documento</TableHead>
-                                    <TableHead>Ubicación</TableHead>
-                                    <TableHead>Cantidad</TableHead>
-                                    <TableHead>Usuario</TableHead>
+                                    {visibleColumnsData.map(col => (
+                                        <TableHead key={col.id}>{col.label}</TableHead>
+                                    ))}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoading ? (
-                                    <TableRow><TableCell colSpan={7} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
                                 ) : sortedData.length > 0 ? (
                                     sortedData.map(item => (
                                         <TableRow key={item.id}>
-                                            <TableCell className="text-xs text-muted-foreground">{format(parseISO(item.createdAt), 'dd/MM/yy HH:mm')}</TableCell>
-                                            <TableCell>
-                                                <div className="font-medium">{selectors.getProductDescription(item.productId)}</div>
-                                                <div className="text-sm text-muted-foreground">{item.productId}</div>
-                                            </TableCell>
-                                            <TableCell className="font-mono">{item.humanReadableId || 'N/A'}</TableCell>
-                                            <TableCell>{item.documentId || 'N/A'}</TableCell>
-                                            <TableCell className="text-xs">{selectors.getLocationPath(item.locationId)}</TableCell>
-                                            <TableCell className="font-bold">{(item as any).quantity || 1}</TableCell>
-                                            <TableCell>{item.createdBy}</TableCell>
+                                            {visibleColumns.includes('createdAt') && <TableCell className="text-xs text-muted-foreground">{format(parseISO(item.createdAt), 'dd/MM/yy HH:mm')}</TableCell>}
+                                            {visibleColumns.includes('productId') && <TableCell><div className="font-medium">{selectors.getProductDescription(item.productId)}</div><div className="text-sm text-muted-foreground">{item.productId}</div></TableCell>}
+                                            {visibleColumns.includes('humanReadableId') && <TableCell className="font-mono">{item.humanReadableId || 'N/A'}</TableCell>}
+                                            {visibleColumns.includes('unitCode') && <TableCell className="font-mono text-xs">{item.unitCode}</TableCell>}
+                                            {visibleColumns.includes('documentId') && <TableCell>{item.documentId || 'N/A'}</TableCell>}
+                                            {visibleColumns.includes('locationPath') && <TableCell className="text-xs">{selectors.getLocationPath(item.locationId)}</TableCell>}
+                                            {visibleColumns.includes('quantity') && <TableCell className="font-bold">{(item as any).quantity || 1}</TableCell>}
+                                            {visibleColumns.includes('createdBy') && <TableCell>{item.createdBy}</TableCell>}
                                         </TableRow>
                                     ))
                                 ) : (
-                                    <TableRow><TableCell colSpan={7} className="h-24 text-center">No hay datos para los filtros seleccionados.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center">No hay datos para los filtros seleccionados.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>

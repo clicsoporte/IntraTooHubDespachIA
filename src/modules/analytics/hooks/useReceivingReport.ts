@@ -9,18 +9,30 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getReceivingReportData } from '@/modules/analytics/lib/actions';
-import type { DateRange, InventoryUnit, Product, WarehouseLocation } from '@/modules/core/types';
+import type { DateRange, InventoryUnit, Product, WarehouseLocation, UserPreferences } from '@/modules/core/types';
 import { subDays, startOfDay, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDebounce } from 'use-debounce';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
+import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
     return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 };
+
+const availableColumns = [
+    { id: 'createdAt', label: 'Fecha' },
+    { id: 'productId', label: 'Producto' },
+    { id: 'humanReadableId', label: 'Nº Lote / ID' },
+    { id: 'unitCode', label: 'ID Unidad' },
+    { id: 'documentId', label: 'Documento' },
+    { id: 'locationPath', label: 'Ubicación' },
+    { id: 'quantity', label: 'Cantidad' },
+    { id: 'createdBy', label: 'Usuario' },
+];
 
 interface State {
     isLoading: boolean;
@@ -30,6 +42,7 @@ interface State {
     searchTerm: string;
     userFilter: string[];
     locationFilter: string[];
+    visibleColumns: string[];
 }
 
 export function useReceivingReport() {
@@ -51,6 +64,7 @@ export function useReceivingReport() {
         searchTerm: '',
         userFilter: [],
         locationFilter: [],
+        visibleColumns: availableColumns.map(c => c.id),
     });
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
@@ -77,15 +91,41 @@ export function useReceivingReport() {
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        const loadInitial = async () => {
-             await fetchData();
+        const loadPrefsAndData = async () => {
+             if(user) {
+                const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                if (prefs && prefs.visibleColumns) {
+                    updateState({ visibleColumns: prefs.visibleColumns });
+                }
+            }
+             // Do not fetch data automatically, wait for user action.
              setIsInitialLoading(false);
         }
         if (isAuthorized) {
-            loadInitial();
+            loadPrefsAndData();
         }
-    }, [setTitle, isAuthorized, fetchData]);
+    }, [setTitle, isAuthorized, user, updateState]);
     
+    const getAllChildLocationIds = useCallback((locationId: number): number[] => {
+        let children: number[] = [];
+        const queue: number[] = [locationId];
+        const processed = new Set<number>();
+
+        while (queue.length > 0) {
+            const currentId = queue.shift()!;
+            if (processed.has(currentId)) continue;
+            
+            children.push(currentId);
+            processed.add(currentId);
+
+            const directChildren = state.allLocations
+                .filter(l => l.parentId === currentId)
+                .map(l => l.id);
+            queue.push(...directChildren);
+        }
+        return children;
+    }, [state.allLocations]);
+
     const sortedData = useMemo(() => {
         let filtered = state.data;
         
@@ -97,7 +137,8 @@ export function useReceivingReport() {
                     normalizeText(item.productId).includes(searchLower) ||
                     normalizeText(product?.description).includes(searchLower) ||
                     normalizeText(item.humanReadableId).includes(searchLower) ||
-                    normalizeText(item.documentId).includes(searchLower)
+                    normalizeText(item.documentId).includes(searchLower) ||
+                    normalizeText(item.unitCode).includes(searchLower)
                 );
             });
         }
@@ -107,11 +148,15 @@ export function useReceivingReport() {
         }
 
         if (state.locationFilter.length > 0) {
-            filtered = filtered.filter(item => item.locationId && state.locationFilter.includes(String(item.locationId)));
+            const targetLocationIds = new Set<number>();
+            state.locationFilter.forEach(locIdStr => {
+                getAllChildLocationIds(Number(locIdStr)).forEach(id => targetLocationIds.add(id));
+            });
+            filtered = filtered.filter(item => item.locationId && targetLocationIds.has(item.locationId));
         }
 
         return filtered.sort((a, b) => parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime());
-    }, [state.data, debouncedSearchTerm, state.userFilter, state.locationFilter, products]);
+    }, [state.data, debouncedSearchTerm, state.userFilter, state.locationFilter, products, getAllChildLocationIds]);
 
     const getLocationPath = useCallback((locationId: number | null): string => {
         if (!locationId) return 'N/A';
@@ -128,39 +173,60 @@ export function useReceivingReport() {
         return products.find(p => p.id === productId)?.description || 'Producto Desconocido';
     }, [products]);
     
+    const handleSavePreferences = async () => {
+        if (!user) return;
+        try {
+            await saveUserPreferences(user.id, 'receivingReportPrefs', { visibleColumns: state.visibleColumns });
+            toast({ title: "Preferencias Guardadas" });
+        } catch (error: any) {
+            logError('Failed to save receiving report preferences', { error: error.message });
+            toast({ title: 'Error', description: 'No se pudieron guardar las preferencias.', variant: 'destructive' });
+        }
+    };
+    
     const handleExportExcel = () => {
-        const dataToExport = sortedData.map(item => ({
-            'Fecha': format(parseISO(item.createdAt), 'dd/MM/yyyy HH:mm'),
-            'Código Producto': item.productId,
-            'Descripción': getProductDescription(item.productId),
-            'Nº Lote / ID Físico': item.humanReadableId || 'N/A',
-            'Documento': item.documentId || 'N/A',
-            'Ubicación': getLocationPath(item.locationId),
-            'Cantidad': (item as any).quantity || 1,
-            'Usuario': item.createdBy,
-        }));
-
+        const headers = selectors.visibleColumnsData.map(c => c.label);
+        const dataToExport = sortedData.map(item => 
+            selectors.visibleColumnsData.map(col => {
+                switch(col.id) {
+                    case 'createdAt': return format(parseISO(item.createdAt), 'dd/MM/yyyy HH:mm');
+                    case 'productId': return `${getProductDescription(item.productId)} (${item.productId})`;
+                    case 'humanReadableId': return item.humanReadableId || 'N/A';
+                    case 'unitCode': return item.unitCode;
+                    case 'documentId': return item.documentId || 'N/A';
+                    case 'locationPath': return getLocationPath(item.locationId);
+                    case 'quantity': return (item as any).quantity || 1;
+                    case 'createdBy': return item.createdBy;
+                    default: return '';
+                }
+            })
+        );
         exportToExcel({
             fileName: 'reporte_recepciones',
             sheetName: 'Recepciones',
-            headers: Object.keys(dataToExport[0] || {}),
-            data: dataToExport.map(item => Object.values(item)),
-            columnWidths: [20, 15, 40, 20, 20, 30, 10, 20],
+            headers,
+            data: dataToExport,
         });
     };
     
     const handleExportPDF = () => {
          if (!companyData) return;
-        const tableHeaders = ["Fecha", "Producto", "Lote/ID", "Documento", "Ubicación", "Cant.", "Usuario"];
-        const tableRows = sortedData.map(item => [
-            format(parseISO(item.createdAt), 'dd/MM/yy HH:mm'),
-            `${getProductDescription(item.productId)}\n(${item.productId})`,
-            item.humanReadableId || 'N/A',
-            item.documentId || 'N/A',
-            getLocationPath(item.locationId),
-            (item as any).quantity || 1,
-            item.createdBy,
-        ]);
+        const tableHeaders = selectors.visibleColumnsData.map(c => c.label);
+        const tableRows = sortedData.map(item => 
+            selectors.visibleColumnsData.map(col => {
+                switch(col.id) {
+                    case 'createdAt': return format(parseISO(item.createdAt), 'dd/MM/yy HH:mm');
+                    case 'productId': return `${getProductDescription(item.productId)}\n(${item.productId})`;
+                    case 'humanReadableId': return item.humanReadableId || 'N/A';
+                    case 'unitCode': return item.unitCode;
+                    case 'documentId': return item.documentId || 'N/A';
+                    case 'locationPath': return getLocationPath(item.locationId);
+                    case 'quantity': return String((item as any).quantity || 1);
+                    case 'createdBy': return item.createdBy;
+                    default: return '';
+                }
+            })
+        );
         const doc = generateDocument({
             docTitle: "Reporte de Recepciones y Movimientos", docId: '', companyData,
             meta: [{ label: 'Generado', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
@@ -172,6 +238,7 @@ export function useReceivingReport() {
     };
 
     const actions = {
+        fetchData,
         setDateRange: (range: DateRange | undefined) => updateState({ dateRange: range || { from: undefined, to: undefined } }),
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
         setUserFilter: (filter: string[]) => updateState({ userFilter: filter }),
@@ -179,6 +246,10 @@ export function useReceivingReport() {
         handleClearFilters: () => updateState({ searchTerm: '', userFilter: [], locationFilter: [] }),
         handleExportExcel,
         handleExportPDF,
+        handleColumnVisibilityChange: (columnId: string, checked: boolean) => {
+            updateState({ visibleColumns: checked ? [...state.visibleColumns, columnId] : state.visibleColumns.filter(id => id !== columnId) });
+        },
+        handleSavePreferences,
     };
 
     const selectors = {
@@ -187,6 +258,8 @@ export function useReceivingReport() {
         locationOptions: useMemo(() => state.allLocations.map(l => ({ value: String(l.id), label: getLocationPath(l.id) })), [state.allLocations, getLocationPath]),
         getLocationPath,
         getProductDescription,
+        availableColumns,
+        visibleColumnsData: useMemo(() => state.visibleColumns.map(id => availableColumns.find(col => col.id === id)).filter(Boolean) as (typeof availableColumns)[0][], [state.visibleColumns]),
     };
     
     return {
