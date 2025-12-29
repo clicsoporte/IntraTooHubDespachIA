@@ -29,6 +29,7 @@ export default function WarehouseDashboardPage() {
                 case 'warehouse-search':
                 case 'warehouse-search-simple':
                 case 'population-wizard':
+                case 'receiving-wizard':
                     return hasPermission('warehouse:access');
                 case 'assign-item':
                     return hasPermission('warehouse:inventory:assign');
