@@ -162,7 +162,7 @@ export function useReceivingReport() {
     const getLocationPath = useCallback((locationId: number | null): string => {
         if (!locationId) return 'N/A';
         const path: string[] = [];
-        let current = state.allLocations.find(l => l.id === locationId);
+        let current: WarehouseLocation | undefined = state.allLocations.find(l => l.id === locationId);
         while(current) {
             path.unshift(current.name);
             current = current.parentId ? state.allLocations.find(l => l.id === current.parentId) : undefined;
@@ -221,7 +221,7 @@ export function useReceivingReport() {
                     case 'productId': return item.productId;
                     case 'productDescription': return getProductDescription(item.productId);
                     case 'humanReadableId': return item.humanReadableId || 'N/A';
-                    case 'unitCode': return item.unitCode;
+                    case 'unitCode': return item.unitCode || 'N/A';
                     case 'documentId': return item.documentId || 'N/A';
                     case 'locationPath': return getLocationPath(item.locationId);
                     case 'quantity': return String((item as any).quantity || 1);

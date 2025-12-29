@@ -43,7 +43,7 @@ export default function LockManagementPage() {
 
     useEffect(() => {
         setTitle("Gestión de Bloqueos de Almacén");
-        if (hasPermission) {
+        if (hasPermission('warehouse:locks:manage')) {
             fetchLocks();
         }
     }, [setTitle, fetchLocks, hasPermission]);
@@ -62,7 +62,7 @@ export default function LockManagementPage() {
         }
     };
     
-    if (!hasPermission) {
+    if (!hasPermission('warehouse:locks:manage')) {
         return null;
     }
 

@@ -5,7 +5,7 @@
 
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User } from '@/modules/core/types';
-import { logError, logInfo } from '@/modules/core/lib/logger';
+import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
 
 const WAREHOUSE_DB_FILE = 'warehouse.db';
@@ -455,11 +455,24 @@ export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'created
 }
 
 
-export async function getInventoryUnits(): Promise<InventoryUnit[]> {
+export async function getInventoryUnits(dateRange?: DateRange): Promise<InventoryUnit[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const units = db.prepare('SELECT * FROM inventory_units ORDER BY createdAt DESC LIMIT 100').all() as InventoryUnit[];
+    
+    if (dateRange?.from) {
+        const toDate = dateRange.to || new Date();
+        toDate.setHours(23, 59, 59, 999);
+        const units = db.prepare(`
+            SELECT * FROM inventory_units 
+            WHERE createdAt BETWEEN ? AND ?
+            ORDER BY createdAt DESC
+        `).all(dateRange.from.toISOString(), toDate.toISOString()) as InventoryUnit[];
+        return JSON.parse(JSON.stringify(units));
+    }
+    
+    const units = db.prepare('SELECT * FROM inventory_units ORDER BY createdAt DESC LIMIT 200').all() as InventoryUnit[];
     return JSON.parse(JSON.stringify(units));
 }
+
 
 export async function getInventoryUnitById(id: string | number): Promise<InventoryUnit | null> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
