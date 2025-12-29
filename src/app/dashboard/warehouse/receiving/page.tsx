@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, PackageCheck, Search, CheckCircle, ArrowRight, List, ArrowLeft } from 'lucide-react';
+import { Loader2, PackageCheck, Search, CheckCircle, ArrowRight, List, ArrowLeft, Printer } from 'lucide-react';
 import { useReceivingWizard } from '@/modules/warehouse/hooks/useReceivingWizard';
 import { SearchInput } from '@/components/ui/search-input';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -28,7 +28,7 @@ export default function ReceivingWizardPage() {
         selectedProduct,
         suggestedLocations,
         isSubmitting,
-        lastReceipt,
+        lastCreatedUnit,
         productSearchTerm,
         isProductSearchOpen,
         locationSearchTerm,
@@ -161,15 +161,23 @@ export default function ReceivingWizardPage() {
                         <div className="text-center space-y-4 py-8">
                             <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
                             <h2 className="text-2xl font-bold">¡Recepción Registrada!</h2>
-                            {lastReceipt && (
-                                <p className="text-muted-foreground">
-                                    Se registró la unidad <strong>{lastReceipt.unitCode}</strong> para el producto <strong>{lastReceipt.productDescription}</strong> en la ubicación <strong>{lastReceipt.locationPath}</strong>.
-                                </p>
+                            {lastCreatedUnit && (
+                                <>
+                                    <p className="text-muted-foreground">
+                                        Se registró la unidad <strong>{lastCreatedUnit.unitCode}</strong> para el producto <strong>{state.selectedProduct?.description}</strong> en la ubicación <strong>{selectors.renderLocationPath(lastCreatedUnit.locationId)}</strong>.
+                                    </p>
+                                    <div className='flex gap-2 justify-center'>
+                                        <Button onClick={() => actions.handlePrintLabel(lastCreatedUnit)} variant="outline">
+                                            <Printer className="mr-2 h-4 w-4"/>
+                                            Imprimir Etiqueta
+                                        </Button>
+                                        <Button onClick={actions.handleReset} className="w-auto">
+                                            <PackageCheck className="mr-2 h-4 w-4" />
+                                            Registrar Otro Producto
+                                        </Button>
+                                    </div>
+                                </>
                             )}
-                            <Button onClick={actions.handleReset} className="w-full">
-                                <PackageCheck className="mr-2 h-4 w-4" />
-                                Registrar Otro Producto
-                            </Button>
                         </div>
                     )}
                 </CardContent>

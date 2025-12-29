@@ -9,13 +9,12 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
 import { getLocations, getAllItemLocations, addInventoryUnit, getSelectableLocations } from '@/modules/warehouse/lib/actions';
-import type { Product, WarehouseLocation, ItemLocation } from '@/modules/core/types';
+import type { Product, WarehouseLocation, ItemLocation, InventoryUnit } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
-import { generateDocument } from '@/modules/core/lib/pdf-generator';
+import jsPDF from "jspdf";
 import QRCode from 'qrcode';
 import jsbarcode from 'jsbarcode';
-import jsPDF from "jspdf";
 import { format } from 'date-fns';
 
 type WizardStep = 'select_product' | 'select_location' | 'confirm_suggested' | 'confirm_new' | 'finished';
@@ -53,7 +52,7 @@ export const useReceivingWizard = () => {
         quantity: '',
         humanReadableId: '',
         documentId: '',
-        lastReceipt: null as { unitCode: string, productDescription: string, locationPath: string } | null,
+        lastCreatedUnit: null as InventoryUnit | null,
         productSearchTerm: '',
         isProductSearchOpen: false,
         locationSearchTerm: '',
@@ -156,7 +155,7 @@ export const useReceivingWizard = () => {
         if (state.step === 'select_location') {
             updateState({ step: 'select_product', selectedProduct: null, productSearchTerm: '' });
         } else {
-            updateState({ step: 'confirm_suggested', newLocationId: null, locationSearchTerm: '' });
+            updateState({ step: 'select_location', newLocationId: null, locationSearchTerm: '' });
         }
     };
     
@@ -172,8 +171,42 @@ export const useReceivingWizard = () => {
             quantity: '',
             humanReadableId: '',
             documentId: '',
-            lastReceipt: null,
+            lastCreatedUnit: null,
         });
+    };
+
+    const handlePrintLabel = async (unit: InventoryUnit | null) => {
+        if (!unit || !state.selectedProduct || !companyData) {
+            toast({ title: 'Error de Datos', description: 'No hay información suficiente para imprimir la etiqueta.', variant: 'destructive'});
+            return;
+        }
+
+        try {
+            const canvas = document.createElement('canvas');
+            jsbarcode(canvas, unit.unitCode!, { format: 'CODE128', displayValue: false });
+            const barcodeDataUrl = canvas.toDataURL('image/png');
+
+            const qrCodeDataUrl = await QRCode.toDataURL(unit.unitCode!, { errorCorrectionLevel: 'H', width: 200 });
+
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
+            doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.2, 1.2);
+            doc.addImage(barcodeDataUrl, 'PNG', 0.2, 1.5, 1.2, 0.5);
+            doc.setFontSize(10).text(unit.unitCode!, 0.8, 2.2, { align: 'center' });
+
+            doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Producto: ${unit.productId}`, 1.6, 0.4);
+            doc.setFontSize(9).setFont('Helvetica', 'normal').text(doc.splitTextToSize(state.selectedProduct.description, 2.2), 1.6, 0.6);
+            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Lote/ID: ${unit.humanReadableId || 'N/A'}`, 1.6, 1.2);
+            doc.text(`Documento: ${unit.documentId || 'N/A'}`, 1.6, 1.4);
+            doc.text(`Ubicación:`, 1.6, 1.8);
+            doc.setFontSize(8).setFont('Helvetica', 'normal').text(renderLocationPathAsString(unit.locationId!, state.allLocations), 1.6, 1.95);
+            doc.setFontSize(8).text(`Creado: ${format(new Date(), 'dd/MM/yyyy')} por ${user?.name || 'Sistema'}`, 3.8, 2.8, { align: 'right' });
+
+            doc.save(`etiqueta_unidad_${unit.unitCode}.pdf`);
+
+        } catch (error: any) {
+             logError('Failed to generate label', { error: error.message, unitCode: unit.unitCode });
+            toast({ title: 'Error al Imprimir', description: 'No se pudo generar la etiqueta PDF.', variant: 'destructive' });
+        }
     };
     
     const handleConfirmAndRegister = async () => {
@@ -186,7 +219,7 @@ export const useReceivingWizard = () => {
             const unitData = {
                 productId: state.selectedProduct.id,
                 locationId: state.newLocationId,
-                quantity: parseFloat(state.quantity) || 0, // Pass the quantity
+                quantity: parseFloat(state.quantity) || 0,
                 humanReadableId: state.humanReadableId,
                 documentId: state.documentId,
                 createdBy: user.name,
@@ -194,38 +227,11 @@ export const useReceivingWizard = () => {
             };
             const newUnit = await addInventoryUnit(unitData);
             
-            const locationPath = renderLocationPathAsString(newUnit.locationId!, state.allLocations);
             updateState({
                 step: 'finished',
-                lastReceipt: {
-                    unitCode: newUnit.unitCode!,
-                    productDescription: state.selectedProduct.description,
-                    locationPath,
-                }
+                lastCreatedUnit: newUnit,
             });
             toast({ title: 'Unidad Registrada', description: `Se creó la unidad ${newUnit.unitCode}.`});
-
-            // Auto-generate and download label
-            const canvas = document.createElement('canvas');
-            jsbarcode(canvas, newUnit.unitCode!, { format: 'CODE128', displayValue: false });
-            const barcodeDataUrl = canvas.toDataURL('image/png');
-            
-            const qrCodeDataUrl = await QRCode.toDataURL(newUnit.unitCode!, { errorCorrectionLevel: 'H', width: 200 });
-
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
-            doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.2, 1.2);
-            doc.addImage(barcodeDataUrl, 'PNG', 0.2, 1.5, 1.2, 0.5);
-            doc.setFontSize(10).text(newUnit.unitCode!, 0.8, 2.2, { align: 'center' });
-            
-            doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Producto: ${newUnit.productId}`, 1.6, 0.4);
-            doc.setFontSize(9).setFont('Helvetica', 'normal').text(doc.splitTextToSize(state.selectedProduct.description, 2.2), 1.6, 0.6);
-            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Lote/ID: ${newUnit.humanReadableId || 'N/A'}`, 1.6, 1.2);
-            doc.text(`Documento: ${newUnit.documentId || 'N/A'}`, 1.6, 1.4);
-            doc.text(`Ubicación:`, 1.6, 1.8);
-            doc.setFontSize(8).setFont('Helvetica', 'normal').text(locationPath, 1.6, 1.95);
-            doc.setFontSize(8).text(`Creado: ${format(new Date(), 'dd/MM/yyyy')} por ${user.name}`, 3.8, 2.8, { align: 'right' });
-            
-            doc.save(`etiqueta_unidad_${newUnit.unitCode}.pdf`);
 
         } catch (error: any) {
             logError('Failed to register unit', { error: error.message });
@@ -252,7 +258,8 @@ export const useReceivingWizard = () => {
             setQuantity: (qty: string) => updateState({ quantity: qty }),
             setHumanReadableId: (id: string) => updateState({ humanReadableId: id }),
             setDocumentId: (id: string) => updateState({ documentId: id }),
-            handleProductSearchKeyDown
+            handleProductSearchKeyDown,
+            handlePrintLabel,
         },
         selectors: {
             productOptions,
