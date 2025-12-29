@@ -107,20 +107,19 @@ export function useTransitsReport() {
     
     useEffect(() => {
         setTitle("Reporte de Tránsitos");
-        const loadPrefs = async () => {
+        const loadPrefsAndData = async () => {
              if(user) {
                 const prefs = await getUserPreferences(user.id, 'transitsReportPrefs');
                 if (prefs && prefs.visibleColumns) {
                     updateState({ visibleColumns: prefs.visibleColumns });
                 }
             }
-            setIsInitialLoading(false); // Mark initial loading as done even if no analysis is run yet.
-            updateState({isLoading: false});
+            await handleAnalyze();
         };
         if (isAuthorized) {
-            loadPrefs();
+            loadPrefsAndData();
         }
-    }, [setTitle, isAuthorized, user, updateState]);
+    }, [setTitle, isAuthorized, user, updateState, handleAnalyze]);
 
     const sortedData = useMemo(() => {
         let filtered = state.data;

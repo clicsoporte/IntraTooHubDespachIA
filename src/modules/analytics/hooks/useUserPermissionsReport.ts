@@ -48,7 +48,7 @@ export function useUserPermissionsReport() {
     const [isInitialLoading, setIsInitialLoading] = useState(true);
 
     const [state, setState] = useState<State>({
-        isLoading: false,
+        isLoading: true,
         data: [],
         searchTerm: '',
         sortKey: 'userName',

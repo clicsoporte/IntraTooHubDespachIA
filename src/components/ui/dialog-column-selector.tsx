@@ -6,12 +6,12 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Columns3, Save } from "lucide-react";
-import React from 'react';
+import React, { useState } from 'react';
 
 interface ColumnOption {
   id: string;
@@ -33,8 +33,15 @@ export function DialogColumnSelector({
   onSave,
   className
 }: DialogColumnSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSave = () => {
+    onSave();
+    setIsOpen(false);
+  };
+
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className={className}>
           <Columns3 className="mr-2 h-4 w-4" />
@@ -62,7 +69,10 @@ export function DialogColumnSelector({
           </div>
         </ScrollArea>
         <DialogFooter>
-          <Button onClick={onSave}>
+           <DialogClose asChild>
+                <Button variant="ghost">Cancelar</Button>
+           </DialogClose>
+          <Button onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" />
             Guardar Preferencias
           </Button>
