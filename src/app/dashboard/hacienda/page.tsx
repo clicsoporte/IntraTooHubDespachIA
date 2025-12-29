@@ -65,8 +65,8 @@ const ContributorInfoCard = ({ data }: { data: HaciendaContributorInfo | null })
                 <div className="space-y-2 pt-2">
                     <p className="font-medium text-muted-foreground">Actividades Económicas</p>
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
-                        {data.actividades.map(act => (
-                            <div key={act.codigo} className="p-2 bg-muted/50 rounded-md text-xs">
+                        {data.actividades.map((act, index) => (
+                            <div key={`${act.codigo}-${index}`} className="p-2 bg-muted/50 rounded-md text-xs">
                                 <p className="font-semibold">{act.descripcion}</p>
                                 <p className="text-muted-foreground">Código: {act.codigo} - Tipo: {act.tipo}</p>
                             </div>

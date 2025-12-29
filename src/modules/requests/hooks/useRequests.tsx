@@ -33,6 +33,7 @@ import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag } from 'lucide-react';
 import type { RowInput } from 'jspdf-autotable';
 import { useSearchParams } from 'next/navigation';
+import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 
 
 const normalizeText = (text: string | null | undefined): string => {

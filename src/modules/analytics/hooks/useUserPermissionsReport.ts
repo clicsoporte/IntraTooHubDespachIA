@@ -73,7 +73,7 @@ export function useUserPermissionsReport() {
                     userName: user.name,
                     userEmail: user.email,
                     roleId: user.role,
-                    roleName: role ? role.name : 'Rol no encontrado',
+                    roleName: role ? role.name : 'Rol Inválido',
                     permissions: role ? role.permissions : [],
                 };
             });

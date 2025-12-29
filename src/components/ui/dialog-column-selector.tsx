@@ -23,6 +23,7 @@ interface DialogColumnSelectorProps {
   visibleColumns: string[];
   onColumnChange: (columnId: string, checked: boolean) => void;
   onSave: () => void;
+  onClose: () => void;
   className?: string;
 }
 
@@ -31,12 +32,14 @@ export function DialogColumnSelector({
   visibleColumns,
   onColumnChange,
   onSave,
+  onClose,
   className
 }: DialogColumnSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSave = () => {
     onSave();
+    onClose(); // Call the passed onClose function
     setIsOpen(false);
   };
 

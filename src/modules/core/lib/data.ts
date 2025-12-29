@@ -218,7 +218,7 @@ export const warehouseTools: Tool[] = [
 export const allAdminPermissions = [
     "dashboard:access", "quotes:create", "quotes:generate", "quotes:drafts:create", "quotes:drafts:read", "quotes:drafts:delete",
     "requests:read", "requests:read:all", "requests:create", "requests:create:duplicate", "requests:edit:pending", "requests:edit:approved", "requests:reopen", "requests:notes:add", "requests:status:review", "requests:status:pending-approval", "requests:status:approve", "requests:status:ordered", "requests:status:received-in-warehouse", "requests:status:entered-erp", "requests:status:cancel", "requests:status:unapproval-request", "requests:status:unapproval-request:approve", "requests:status:revert-to-approved",
-    "planner:read", "planner:read:all", "planner:create", "planner:edit:pending", "planner:edit:approved", "planner:reopen", "planner:receive", "planner:status:review", "planner:status:pending-approval", "planner:status:approve", "planner:status:in-progress", "planner:status:on-hold", "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:status:unapprove-request:approve", "planner:priority:update", "planner:machine:assign", "planner:schedule",
+    "planner:read", "planner:read:all", "planner:create", "planner:edit:pending", "planner:edit:approved", "planner:reopen", "planner:receive", "planner:status:review", "planner:status:pending-approval", "planner:status:approve", "planner:status:in-progress", "planner:status:on-hold", "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:priority:update", "planner:machine:assign", "planner:schedule",
     "analytics:read", "analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read",
     "cost-assistant:access", "cost-assistant:drafts:read-write", "users:create", "users:read", "users:update", "users:delete",
     "roles:create", "roles:read", "roles:update", "roles:delete", "admin:settings:general", "admin:settings:api", "admin:settings:planner", "admin:settings:requests", "admin:settings:warehouse", "admin:settings:stock", "admin:settings:cost-assistant",
@@ -242,35 +242,6 @@ export const initialRoles: Role[] = [
     name: "Viewer",
     permissions: ["dashboard:access", "quotes:create", "quotes:drafts:read"],
   },
-  {
-    id: 'planner-user',
-    name: 'Planificador',
-    permissions: [
-        "dashboard:access",
-        "planner:read",
-        "planner:create",
-        "planner:status:approve",
-        "planner:status:in-progress",
-        "planner:status:on-hold",
-        "planner:status:completed",
-        "planner:status:cancel",
-        "planner:priority:update",
-        "planner:machine:assign",
-        "planner:schedule",
-    ]
-  },
-   {
-    id: 'requester-user',
-    name: 'Solicitante',
-    permissions: [
-        "dashboard:access",
-        "requests:read",
-        "requests:create",
-        "requests:status:review",
-        "requests:status:cancel",
-        "requests:notes:add",
-    ]
-  }
 ];
 
 export const permissionGroups = {

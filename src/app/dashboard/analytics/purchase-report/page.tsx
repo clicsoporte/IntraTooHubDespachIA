@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Page for the read-only Purchase Report.
  * This component visualizes purchase suggestions without offering creation actions.
@@ -39,7 +38,7 @@ const CellContent: React.FC<{ item: PurchaseSuggestion; colId: string; selectors
                     <TooltipTrigger asChild>
                         <span className={cn("inline-flex items-center gap-1 rounded-md bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-800", className)}>
                             <Info className="h-3 w-3" />
-                            {data.total.toLocaleString()}
+                            {data.total ? data.total.toLocaleString() : 0}
                         </span>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -170,6 +169,7 @@ export default function PurchaseReportPage() {
                                     visibleColumns={visibleColumns}
                                     onColumnChange={actions.handleColumnVisibilityChange}
                                     onSave={actions.savePreferences}
+                                    onClose={() => {}}
                                 />
                                 <Button onClick={actions.handleExportExcel} variant="outline" disabled={isLoading || selectors.filteredSuggestions.length === 0}><FileSpreadsheet className="mr-2 h-4 w-4" />Exportar a Excel</Button>
                             </div>

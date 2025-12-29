@@ -42,7 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { logInfo, logWarn } from "@/modules/core/lib/logger";
 import type { Role } from "@/modules/core/types";
-import { PlusCircle, Trash2, RefreshCw, Copy, FileText, Factory } from "lucide-react";
+import { PlusCircle, Trash2, RefreshCw, Copy } from "lucide-react";
 import { getAllRoles, saveAllRoles, resetDefaultRoles } from "@/modules/core/lib/db";
 import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,17 +62,6 @@ const emptyRole: Role = {
     permissions: [],
 }
 
-const roleTemplates = {
-    'requester': {
-        name: 'Solicitante de Compras',
-        permissions: ['dashboard:access', 'requests:read', 'requests:create', 'requests:notes:add', 'requests:status:cancel']
-    },
-    'planner': {
-        name: 'Planificador de Producción',
-        permissions: ['dashboard:access', 'planner:read', 'planner:create', 'planner:status:approve', 'planner:status:in-progress', 'planner:status:on-hold', 'planner:status:completed', 'planner:status:cancel', 'planner:priority:update', 'planner:machine:assign', 'planner:schedule']
-    }
-}
-
 export default function RolesPage() {
     const { isAuthorized } = useAuthorization(['roles:read', 'roles:create', 'roles:update', 'roles:delete']);
     const { toast } = useToast();
@@ -81,10 +70,9 @@ export default function RolesPage() {
     
     // State for dialogs
     const [isAddRoleDialogOpen, setAddRoleDialogOpen] = useState(false);
-    const [isTemplateSelectorOpen, setTemplateSelectorOpen] = useState(false);
     const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
 
-    // State for form data (add, copy, template)
+    // State for form data (add, copy)
     const [roleFormData, setRoleFormData] = useState<Role>(emptyRole);
     const [formTitle, setFormTitle] = useState("Crear Nuevo Rol");
 
@@ -167,24 +155,11 @@ export default function RolesPage() {
         setAddRoleDialogOpen(true);
     };
 
-    const openTemplateDialog = (template?: 'requester' | 'planner') => {
-        setTemplateSelectorOpen(false); // Close the selector
-        if (template) {
-            const t = roleTemplates[template];
-            setFormTitle(`Nuevo Rol desde Plantilla: ${t.name}`);
-            setRoleFormData({
-                id: `rol-${template}-personalizado`,
-                name: `${t.name} Personalizado`,
-                permissions: t.permissions
-            });
-        } else {
-            // Blank role
-            setFormTitle("Crear Nuevo Rol en Blanco");
-            setRoleFormData(emptyRole);
-        }
+    const openNewBlankDialog = () => {
+        setFormTitle("Crear Nuevo Rol en Blanco");
+        setRoleFormData(emptyRole);
         setAddRoleDialogOpen(true);
     };
-
 
     const handleDeleteRole = async () => {
         if (!roleToDelete) return;
@@ -249,9 +224,8 @@ export default function RolesPage() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>¿Restablecer Roles por Defecto?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción restaurará los roles por defecto (&apos;admin&apos;, &apos;viewer&apos;, &apos;planner-user&apos;, &apos;requester-user&apos;) a sus permisos originales.
+                                    Esta acción restaurará los roles por defecto (&apos;admin&apos; y &apos;viewer&apos;) a sus permisos originales.
                                     Los roles personalizados que hayas creado no se verán afectados.
-                                    Esto es útil si los permisos por defecto se han corrompido.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -260,43 +234,10 @@ export default function RolesPage() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <Dialog open={isTemplateSelectorOpen} onOpenChange={setTemplateSelectorOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Crear Rol
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Crear Nuevo Rol</DialogTitle>
-                                <DialogDescription>Elige un punto de partida para tu nuevo rol.</DialogDescription>
-                            </DialogHeader>
-                            <div className="py-4 space-y-4">
-                                <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={() => openTemplateDialog('requester')}>
-                                    <FileText className="mr-4 h-6 w-6"/>
-                                    <div className="text-left">
-                                        <p className="font-semibold">Crear desde Plantilla &quot;Solicitante&quot;</p>
-                                        <p className="text-xs text-muted-foreground">Precarga permisos para el módulo de compras.</p>
-                                    </div>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={() => openTemplateDialog('planner')}>
-                                    <Factory className="mr-4 h-6 w-6"/>
-                                    <div className="text-left">
-                                        <p className="font-semibold">Crear desde Plantilla &quot;Planificador&quot;</p>
-                                        <p className="text-xs text-muted-foreground">Precarga permisos para el módulo de producción.</p>
-                                    </div>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={() => openTemplateDialog()}>
-                                    <div className="w-10"></div>
-                                    <div className="text-left">
-                                        <p className="font-semibold">Crear Rol en Blanco</p>
-                                        <p className="text-xs text-muted-foreground">Empieza desde cero sin permisos predefinidos.</p>
-                                    </div>
-                                </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={openNewBlankDialog}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Crear Rol
+                    </Button>
                 </div>
             </div>
           </CardHeader>
@@ -313,7 +254,7 @@ export default function RolesPage() {
                         <Copy className="mr-2 h-4 w-4" />
                         Copiar
                     </Button>
-                    {role.id !== 'admin' && role.id !== 'viewer' && role.id !== 'planner-user' && role.id !== 'requester-user' && (
+                    {role.id !== 'admin' && role.id !== 'viewer' && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={() => setRoleToDelete(role)}>

@@ -67,7 +67,7 @@ export function useTransitsReport() {
     const [isInitialLoading, setIsInitialLoading] = useState(true);
 
     const [state, setState] = useState<State>({
-        isLoading: false,
+        isLoading: true,
         dateRange: {
             from: startOfDay(subDays(new Date(), 90)),
             to: new Date(),
@@ -107,19 +107,20 @@ export function useTransitsReport() {
     
     useEffect(() => {
         setTitle("Reporte de Tránsitos");
-        const loadPrefsAndData = async () => {
+        const loadPrefs = async () => {
              if(user) {
                 const prefs = await getUserPreferences(user.id, 'transitsReportPrefs');
                 if (prefs && prefs.visibleColumns) {
                     updateState({ visibleColumns: prefs.visibleColumns });
                 }
             }
-            await handleAnalyze();
+            setIsInitialLoading(false);
+            updateState({ isLoading: false });
         };
         if (isAuthorized) {
-            loadPrefsAndData();
+            loadPrefs();
         }
-    }, [setTitle, isAuthorized, user, updateState, handleAnalyze]);
+    }, [setTitle, isAuthorized, user, updateState]);
 
     const sortedData = useMemo(() => {
         let filtered = state.data;
