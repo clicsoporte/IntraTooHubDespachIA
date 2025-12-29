@@ -161,19 +161,24 @@ export function useReceivingReport() {
 
     const getLocationPath = useCallback((locationId: number | null): string => {
         if (!locationId) return 'N/A';
-        const path: string[] = [];
-        let current: WarehouseLocation | undefined = state.allLocations.find(l => l.id === locationId);
         
-        while (current) {
-            path.unshift(current.name);
-            if (current.parentId) {
-                current = state.allLocations.find(l => l.id === current.parentId);
+        const locationMap = new Map(state.allLocations.map(l => [l.id, l]));
+        const path: string[] = [];
+        let currentId: number | null = locationId;
+
+        // Loop with a safeguard
+        for (let i = 0; i < 10 && currentId !== null; i++) {
+            const current = locationMap.get(currentId);
+            if (current) {
+                path.unshift(current.name);
+                currentId = current.parentId ?? null;
             } else {
-                break; // Exit loop if no parentId
+                break;
             }
         }
         return path.join(' > ');
     }, [state.allLocations]);
+
 
     const getProductDescription = useCallback((productId: string): string => {
         return products.find(p => p.id === productId)?.description || 'Producto Desconocido';
@@ -221,25 +226,27 @@ export function useReceivingReport() {
         const tableHeaders = selectors.visibleColumnsData.map(c => c.label);
         const tableRows = sortedData.map(item => 
             selectors.visibleColumnsData.map(col => {
+                let cellValue: string;
                 switch(col.id) {
-                    case 'createdAt': return format(parseISO(item.createdAt), 'dd/MM/yy HH:mm');
-                    case 'productId': return item.productId;
-                    case 'productDescription': return getProductDescription(item.productId);
-                    case 'humanReadableId': return item.humanReadableId || 'N/A';
-                    case 'unitCode': return item.unitCode || 'N/A';
-                    case 'documentId': return item.documentId || 'N/A';
-                    case 'locationPath': return getLocationPath(item.locationId);
-                    case 'quantity': return String((item as any).quantity || 1);
-                    case 'createdBy': return item.createdBy;
-                    default: return '';
+                    case 'createdAt': cellValue = format(parseISO(item.createdAt), 'dd/MM/yy HH:mm'); break;
+                    case 'productId': cellValue = item.productId; break;
+                    case 'productDescription': cellValue = getProductDescription(item.productId); break;
+                    case 'humanReadableId': cellValue = item.humanReadableId || 'N/A'; break;
+                    case 'unitCode': cellValue = item.unitCode || 'N/A'; break;
+                    case 'documentId': cellValue = item.documentId || 'N/A'; break;
+                    case 'locationPath': cellValue = getLocationPath(item.locationId); break;
+                    case 'quantity': cellValue = String((item as any).quantity || 1); break;
+                    case 'createdBy': cellValue = item.createdBy; break;
+                    default: cellValue = '';
                 }
+                return cellValue;
             })
         );
         const doc = generateDocument({
             docTitle: "Reporte de Recepciones y Movimientos", docId: '', companyData,
             meta: [{ label: 'Generado', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
             blocks: [],
-            table: { columns: tableHeaders, rows: tableRows.map(row => row.map(cell => cell || '')) },
+            table: { columns: tableHeaders, rows: tableRows },
             totals: [], orientation: 'landscape'
         });
         doc.save('reporte_recepciones.pdf');
