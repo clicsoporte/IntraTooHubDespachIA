@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 
 type SearchableItem = {
   id: string;
-  type: 'product' | 'customer' | 'unit';
+  type: 'product' | 'customer';
   searchText: string;
 };
 
@@ -191,13 +191,9 @@ export default function WarehouseSearchPage() {
         const customerResults = customers
             .filter(c => searchTerms.every(term => normalizeText(`${c.id} ${c.name}`).includes(term)))
             .map(c => ({ value: `customer-${c.id}`, label: `[CLIENTE] ${c.id} - ${c.name}` }));
-        const unitCodePrefix = warehouseSettings?.unitPrefix?.toUpperCase();
-        const unitResults = unitCodePrefix && debouncedSearchTerm.toUpperCase().startsWith(unitCodePrefix)
-            ? [{ value: `unit-${debouncedSearchTerm.toUpperCase()}`, label: `[UNIDAD] ${debouncedSearchTerm.toUpperCase()}` }]
-            : [];
             
-        return [...unitResults, ...productResults, ...customerResults];
-    }, [debouncedSearchTerm, products, customers, warehouseSettings]);
+        return [...productResults, ...customerResults];
+    }, [debouncedSearchTerm, products, customers]);
 
     const handleSelectSearchItem = (value: string) => {
         const [type, id] = value.split('-');
@@ -215,47 +211,41 @@ export default function WarehouseSearchPage() {
                 setSelectedItem({ id: customer.id, type: 'customer', searchText: '' });
                 setSearchTerm(`[CLIENTE] ${customer.id} - ${customer.name}`);
             }
-        } else if (type === 'unit') {
-            router.push(`/dashboard/scanner?unitId=${id}`);
         }
     };
 
 
     const filteredItems = useMemo((): CombinedItem[] => {
         if (!selectedItem) return [];
-        let results: CombinedItem[] = [];
+        
+        const groupedByItem: { [key: string]: SearchResultItem } = {};
 
-        if (selectedItem.type === 'unit') {
-            // This case is now handled by redirecting in handleSelectSearchItem.
-        } else {
-            const groupedByItem: { [key: string]: SearchResultItem } = {};
-
-            if (selectedItem.type === 'product') {
-                const product = products.find(p => p.id === selectedItem.id);
-                if (product) {
-                    groupedByItem[product.id] = { isUnit: false, unit: null, product, physicalLocations: [], erpStock: stock.find(s => s.itemId === product.id) || null };
-                }
+        if (selectedItem.type === 'product') {
+            const product = products.find(p => p.id === selectedItem.id);
+            if (product) {
+                groupedByItem[product.id] = { isUnit: false, unit: null, product, physicalLocations: [], erpStock: stock.find(s => s.itemId === product.id) || null };
             }
-            
-            inventory.forEach(item => {
-                if (groupedByItem[item.itemId]) {
-                    groupedByItem[item.itemId].physicalLocations.push({ path: renderLocationPath(item.locationId, locations), quantity: item.quantity, location: locations.find(l => l.id === item.locationId) });
-                }
-            });
-            
-            itemLocations.forEach(itemLoc => {
-                if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
-                    groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
-                } else if (selectedItem.type === 'customer' && itemLoc.clientId === selectedItem.id) {
-                     const product = products.find(p => p.id === itemLoc.itemId);
-                     if (!groupedByItem[itemLoc.itemId]) {
-                         groupedByItem[itemLoc.itemId] = { isUnit: false, unit: null, product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' }, physicalLocations: [], erpStock: stock.find(s => s.itemId === itemLoc.itemId) || null, client: customers.find(c => c.id === itemLoc.clientId) };
-                     }
-                     groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
-                }
-            });
-            results = Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
         }
+        
+        inventory.forEach(item => {
+            if (selectedItem.type === 'product' && item.itemId === selectedItem.id && groupedByItem[item.itemId]) {
+                 groupedByItem[item.itemId].physicalLocations.push({ path: renderLocationPath(item.locationId, locations), quantity: item.quantity, location: locations.find(l => l.id === item.locationId) });
+            }
+        });
+        
+        itemLocations.forEach(itemLoc => {
+            if (selectedItem.type === 'product' && itemLoc.itemId === selectedItem.id && groupedByItem[itemLoc.itemId]) {
+                groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
+            } else if (selectedItem.type === 'customer' && itemLoc.clientId === selectedItem.id) {
+                 const product = products.find(p => p.id === itemLoc.itemId);
+                 if (!groupedByItem[itemLoc.itemId]) {
+                     groupedByItem[itemLoc.itemId] = { isUnit: false, unit: null, product: product || { id: itemLoc.itemId, description: `Artículo ${itemLoc.itemId}`, active: 'S', cabys: '', classification: '', isBasicGood: 'N', lastEntry: '', notes: '', unit: '' }, physicalLocations: [], erpStock: stock.find(s => s.itemId === itemLoc.itemId) || null, client: customers.find(c => c.id === itemLoc.clientId) };
+                 }
+                 groupedByItem[itemLoc.itemId].physicalLocations.push({ path: renderLocationPath(itemLoc.locationId, locations), clientId: itemLoc.clientId || undefined, location: locations.find(l => l.id === itemLoc.locationId) });
+            }
+        });
+        
+        let results: CombinedItem[] = Object.values(groupedByItem).sort((a, b) => (a.product?.id || '').localeCompare(b.product?.id || ''));
 
         if (classificationFilter.length > 0) {
             return results.filter(item => item.product && classificationFilter.includes(item.product.classification));
@@ -270,10 +260,8 @@ export default function WarehouseSearchPage() {
         try {
             const newUnit = await addInventoryUnit({ productId: product.id, locationId: location.id, createdBy: user.name, notes: 'Etiqueta generada desde búsqueda.' });
             
-            const baseUrl = companyData.publicUrl || window.location.origin;
-            const scanUrl = `${baseUrl}/dashboard/scanner?unitId=${newUnit.unitCode}`;
-
-            const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
+            // The QR code now only contains the PRODUCT ID
+            const qrCodeDataUrl = await QRCode.toDataURL(newUnit.productId, { errorCorrectionLevel: 'H', width: 200 });
 
             const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
             doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.5, 1.5);
@@ -323,7 +311,7 @@ export default function WarehouseSearchPage() {
                             onValueChange={setSearchTerm}
                             onOpenChange={setIsSearchOpen}
                             open={isSearchOpen}
-                            placeholder="Buscar artículo, cliente o escanear unidad..."
+                            placeholder="Buscar artículo o cliente..."
                             className="text-lg h-12"
                         />
                     </div>
@@ -440,7 +428,7 @@ export default function WarehouseSearchPage() {
                         })
                     ) : (
                         <div className="text-center py-16 text-muted-foreground">
-                            {debouncedSearchTerm ? <p>No se encontraron resultados para &quot;{debouncedSearchTerm}&quot;.</p> : <p>Comienza a escribir para buscar un artículo, cliente o unidad.</p>}
+                            {debouncedSearchTerm ? <p>No se encontraron resultados para &quot;{debouncedSearchTerm}&quot;.</p> : <p>Comienza a escribir para buscar un artículo o cliente.</p>}
                         </div>
                     )}
                 </div>

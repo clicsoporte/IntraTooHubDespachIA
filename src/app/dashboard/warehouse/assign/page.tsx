@@ -257,9 +257,8 @@ export default function AssignItemPage() {
         }
     
         try {
-            const baseUrl = companyData.publicUrl || window.location.origin;
-            const scanUrl = `${baseUrl}/dashboard/scanner?locationId=${assignment.locationId}&productId=${product.id}`;
-            const qrCodeDataUrl = await QRCode.toDataURL(scanUrl, { errorCorrectionLevel: 'H', width: 200 });
+            // QR Code now contains only the product ID
+            const qrCodeDataUrl = await QRCode.toDataURL(product.id, { errorCorrectionLevel: 'H', width: 200 });
             
             const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
             const pageWidth = doc.internal.pageSize.getWidth();
@@ -432,7 +431,7 @@ export default function AssignItemPage() {
                                                       </AlertDialogHeader>
                                                       <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteAssignment(a.id)}>Eliminar</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleDeleteAssignment(a.id!)}>Eliminar</AlertDialogAction>
                                                       </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
