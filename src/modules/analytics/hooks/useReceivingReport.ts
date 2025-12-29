@@ -25,7 +25,8 @@ const normalizeText = (text: string | null | undefined): string => {
 
 const availableColumns = [
     { id: 'createdAt', label: 'Fecha' },
-    { id: 'productId', label: 'Producto' },
+    { id: 'productId', label: 'Código Producto' },
+    { id: 'productDescription', label: 'Descripción' },
     { id: 'humanReadableId', label: 'Nº Lote / ID' },
     { id: 'unitCode', label: 'ID Unidad' },
     { id: 'documentId', label: 'Documento' },
@@ -190,7 +191,8 @@ export function useReceivingReport() {
             selectors.visibleColumnsData.map(col => {
                 switch(col.id) {
                     case 'createdAt': return format(parseISO(item.createdAt), 'dd/MM/yyyy HH:mm');
-                    case 'productId': return `${getProductDescription(item.productId)} (${item.productId})`;
+                    case 'productId': return item.productId;
+                    case 'productDescription': return getProductDescription(item.productId);
                     case 'humanReadableId': return item.humanReadableId || 'N/A';
                     case 'unitCode': return item.unitCode;
                     case 'documentId': return item.documentId || 'N/A';
@@ -216,7 +218,8 @@ export function useReceivingReport() {
             selectors.visibleColumnsData.map(col => {
                 switch(col.id) {
                     case 'createdAt': return format(parseISO(item.createdAt), 'dd/MM/yy HH:mm');
-                    case 'productId': return `${getProductDescription(item.productId)}\n(${item.productId})`;
+                    case 'productId': return item.productId;
+                    case 'productDescription': return getProductDescription(item.productId);
                     case 'humanReadableId': return item.humanReadableId || 'N/A';
                     case 'unitCode': return item.unitCode;
                     case 'documentId': return item.documentId || 'N/A';

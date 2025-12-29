@@ -125,7 +125,8 @@ export default function ReceivingReportPage() {
                                     sortedData.map(item => (
                                         <TableRow key={item.id}>
                                             {visibleColumns.includes('createdAt') && <TableCell className="text-xs text-muted-foreground">{format(parseISO(item.createdAt), 'dd/MM/yy HH:mm')}</TableCell>}
-                                            {visibleColumns.includes('productId') && <TableCell><div className="font-medium">{selectors.getProductDescription(item.productId)}</div><div className="text-sm text-muted-foreground">{item.productId}</div></TableCell>}
+                                            {visibleColumns.includes('productId') && <TableCell>{item.productId}</TableCell>}
+                                            {visibleColumns.includes('productDescription') && <TableCell>{selectors.getProductDescription(item.productId)}</TableCell>}
                                             {visibleColumns.includes('humanReadableId') && <TableCell className="font-mono">{item.humanReadableId || 'N/A'}</TableCell>}
                                             {visibleColumns.includes('unitCode') && <TableCell className="font-mono text-xs">{item.unitCode}</TableCell>}
                                             {visibleColumns.includes('documentId') && <TableCell>{item.documentId || 'N/A'}</TableCell>}
