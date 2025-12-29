@@ -33,7 +33,7 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
 };
 
 export const useReceivingWizard = () => {
-    useAuthorization(['warehouse:access']);
+    useAuthorization(['warehouse:receiving:create']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user, companyData, products: authProducts, isReady } = useAuth();
