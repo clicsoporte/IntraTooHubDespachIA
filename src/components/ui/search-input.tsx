@@ -49,8 +49,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(({
     const scrollViewportRef = React.useRef<HTMLDivElement>(null);
     
     const handleSelect = (optionValue: string) => {
-        onSelect(optionValue);
+        // Close the popover immediately for a snappier user experience.
         onOpenChange(false);
+        // Then call the onSelect handler passed from the parent.
+        onSelect(optionValue);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

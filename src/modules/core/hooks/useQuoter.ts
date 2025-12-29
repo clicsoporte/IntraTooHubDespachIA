@@ -466,7 +466,6 @@ export const useQuoter = () => {
 
   const handleSelectProduct = useCallback(
     (productId: string) => {
-      setProductSearchOpen(false);
       if (!productId) {
         setProductSearchTerm("");
         return;
@@ -482,7 +481,6 @@ export const useQuoter = () => {
 
   const handleSelectCustomer = useCallback(
     (customerId: string) => {
-      setCustomerSearchOpen(false);
       setExemptionInfo(null); // CRITICAL FIX: Reset exemption info when changing customer
       if (!customerId) {
         setSelectedCustomer(null);
@@ -947,8 +945,13 @@ export const useQuoter = () => {
     if (e.key === "Enter") {
       e.preventDefault();
       const lineRefs = lineInputRefs.current.get(lineId);
+      const currentLine = lines.find(l => l.id === lineId);
       if (field === "qty" && lineRefs?.price) {
-        lineRefs.price.focus();
+        if(currentLine && currentLine.price === 0) {
+            lineRefs.price.focus();
+        } else {
+            productInputRef.current?.focus();
+        }
       } else if (field === "price" && productInputRef.current) {
         productInputRef.current.focus();
       }
