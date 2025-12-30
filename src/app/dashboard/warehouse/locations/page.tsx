@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { getWarehouseSettings, saveWarehouseSettings, getLocations, addLocation, deleteLocation, updateLocation, addBulkLocations } from '@/modules/warehouse/lib/actions';
-import { PlusCircle, Trash2, Edit2, Save, ChevronDown, ChevronRight, Info, Wand2, Copy } from 'lucide-react';
+import { PlusCircle, Trash2, Edit2, Save, ChevronDown, ChevronRight, Info, Wand2, Copy, List } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WarehouseSettings, WarehouseLocation } from '@/modules/core/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,16 +22,31 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/modules/core/hooks/useAuth';
+import { SearchInput } from '@/components/ui/search-input';
+import { useDebounce } from 'use-debounce';
 
 const emptyLocation: Omit<WarehouseLocation, 'id'> = { name: '', code: '', type: 'building', parentId: null };
 const initialWizardState = { name: '', prefix: '', levels: '', positions: '', depth: '', parentId: null as number | null };
 const initialCloneState = { sourceRackId: '', newName: '', newPrefix: '' };
 
+const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
+    if (!locationId) return '';
+    const path: WarehouseLocation[] = [];
+    let current: WarehouseLocation | undefined = locations.find(l => l.id === locationId);
+    
+    while (current) {
+        path.unshift(current);
+        const parentId = current.parentId;
+        if (!parentId) break;
+        current = locations.find(l => l.id === parentId);
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
 
 interface LocationFormProps {
-    location: Partial<WarehouseLocation>;
+    initialLocation: Partial<WarehouseLocation>;
     allLocations: WarehouseLocation[];
     settings: WarehouseSettings;
     onSave: (location: Partial<WarehouseLocation>) => void;
@@ -39,20 +54,49 @@ interface LocationFormProps {
     isEditing: boolean;
 }
 
-function LocationForm({ location, allLocations, settings, onSave, onCancel, isEditing }: LocationFormProps) {
-    const [formData, setFormData] = useState(location);
+function LocationForm({ initialLocation, allLocations, settings, onSave, onCancel, isEditing }: LocationFormProps) {
+    const [formData, setFormData] = useState(initialLocation);
+    const [parentSearchTerm, setParentSearchTerm] = useState('');
+    const [isParentSearchOpen, setIsParentSearchOpen] = useState(false);
+    const [debouncedParentSearch] = useDebounce(parentSearchTerm, 300);
 
     useEffect(() => {
-        setFormData(location);
-    }, [location]);
+        setFormData(initialLocation);
+        const parentLocation = allLocations.find(l => l.id === initialLocation.parentId);
+        if (parentLocation) {
+            setParentSearchTerm(renderLocationPathAsString(parentLocation.id, allLocations));
+        } else {
+            setParentSearchTerm('');
+        }
+    }, [initialLocation, allLocations]);
 
     const handleChange = (field: keyof WarehouseLocation, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const parentLocationOptions = allLocations
-        .filter(l => l.id !== formData?.id)
-        .map(l => ({ value: String(l.id), label: `${l.name} (${l.code})` }));
+    const handleSelectParent = (value: string) => {
+        const parentId = Number(value);
+        handleChange('parentId', parentId);
+        const parentLocation = allLocations.find(l => l.id === parentId);
+        if (parentLocation) {
+            setParentSearchTerm(renderLocationPathAsString(parentLocation.id, allLocations));
+        }
+        setIsParentSearchOpen(false);
+    };
+
+    const parentLocationOptions = useMemo(() => {
+        const searchLower = debouncedParentSearch.trim().toLowerCase();
+        
+        const filtered = allLocations.filter(l => 
+            l.id !== formData?.id &&
+            renderLocationPathAsString(l.id, allLocations).toLowerCase().includes(searchLower)
+        );
+
+        return filtered.map(l => ({
+            value: String(l.id),
+            label: renderLocationPathAsString(l.id, allLocations)
+        }));
+    }, [allLocations, debouncedParentSearch, formData?.id]);
 
     return (
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
@@ -80,15 +124,20 @@ function LocationForm({ location, allLocations, settings, onSave, onCancel, isEd
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="loc-parent">Ubicación Padre (Opcional)</Label>
-                    <Select value={formData.parentId ? String(formData.parentId) : 'none'} onValueChange={(val) => handleChange('parentId', val === 'none' ? null : Number(val))}>
-                        <SelectTrigger><SelectValue placeholder="Sin padre (Nivel Raíz)"/></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">Sin padre (Nivel Raíz)</SelectItem>
-                            {parentLocationOptions.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                        <SearchInput 
+                            options={parentLocationOptions}
+                            onSelect={handleSelectParent}
+                            value={parentSearchTerm}
+                            onValueChange={setParentSearchTerm}
+                            placeholder="Buscar ubicación padre..."
+                            open={isParentSearchOpen}
+                            onOpenChange={setIsParentSearchOpen}
+                        />
+                         <Button type="button" variant="outline" size="icon" onClick={() => {setParentSearchTerm(''); setIsParentSearchOpen(true); handleChange('parentId', null);}}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
             <DialogFooter>
@@ -415,7 +464,7 @@ export default function ManageLocationsPage() {
                             </DialogDescription>
                         </DialogHeader>
                          <LocationForm 
-                            location={currentLocation}
+                            initialLocation={currentLocation}
                             allLocations={locations}
                             settings={settings}
                             onSave={handleSaveLocation}
