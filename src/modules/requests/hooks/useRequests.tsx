@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -21,8 +22,7 @@ import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/mo
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, ErpPurchaseOrderHeader, Product, Customer, ErpPurchaseOrderLine as ErpPOLine
-} from '../../core/types';
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, ErpPurchaseOrderHeader as ErpPOHeader } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/modules/core/hooks/useAuth';
@@ -153,8 +153,8 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    erpPoHeaders: ErpPurchaseOrderHeader[];
-    erpPoLines: ErpPOLine[];
+    erpPoHeaders: ErpPOHeader[];
+    erpPoLines: ErpOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
     isCostAnalysisDialogOpen: boolean;
@@ -907,7 +907,7 @@ export const useRequests = () => {
         },
         handleDetailUpdate: async (requestId: number, details: { priority: PurchaseRequestPriority }) => {
             if (!currentUser) return;
-            const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
+            const updated = await updateRequestDetails({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
                 activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
                 archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
@@ -985,7 +985,7 @@ export const useRequests = () => {
         setEditRequestDialogOpen: (isOpen: boolean) => updateState({ isEditRequestDialogOpen: isOpen }),
         setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, archivedPage: 0 }),
         setArchivedPage: (updater: (prev: number) => number) => updateState({ archivedPage: updater(state.archivedPage) }),
-        setPageSize: (size: number) => updateState({ pageSize: size, archivedPage: 0 }),
+        setPageSize: (size: number) => updateState({ pageSize: size, currentPage: 0 }),
         setRequestToEdit: (request: PurchaseRequest | null) => updateState({ requestToEdit: request }),
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
         setStatusFilter: (filter: string) => updateState({ statusFilter: filter }),

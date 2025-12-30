@@ -114,7 +114,7 @@ export const useCostAssistant = () => {
             
             const { lines: processedLines, processedInvoices } = await processInvoiceXmls(fileContents);
 
-            const newLines = processedLines.map((line) => ({
+            const newLines = processedLines.map((line: any) => ({
                 ...line,
                 displayMargin: "20",
                 margin: 0.20,
@@ -131,7 +131,7 @@ export const useCostAssistant = () => {
                 lines: [...prevState.lines, ...newLines],
                 processedInvoices: [...prevState.processedInvoices, ...processedInvoices]
             }));
-            const successCount = processedInvoices.filter(p => p.status === 'success').length;
+            const successCount = processedInvoices.filter((p: any) => p.status === 'success').length;
             toast({ title: "Facturas Procesadas", description: `Se agregaron ${newLines.length} artículos de ${successCount} factura(s).` });
 
         } catch (error: any) {
