@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Custom hook `usePlanner` for managing the state and logic of the Production Planner page.
  * This hook encapsulates all state and actions for the planner, keeping the UI component clean.
@@ -184,7 +185,7 @@ export const usePlanner = () => {
                 plannerSettings: settingsData,
                 dynamicStatusConfig: newDynamicConfig,
                 orders: state.viewingArchived ? ordersResponse.archivedOrders : ordersResponse.activeOrders,
-                totalItems: state.viewingArchived ? ordersResponse.totalArchivedCount : ordersResponse.activeOrders.length, // Simplified total for active
+                totalItems: state.viewingArchived ? ordersResponse.totalArchivedCount : ordersResponse.totalActiveCount,
             });
 
         } catch (error) {

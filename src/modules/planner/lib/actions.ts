@@ -29,7 +29,7 @@ import { getStatusConfig } from './utils';
 /**
  * Fetches production orders from the server.
  * @param options - Pagination and filtering options.
- * @returns A promise that resolves to the orders and total archived count.
+ * @returns A promise that resolves to the orders and total counts.
  */
 export async function getProductionOrders(options: { 
     page: number; 
@@ -38,11 +38,11 @@ export async function getProductionOrders(options: {
     filters: {
         searchTerm?: string;
         status?: string[];
-        classification?: string;
+        classification?: string[];
         showOnlyMy?: string;
         dateRange?: DateRange;
     };
-}): Promise<{ activeOrders: ProductionOrder[], archivedOrders: ProductionOrder[], totalArchivedCount: number }> {
+}): Promise<{ activeOrders: ProductionOrder[], archivedOrders: ProductionOrder[], totalActiveCount: number, totalArchivedCount: number }> {
     return getOrders(options);
 }
 
