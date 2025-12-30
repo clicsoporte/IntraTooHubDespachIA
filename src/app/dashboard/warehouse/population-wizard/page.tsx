@@ -48,10 +48,10 @@ export default function PopulationWizardPage() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [wizardStep, setWizardStep] = useState<WizardStep>('setup');
-    const [allLocations, setAllLocations] = useState<WarehouseLocation[]>([]);
+    const [allLocations, setAllLocations] = useState<(WarehouseLocation & { isCompleted?: boolean })[]>([]);
     
     const [selectedRackId, setSelectedRackId] = useState<number | null>(null);
-    const [rackLevels, setRackLevels] = useState<WarehouseLocation[]>([]);
+    const [rackLevels, setRackLevels] = useState<(WarehouseLocation & { isCompleted?: boolean })[]>([]);
     const [selectedLevelIds, setSelectedLevelIds] = useState<Set<number>>(new Set());
 
     const [locationsToPopulate, setLocationsToPopulate] = useState<WarehouseLocation[]>([]);
@@ -121,7 +121,7 @@ export default function PopulationWizardPage() {
         }
         setIsRackSearchOpen(false);
 
-        const allLocs = await getLocations(); // Re-fetch to get latest lock status
+        const allLocs = await getLocations(); // Re-fetch to get latest lock and completion status
         setAllLocations(allLocs);
         const levels = allLocs.filter(l => l.parentId === id);
         setRackLevels(levels);
@@ -323,7 +323,9 @@ export default function PopulationWizardPage() {
                                                 disabled={!!level.isLocked}
                                             />
                                             <Label htmlFor={`level-${level.id}`} className={`font-normal ${!!level.isLocked ? 'text-muted-foreground italic' : ''}`}>
-                                                {level.name} {!!level.isLocked && `(En uso por ${level.lockedBy || 'otro usuario'})`}
+                                                {level.name}
+                                                {level.isCompleted && <span className="ml-2 text-xs text-green-600 font-semibold">(Finalizado)</span>}
+                                                {!!level.isLocked && <span className="ml-2 text-xs text-destructive font-semibold">(En uso por {level.lockedBy || 'otro usuario'})</span>}
                                             </Label>
                                         </div>
                                     ))}

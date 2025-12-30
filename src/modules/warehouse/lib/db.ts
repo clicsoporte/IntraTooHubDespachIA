@@ -203,10 +203,51 @@ export async function saveWarehouseSettings(settings: WarehouseSettings): Promis
     `).run(JSON.stringify(settings));
 }
 
-export async function getLocations(): Promise<WarehouseLocation[]> {
+// Helper function to recursively find all final child nodes (bins) of a location.
+function getAllFinalChildren(locationId: number, allLocations: WarehouseLocation[]): number[] {
+    let finalChildren: number[] = [];
+    const queue: number[] = [locationId];
+    const visited = new Set<number>();
+
+    while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+
+        const children = allLocations.filter(l => l.parentId === currentId);
+        if (children.length === 0) {
+            finalChildren.push(currentId);
+        } else {
+            queue.push(...children.map(c => c.id));
+        }
+    }
+    return finalChildren;
+}
+
+
+/**
+ * Gets all locations and enriches them with completion status for wizard.
+ * @returns {Promise<WarehouseLocation[]>} A promise that resolves to an array of all locations.
+ */
+export async function getLocations(): Promise<(WarehouseLocation & { isCompleted?: boolean })[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const locations = db.prepare('SELECT * FROM locations ORDER BY parentId, name').all() as WarehouseLocation[];
-    return JSON.parse(JSON.stringify(locations));
+    const allLocations = db.prepare('SELECT * FROM locations ORDER BY parentId, name').all() as WarehouseLocation[];
+    const allItemLocations = db.prepare('SELECT locationId FROM item_locations').all() as { locationId: number }[];
+    const populatedLocationIds = new Set(allItemLocations.map(il => il.locationId));
+
+    const enrichedLocations = allLocations.map(loc => {
+        // Check if a location is a 'level' (has children)
+        const children = allLocations.filter(l => l.parentId === loc.id);
+        if (children.length > 0) {
+            // It's a parent, let's see if all its final children are populated
+            const finalChildren = getAllFinalChildren(loc.id, allLocations);
+            const isCompleted = finalChildren.length > 0 && finalChildren.every(childId => populatedLocationIds.has(childId));
+            return { ...loc, isCompleted };
+        }
+        return loc;
+    });
+
+    return JSON.parse(JSON.stringify(enrichedLocations));
 }
 
 export async function getSelectableLocations(): Promise<WarehouseLocation[]> {
@@ -547,7 +588,26 @@ export async function forceReleaseLock(locationId: number): Promise<void> {
 export async function getChildLocations(parentIds: number[]): Promise<WarehouseLocation[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     if (parentIds.length === 0) return [];
-    const placeholders = parentIds.map(() => '?').join(',');
-    const locations = db.prepare(`SELECT * FROM locations WHERE parentId IN (${placeholders})`).all(...parentIds) as WarehouseLocation[];
-    return JSON.parse(JSON.stringify(locations));
+    
+    let allChildren: WarehouseLocation[] = [];
+    const queue = [...parentIds];
+    const visited = new Set<number>();
+
+    while (queue.length > 0) {
+        const currentId = queue.shift()!;
+        if (visited.has(currentId)) continue;
+        visited.add(currentId);
+
+        const children = db.prepare(`SELECT * FROM locations WHERE parentId = ?`).all(currentId) as WarehouseLocation[];
+        if (children.length === 0) {
+            const self = db.prepare('SELECT * FROM locations WHERE id = ?').get(currentId) as WarehouseLocation;
+            if(self) allChildren.push(self);
+        } else {
+            queue.push(...children.map(c => c.id));
+        }
+    }
+    
+    // De-duplicate in case of complex structures
+    const uniqueChildren = Array.from(new Map(allChildren.map(item => [item.id, item])).values());
+    return JSON.parse(JSON.stringify(uniqueChildren));
 }
