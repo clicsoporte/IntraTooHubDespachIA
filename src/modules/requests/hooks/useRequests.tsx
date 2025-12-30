@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Custom hook `useRequests` for managing the state and logic of the Purchase Request page.
  * This hook encapsulates all state and actions for the module, keeping the UI component clean.
@@ -877,7 +876,52 @@ export const useRequests = () => {
             doc.save(`solicitudes_compra_${new Date().getTime()}.pdf`);
         },
         handleExportSingleRequestPDF: async (request: PurchaseRequest) => {
-            // Implementation remains the same
+            if (!authCompanyData || !state.requestSettings) return;
+
+            let logoDataUrl: string | null = null;
+            if (authCompanyData.logoUrl) {
+                 try {
+                    const response = await fetch(authCompanyData.logoUrl);
+                    const blob = await response.blob();
+                    logoDataUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch(e) { console.error("Error adding logo to PDF:", e) }
+            }
+
+            const requestHistory = await getRequestHistory(request.id);
+            
+            const doc = generateDocument({
+                docTitle: 'Solicitud de Compra',
+                docId: request.consecutive,
+                companyData: authCompanyData,
+                logoDataUrl,
+                meta: [{ label: 'Generado', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
+                blocks: [
+                    { title: 'Cliente', content: `${request.clientName} (${request.clientTaxId})` },
+                    { title: 'Artículo', content: `[${request.itemId}] ${request.itemDescription}` },
+                    { title: 'Cantidad', content: request.quantity.toLocaleString('es-CR') },
+                    { title: 'Fecha Requerida', content: format(parseISO(request.requiredDate), 'dd/MM/yyyy') },
+                    { title: 'Estado Actual', content: statusConfig[request.status]?.label || request.status },
+                    { title: 'Solicitado por', content: request.requestedBy },
+                    { title: 'Notas', content: request.notes || 'N/A' },
+                ],
+                table: {
+                    columns: ["Fecha", "Estado", "Usuario", "Notas"],
+                    rows: requestHistory.map(entry => [
+                        format(parseISO(entry.timestamp), 'dd/MM/yy HH:mm'),
+                        statusConfig[entry.status]?.label || entry.status,
+                        entry.updatedBy,
+                        entry.notes || ''
+                    ]),
+                    columnStyles: {},
+                },
+                totals: []
+            });
+        
+            doc.save(`sc_${request.consecutive}.pdf`);
         },
         openAddNoteDialog: (request: PurchaseRequest) => {
             if (!currentUser) return;
