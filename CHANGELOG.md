@@ -23,7 +23,7 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
 
 ---
 
-## [2.1.0] - (En Desarrollo)
+## [2.1.0] - Publicado
 
 ### Mejoras de Seguridad Críticas
 
@@ -34,16 +34,13 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
     -   Se añadirá una capa de autenticación y autorización a las rutas de descarga de archivos (`/api/temp-backups` y `/api/temp-exports`).
     -   A partir de ahora, solo los usuarios autenticados con los permisos adecuados (ej. `admin:maintenance:backup`) podrán descargar respaldos de bases de datos o reportes de Excel, previniendo fugas de información.
 
----
-
-## [2.0.1] - Publicado
-
 ### Mejoras y Correcciones en Módulo de Almacén
 
 -   **Asistente de Poblado de Racks (Funcionalidad Clave):**
     -   **[Nuevo] Capacidad de Retomar Sesiones:** Se ha implementado un sistema de "sesiones" robusto. Si un usuario inicia el asistente de poblado y luego navega a otro módulo, cierra la pestaña o su sesión expira, al volver a la herramienta podrá **continuar exactamente donde se quedó**.
     -   **[Solucionado] Error de Bloqueo por Sí Mismo:** Se solucionó el bug crítico que impedía a un usuario volver a usar el asistente si lo había abandonado sin finalizar, mostrándole que él mismo tenía el tramo bloqueado.
     -   **[Mejora] Detección Visual de Bloqueos:** La interfaz ahora detecta y deshabilita visualmente los niveles de un rack que ya están siendo poblados por otro usuario, previniendo errores y mejorando la claridad.
+    -   **[Mejora] Indicador de Nivel Finalizado:** En el asistente, los niveles que ya han sido completamente poblados ahora muestran una etiqueta `(Finalizado)` para dar una retroalimentación visual clara al operario.
     -   **[Solucionado] Corrección del "Unknown" en Gestión de Bloqueos:** Se solucionó el error que causaba que el nombre del tramo bloqueado apareciera como "unknown".
     -   **[Estabilidad]** Se corrigieron múltiples errores de `NOT NULL constraint failed` y `Cannot read properties of undefined` que ocurrían debido a inconsistencias en la gestión del estado de la sesión, haciendo el asistente mucho más estable.
 
@@ -63,4 +60,3 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
 -   Lanzamiento de la versión 2.0.0 de Clic-Tools.
 -   Incluye los módulos de Cotizador, Planificador OP, Solicitudes de Compra, Asistente de Costos, Almacenes, Consultas Hacienda y el panel de Administración completo.
 -   Arquitectura basada en Next.js App Router, componentes de servidor y bases de datos modulares SQLite.
-

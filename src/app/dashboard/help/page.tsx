@@ -648,7 +648,7 @@ export default function HelpPage() {
                         <strong>Búsqueda Rápida (<QrCode className="inline h-4 w-4"/>):</strong> Una interfaz simple, ideal para celulares, que permite escanear un código QR o buscar rápidamente un artículo para ver su ubicación e inventario.
                     </li>
                      <li>
-                        <strong>Asistente de Poblado (<Wand2 className="inline h-4 w-4 text-indigo-500" />):</strong> Permite poblar masivamente las ubicaciones de un rack de forma guiada, ideal para el ingreso de mercadería nueva. Incluye un sistema para retomar sesiones interrumpidas.
+                        <strong>Asistente de Poblado (<Wand2 className="inline h-4 w-4 text-indigo-500" />):</strong> Permite poblar masivamente las ubicaciones de un rack de forma guiada, ideal para el ingreso de mercadería nueva. Incluye un sistema para retomar sesiones interrumpidas y ahora muestra un indicador de `(Finalizado)` en los niveles que ya se completaron.
                     </li>
                     <li>
                         <strong>Asignar Ubicación a Producto (<PackagePlus className="inline h-4 w-4" />):</strong> Permite crear un &quot;catálogo&quot; indicando en qué ubicación física se almacena un producto específico de un cliente. Es ideal para productos que siempre van en el mismo lugar.
