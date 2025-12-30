@@ -109,8 +109,8 @@ type State = {
     requests: PurchaseRequest[];
     viewingArchived: boolean;
     currentPage: number;
-    pageSize: number;
-    totalItems: number;
+    totalActive: number;
+    totalArchived: number;
     requestSettings: RequestSettings | null;
     companyData: Company | null;
     newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>;
@@ -214,8 +214,8 @@ export const useRequests = () => {
         requests: [],
         viewingArchived: false,
         currentPage: 0,
-        pageSize: 50,
-        totalItems: 0,
+        totalActive: 0,
+        totalArchived: 0,
         requestSettings: null,
         companyData: null,
         newRequest: emptyRequest,
@@ -288,9 +288,9 @@ export const useRequests = () => {
                 getRequestSettings(),
                 getPurchaseRequests({
                     page: state.currentPage,
-                    pageSize: state.pageSize,
+                    pageSize: state.rowsPerPage,
+                    isArchived: state.viewingArchived,
                     filters: {
-                        isArchived: state.viewingArchived,
                         searchTerm: debouncedSearchTerm,
                         status: state.statusFilter,
                         classification: state.classificationFilter,
@@ -309,7 +309,8 @@ export const useRequests = () => {
                 erpPoHeaders: poHeaders,
                 erpPoLines: poLines,
                 requests: requestsData.requests.map(sanitizeRequest),
-                totalItems: requestsData.totalCount
+                totalActive: requestsData.totalActive,
+                totalArchived: requestsData.totalArchived,
             });
 
         } catch (error) {
@@ -323,7 +324,7 @@ export const useRequests = () => {
             }
         }
          return () => { isMounted = false; };
-    }, [toast, updateState, state.currentPage, state.pageSize, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, currentUser?.name]);
+    }, [toast, updateState, state.currentPage, state.rowsPerPage, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, currentUser?.name]);
     
     useEffect(() => {
         setTitle("Solicitud de Compra");
@@ -1050,6 +1051,9 @@ export const useRequests = () => {
         setCostAnalysisDialogOpen: (isOpen: boolean) => updateState({ isCostAnalysisDialogOpen: isOpen }),
         setAnalysisCost: (cost: string) => updateState({ analysisCost: cost }),
         setAnalysisSalePrice: (price: string) => updateState({ analysisSalePrice: price }),
+        setSearchTerm: (term: string) => updateState({ searchTerm: term, currentPage: 0 }),
+        setDateFilter: (range: DateRange | undefined) => updateState({ dateFilter: range, currentPage: 0 }),
+        setRowsPerPage: (size: number) => updateState({ rowsPerPage: size, currentPage: 0 }),
     };
 
     const selectors = {
@@ -1110,13 +1114,3 @@ export const useRequests = () => {
         isAuthorized
     };
 }
-
-    
-
-```
-- src/modules/planner/lib/db.ts
-- src/modules/requests/lib/db.ts
-- src/modules/planner/lib/actions.ts
-- src/modules/requests/lib/actions.ts
-- src/app/dashboard/planner/page.tsx
-- src/app/dashboard/requests/page.tsx

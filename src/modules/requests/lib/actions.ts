@@ -37,20 +37,23 @@ import {
 /**
  * Fetches purchase requests from the server.
  * @param options - Pagination and filtering options.
- * @returns A promise that resolves to the requests and total archived count.
+ * @returns A promise that resolves to the requests and total counts.
  */
 export async function getPurchaseRequests(options: { 
-    page?: number; 
-    pageSize?: number;
-    filters?: {
+    page: number; 
+    pageSize: number;
+    isArchived: boolean;
+    filters: {
         searchTerm?: string;
         status?: string;
         classification?: string;
+        showOnlyMy?: string;
         dateRange?: DateRange;
     };
-}): Promise<{ requests: PurchaseRequest[], totalArchivedCount: number }> {
+}): Promise<{ requests: PurchaseRequest[], totalActive: number; totalArchived: number }> {
     return getRequests(options);
 }
+
 
 /**
  * Saves a new purchase request.
@@ -207,7 +210,7 @@ export async function getRequestSuggestions(dateRange: DateRange): Promise<Purch
         getAllErpPurchaseOrderHeadersDb(),
         getAllErpPurchaseOrderLinesDb(),
     ]);
-    const allActiveRequests = await getRequests({}).then(res => res.requests.filter(r => ['pending', 'approved', 'ordered', 'purchasing-review', 'pending-approval'].includes(r.status)));
+    const allActiveRequests = await getRequests({ page: 0, pageSize: 99999, isArchived: false, filters: {} }).then(res => res.requests.filter(r => ['pending', 'approved', 'ordered', 'purchasing-review', 'pending-approval'].includes(r.status)));
 
     const activePoNumbers = new Set(erpPoHeaders.filter((h: any) => h.ESTADO === 'A').map((h: any) => h.ORDEN_COMPRA));
 
