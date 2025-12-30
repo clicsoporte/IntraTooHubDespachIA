@@ -87,8 +87,17 @@ function LocationForm({ initialLocation, allLocations, settings, onSave, onCance
     const parentLocationOptions = useMemo(() => {
         const searchLower = debouncedParentSearch.trim().toLowerCase();
         
+        // Find the types that CANNOT be parents (the last level in the hierarchy)
+        const hierarchyLevels = settings.locationLevels || [];
+        const leafNodeTypes = new Set<string>();
+        if (hierarchyLevels.length > 0) {
+            const lastLevel = hierarchyLevels[hierarchyLevels.length - 1];
+            leafNodeTypes.add(lastLevel.type);
+        }
+
         const filtered = allLocations.filter(l => 
-            l.id !== formData?.id &&
+            l.id !== formData?.id && // Can't be its own parent
+            !leafNodeTypes.has(l.type) && // Exclude leaf node types
             renderLocationPathAsString(l.id, allLocations).toLowerCase().includes(searchLower)
         );
 
@@ -96,7 +105,8 @@ function LocationForm({ initialLocation, allLocations, settings, onSave, onCance
             value: String(l.id),
             label: renderLocationPathAsString(l.id, allLocations)
         }));
-    }, [allLocations, debouncedParentSearch, formData?.id]);
+    }, [allLocations, debouncedParentSearch, formData?.id, settings.locationLevels]);
+
 
     return (
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
@@ -134,7 +144,7 @@ function LocationForm({ initialLocation, allLocations, settings, onSave, onCance
                             open={isParentSearchOpen}
                             onOpenChange={setIsParentSearchOpen}
                         />
-                         <Button type="button" variant="outline" size="icon" onClick={() => {setParentSearchTerm(''); setIsParentSearchOpen(true); handleChange('parentId', null);}}>
+                         <Button type="button" variant="outline" size="icon" onClick={() => {setParentSearchTerm(''); handleChange('parentId', null);}}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
@@ -576,3 +586,5 @@ export default function ManageLocationsPage() {
         </main>
     );
 }
+
+    
