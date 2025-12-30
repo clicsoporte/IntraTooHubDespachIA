@@ -92,7 +92,6 @@ export default function SimpleWarehouseSearchPage() {
     const [itemLocations, setItemLocations] = useState<ItemLocation[]>([]);
     const [stock, setStock] = useState<StockInfo[]>([]);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
-    const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
@@ -103,7 +102,6 @@ export default function SimpleWarehouseSearchPage() {
             setItemLocations(wData.itemLocations);
             setStock(wData.stock);
             setStockSettings(wData.stockSettings);
-            setWarehouseSettings(wData.warehouseSettings);
         } catch (error) {
             logError("Failed to load warehouse data", { error });
             toast({ title: "Error de Carga", variant: "destructive"});
@@ -122,7 +120,8 @@ export default function SimpleWarehouseSearchPage() {
     // This effect triggers the automatic search when the debounced term changes.
     useEffect(() => {
         if (debouncedSearchTerm) {
-            const exactMatch = products.find(p => p.id.toLowerCase() === debouncedSearchTerm.toLowerCase());
+            const searchLower = debouncedSearchTerm.toLowerCase();
+            const exactMatch = products.find(p => p.id.toLowerCase() === searchLower);
             setSelectedItem(exactMatch || null);
         } else {
             setSelectedItem(null);
@@ -171,7 +170,8 @@ export default function SimpleWarehouseSearchPage() {
             doc.setFontSize(14).setFont('Helvetica', 'bold').text(`Producto: ${product.id}`, 1.8, 0.4);
             doc.setFontSize(10).setFont('Helvetica', 'normal').text(doc.splitTextToSize(product.description, 1.9), 1.8, 0.6);
             doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Ubicación: ${location.code}`, 1.8, 1.3);
-            doc.setFontSize(8).text(`Creado: ${format(new Date(), 'dd/MM/yyyy')}`, 1.8, 2.8);
+            doc.setFontSize(8).text(`ID Interno: ${newUnit.unitCode}`, 0.2, 2.8);
+            doc.text(`Creado: ${format(new Date(), 'dd/MM/yyyy')}`, 1.8, 2.8);
             doc.save(`etiqueta_unidad_${newUnit.unitCode}.pdf`);
             toast({ title: "Etiqueta Generada", description: `Se creó la unidad ${newUnit.unitCode} y se generó el PDF.` });
         } catch (err: any) {
@@ -180,7 +180,7 @@ export default function SimpleWarehouseSearchPage() {
         }
     };
 
-    if (!isReady || isLoading || !warehouseSettings || !stockSettings) {
+    if (!isReady || isLoading || !stockSettings) {
         return <div className="flex h-screen w-full items-center justify-center bg-background"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>
     }
 
@@ -202,6 +202,7 @@ export default function SimpleWarehouseSearchPage() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="text-lg h-14 pl-10"
+                            autoFocus
                         />
                     </div>
                     
