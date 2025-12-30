@@ -328,4 +328,3 @@ export async function saveCostAnalysis(requestId: number, cost: number, salePric
     await logInfo(`Cost analysis saved for request ${updatedRequest.consecutive}`, { requestId, cost, salePrice });
     return updatedRequest;
 }
-```
