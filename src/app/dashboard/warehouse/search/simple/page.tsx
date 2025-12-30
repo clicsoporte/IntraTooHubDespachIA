@@ -250,7 +250,10 @@ export default function SimpleWarehouseSearchPage() {
                                                         if (!warehouse?.isVisible) return null;
                                                         return (
                                                             <div key={whId} className="flex justify-between items-center p-2 border rounded-md">
-                                                                <span>{warehouse?.name} ({whId})</span>
+                                                                <span className="flex items-center gap-2">
+                                                                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: warehouse?.color || '#CCCCCC' }}></span>
+                                                                    {warehouse?.name} ({whId})
+                                                                </span>
                                                                 <span className="font-bold text-lg">{qty.toLocaleString()}</span>
                                                             </div>
                                                         );
