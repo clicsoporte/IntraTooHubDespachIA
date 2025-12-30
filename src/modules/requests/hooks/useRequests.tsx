@@ -21,7 +21,7 @@ import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/mo
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority as PurchaseRequestPriorityType, ErpPurchaseOrderHeader as ErpPOHeader, Product, ErpPurchaseOrderLine
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, ErpPurchaseOrderHeader as ErpPOHeader, Product, ErpPurchaseOrderLine
 } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -109,7 +109,8 @@ type State = {
     requests: PurchaseRequest[];
     viewingArchived: boolean;
     currentPage: number;
-    totalItems: number;
+    totalActive: number;
+    totalArchived: number;
     requestSettings: RequestSettings | null;
     companyData: Company | null;
     newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>;
@@ -213,7 +214,8 @@ export const useRequests = () => {
         requests: [],
         viewingArchived: false,
         currentPage: 0,
-        totalItems: 0,
+        totalActive: 0,
+        totalArchived: 0,
         requestSettings: null,
         companyData: null,
         newRequest: emptyRequest,
@@ -307,7 +309,8 @@ export const useRequests = () => {
                 erpPoHeaders: poHeaders,
                 erpPoLines: poLines,
                 requests: requestsData.requests.map(sanitizeRequest),
-                totalItems: requestsData.totalCount,
+                totalActive: requestsData.totalActive,
+                totalArchived: requestsData.totalArchived,
             });
 
         } catch (error) {
@@ -1080,6 +1083,9 @@ export const useRequests = () => {
         classifications: useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]),
         filteredRequests: state.requests,
         stockLevels: authStockLevels,
+        totalItems: state.totalItems,
+        totalActive: state.totalActive,
+        totalArchived: state.totalArchived,
         visibleErpOrderLines: useMemo(() => {
             if (!state.showOnlyShortageItems) {
                 return state.erpOrderLines;
@@ -1113,3 +1119,4 @@ export const useRequests = () => {
         isAuthorized
     };
 }
+```

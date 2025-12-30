@@ -280,11 +280,11 @@ export async function getOrders(options: {
     filters: {
         searchTerm?: string;
         status?: string[];
-        classification?: string;
+        classification?: string[];
         showOnlyMy?: string;
         dateRange?: DateRange;
     };
-}): Promise<{ orders: ProductionOrder[], totalCount: number }> {
+}): Promise<{ activeOrders: ProductionOrder[], archivedOrders: ProductionOrder[], totalActiveCount: number, totalArchivedCount: number }> {
     const db = await connectDb(PLANNER_DB_FILE);
     const { page, pageSize, isArchived, filters } = options;
 
@@ -292,51 +292,58 @@ export async function getOrders(options: {
     const finalStatus = settings.useWarehouseReception ? 'received-in-warehouse' : 'completed';
     const archivedStatuses = [`'${finalStatus}'`, `'canceled'`];
 
-    let query = `SELECT * FROM production_orders`;
-    let countQuery = `SELECT COUNT(*) as count FROM production_orders`;
-    const whereClauses: string[] = [];
-    const params: any[] = [];
-    const countParams: any[] = [];
+    const buildQuery = (isArchivedView: boolean) => {
+        let baseQuery = `SELECT * FROM production_orders`;
+        let whereClauses: string[] = [];
+        let queryParams: any[] = [];
 
-    if (isArchived) {
-        whereClauses.push(`status IN (${archivedStatuses.join(',')})`);
-    } else {
-        whereClauses.push(`status NOT IN (${archivedStatuses.join(',')})`);
-    }
+        if (isArchivedView) {
+            whereClauses.push(`status IN (${archivedStatuses.join(',')})`);
+        } else {
+            whereClauses.push(`status NOT IN (${archivedStatuses.join(',')})`);
+        }
 
-    if (filters.searchTerm) {
-        whereClauses.push(`(consecutive LIKE ? OR customerName LIKE ? OR productDescription LIKE ? OR productId LIKE ?)`);
-        const searchTermParam = `%${filters.searchTerm}%`;
-        params.push(searchTermParam, searchTermParam, searchTermParam, searchTermParam);
-        countParams.push(searchTermParam, searchTermParam, searchTermParam, searchTermParam);
-    }
+        if (filters.searchTerm) {
+            whereClauses.push(`(consecutive LIKE ? OR customerName LIKE ? OR productDescription LIKE ? OR productId LIKE ?)`);
+            const searchTermParam = `%${filters.searchTerm}%`;
+            queryParams.push(searchTermParam, searchTermParam, searchTermParam, searchTermParam);
+        }
 
-    if (filters.status && filters.status.length > 0) {
-        whereClauses.push(`status IN (${filters.status.map(() => '?').join(',')})`);
-        params.push(...filters.status);
-        countParams.push(...filters.status);
-    }
+        if (filters.status && filters.status.length > 0) {
+            whereClauses.push(`status IN (${filters.status.map(() => '?').join(',')})`);
+            queryParams.push(...filters.status);
+        }
+
+        if (filters.showOnlyMy) {
+            whereClauses.push(`requestedBy = ?`);
+            queryParams.push(filters.showOnlyMy);
+        }
+
+        if (whereClauses.length > 0) {
+            baseQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+        }
+        return { query: baseQuery, params: queryParams };
+    };
+
+    const activeQueryInfo = buildQuery(false);
+    const totalActiveCount = (db.prepare(`SELECT COUNT(*) as count FROM (${activeQueryInfo.query})`).get(...activeQueryInfo.params) as { count: number }).count;
+
+    const archivedQueryInfo = buildQuery(true);
+    const totalArchivedCount = (db.prepare(`SELECT COUNT(*) as count FROM (${archivedQueryInfo.query})`).get(...archivedQueryInfo.params) as { count: number }).count;
+
+    const targetQueryInfo = isArchived ? archivedQueryInfo : activeQueryInfo;
+    targetQueryInfo.query += ' ORDER BY requestDate DESC LIMIT ? OFFSET ?';
+    targetQueryInfo.params.push(pageSize, page * pageSize);
     
-    if (filters.showOnlyMy) {
-        whereClauses.push(`requestedBy = ?`);
-        params.push(filters.showOnlyMy);
-        countParams.push(filters.showOnlyMy);
-    }
-
-    if (whereClauses.length > 0) {
-        query += ` WHERE ${whereClauses.join(' AND ')}`;
-        countQuery += ` WHERE ${whereClauses.join(' AND ')}`;
-    }
-
-    const totalCount = (db.prepare(countQuery).get(...countParams) as { count: number }).count;
-    
-    query += ' ORDER BY requestDate DESC LIMIT ? OFFSET ?';
-    params.push(pageSize, page * pageSize);
-
-    const ordersRaw = db.prepare(query).all(...params) as any[];
+    const ordersRaw = db.prepare(targetQueryInfo.query).all(...targetQueryInfo.params) as any[];
     const orders = ordersRaw.map(o => JSON.parse(JSON.stringify(o)));
 
-    return { orders, totalCount };
+    return { 
+        activeOrders: isArchived ? [] : orders,
+        archivedOrders: isArchived ? orders : [],
+        totalActiveCount, 
+        totalArchivedCount 
+    };
 }
 
 
@@ -718,6 +725,4 @@ export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promi
 }
 
     
-
-
-
+```

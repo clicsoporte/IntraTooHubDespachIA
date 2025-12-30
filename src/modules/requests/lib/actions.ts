@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Client-side functions for interacting with the request module's server-side DB functions.
  * This abstraction layer ensures components only call client-safe functions.
@@ -329,3 +328,4 @@ export async function saveCostAnalysis(requestId: number, cost: number, salePric
     await logInfo(`Cost analysis saved for request ${updatedRequest.consecutive}`, { requestId, cost, salePrice });
     return updatedRequest;
 }
+```
