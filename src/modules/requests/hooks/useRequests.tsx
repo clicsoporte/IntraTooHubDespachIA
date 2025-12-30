@@ -106,12 +106,11 @@ type State = {
     isSubmitting: boolean;
     isNewRequestDialogOpen: boolean;
     isEditRequestDialogOpen: boolean;
-    activeRequests: PurchaseRequest[];
-    archivedRequests: PurchaseRequest[];
+    requests: PurchaseRequest[];
     viewingArchived: boolean;
-    archivedPage: number;
+    currentPage: number;
     pageSize: number;
-    totalArchived: number;
+    totalItems: number;
     requestSettings: RequestSettings | null;
     companyData: Company | null;
     newRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'>;
@@ -212,12 +211,11 @@ export const useRequests = () => {
         isSubmitting: false,
         isNewRequestDialogOpen: false,
         isEditRequestDialogOpen: false,
-        activeRequests: [],
-        archivedRequests: [],
+        requests: [],
         viewingArchived: false,
-        archivedPage: 0,
+        currentPage: 0,
         pageSize: 50,
-        totalArchived: 0,
+        totalItems: 0,
         requestSettings: null,
         companyData: null,
         newRequest: emptyRequest,
@@ -289,8 +287,16 @@ export const useRequests = () => {
              const [settingsData, requestsData, poHeaders, poLines] = await Promise.all([
                 getRequestSettings(),
                 getPurchaseRequests({
-                    page: state.viewingArchived ? state.archivedPage : undefined,
-                    pageSize: state.viewingArchived ? state.pageSize : undefined,
+                    page: state.currentPage,
+                    pageSize: state.pageSize,
+                    filters: {
+                        isArchived: state.viewingArchived,
+                        searchTerm: debouncedSearchTerm,
+                        status: state.statusFilter,
+                        classification: state.classificationFilter,
+                        showOnlyMy: state.showOnlyMyRequests ? currentUser?.name : undefined,
+                        dateRange: state.dateFilter,
+                    }
                 }),
                 getAllErpPurchaseOrderHeaders(),
                 getAllErpPurchaseOrderLines(),
@@ -301,21 +307,9 @@ export const useRequests = () => {
             updateState({ 
                 requestSettings: settingsData, 
                 erpPoHeaders: poHeaders,
-                erpPoLines: poLines
-            });
-            
-            const useWarehouse = settingsData.useWarehouseReception;
-            const useErpEntry = settingsData.useErpEntry;
-
-            const finalStatus = useErpEntry ? 'entered-erp' : (useWarehouse ? 'received-in-warehouse' : 'ordered');
-            const archivedStatuses = [finalStatus, 'canceled'];
-
-            const allRequests = requestsData.requests.map(sanitizeRequest);
-            
-            updateState({
-                activeRequests: allRequests.filter(req => !archivedStatuses.includes(req.status)),
-                archivedRequests: allRequests.filter(req => archivedStatuses.includes(req.status)),
-                totalArchived: requestsData.totalArchivedCount,
+                erpPoLines: poLines,
+                requests: requestsData.requests.map(sanitizeRequest),
+                totalItems: requestsData.totalCount
             });
 
         } catch (error) {
@@ -329,21 +323,19 @@ export const useRequests = () => {
             }
         }
          return () => { isMounted = false; };
-    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
+    }, [toast, updateState, state.currentPage, state.pageSize, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, currentUser?.name]);
     
     useEffect(() => {
         setTitle("Solicitud de Compra");
         if (isAuthReady) {
             loadInitialData(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthReady]);
+    }, [setTitle, isAuthReady, loadInitialData]);
 
-     useEffect(() => {
-        if (!isAuthReady || state.isLoading) return;
+    useEffect(() => {
+        if (!isAuthReady) return;
         loadInitialData(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.viewingArchived, state.archivedPage, state.pageSize]);
+    }, [isAuthReady, loadInitialData]);
 
     // Effect to pre-fill form from URL parameters
     useEffect(() => {
@@ -419,7 +411,7 @@ export const useRequests = () => {
         if (!state.requestToUpdate || !finalStatus || !currentUser) return;
         updateState({ isSubmitting: true });
         try {
-            const rawUpdatedRequest = await updatePurchaseRequestStatus({ 
+            await updatePurchaseRequestStatus({ 
                 requestId: state.requestToUpdate.id, 
                 status: finalStatus, 
                 notes: state.statusUpdateNotes, 
@@ -430,8 +422,6 @@ export const useRequests = () => {
                 erpEntryNumber: finalStatus === 'entered-erp' ? state.erpEntryNumber : undefined,
             });
             
-            const updatedRequest = sanitizeRequest(rawUpdatedRequest);
-
             toast({ title: "Estado Actualizado" });
             
             updateState({
@@ -467,7 +457,7 @@ export const useRequests = () => {
                 const updated = sanitizeRequest(rawUpdated);
                 toast({ title: 'Solicitud Rechazada' });
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? updated : r)
+                    requests: state.requests.map(r => r.id === updated.id ? updated : r)
                 });
             }
             updateState({ isActionDialogOpen: false });
@@ -502,16 +492,15 @@ export const useRequests = () => {
 
             updateState({ isSubmitting: true });
             try {
-                const rawCreatedRequest = await savePurchaseRequest(requestWithFormattedDate, currentUser.name);
-                const createdRequest = sanitizeRequest(rawCreatedRequest);
+                await savePurchaseRequest(requestWithFormattedDate, currentUser.name);
                 toast({ title: "Solicitud Creada" });
                 updateState({
                     isNewRequestDialogOpen: false,
                     newRequest: { ...emptyRequest, requiredDate: '', requiresCurrency: true },
                     clientSearchTerm: '',
                     itemSearchTerm: '',
-                    activeRequests: [createdRequest, ...state.activeRequests]
                 });
+                await loadInitialData(true);
             } catch (error: any) {
                 logError("Failed to create request", { context: 'useRequests.handleCreateRequest', error: error.message });
                 toast({ title: "Error al Crear", description: `No se pudo crear la solicitud. ${error.message}`, variant: "destructive" });
@@ -526,8 +515,7 @@ export const useRequests = () => {
             try {
                 const updated = await updatePurchaseRequest({ requestId: state.requestToEdit.id, updatedBy: currentUser.name, ...state.requestToEdit });
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
+                    requests: state.requests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
                     isEditRequestDialogOpen: false
                 });
                 toast({ title: "Solicitud Actualizada" });
@@ -560,8 +548,7 @@ export const useRequests = () => {
                     updatedBy: currentUser.name,
                 });
                 updateState({
-                    activeRequests: state.activeRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r),
-                    archivedRequests: state.archivedRequests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r)
+                    requests: state.requests.map(r => r.id === updated.id ? sanitizeRequest(updated) : r)
                 });
                 toast({ title: "Solicitud Enviada", description: `Tu solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} ha sido enviada para revisión.` });
             } catch (error: any) {
@@ -941,8 +928,7 @@ export const useRequests = () => {
                 setState(prevState => ({
                     ...prevState,
                     isAddNoteDialogOpen: false,
-                    activeRequests: prevState.activeRequests.map(o => o.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : o),
-                    archivedRequests: prevState.archivedRequests.map(o => o.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : o)
+                    requests: prevState.requests.map(o => o.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : o)
                 }));
             } catch(error: any) {
                 logError("Failed to add note to request", { context: 'useRequests.handleAddNote', error: error.message });
@@ -955,8 +941,7 @@ export const useRequests = () => {
             if (!currentUser) return;
             const updated = await updateRequestDetailsServer({ requestId, ...details, updatedBy: currentUser.name });
             updateState({ 
-                activeRequests: state.activeRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o),
-                archivedRequests: state.archivedRequests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
+                requests: state.requests.map(o => o.id === requestId ? sanitizeRequest(updated) : o)
             });
         },
         setNewRequest: (updater: (prev: State['newRequest']) => State['newRequest']) => {
@@ -1011,8 +996,7 @@ export const useRequests = () => {
                 setState(prevState => ({
                     ...prevState,
                     isCostAnalysisDialogOpen: false,
-                    activeRequests: prevState.activeRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
-                    archivedRequests: prevState.archivedRequests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
+                    requests: prevState.requests.map(r => r.id === updatedRequest.id ? sanitizeRequest(updatedRequest) : r),
                 }));
             } catch (error: any) {
                 logError("Failed to save cost analysis", { error: error.message, requestId: state.requestToUpdate.id });
@@ -1029,20 +1013,15 @@ export const useRequests = () => {
             itemSearchTerm: '' 
         }),
         setEditRequestDialogOpen: (isOpen: boolean) => updateState({ isEditRequestDialogOpen: isOpen }),
-        setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, archivedPage: 0 }),
-        setArchivedPage: (updater: (prev: number) => number) => updateState({ archivedPage: updater(state.archivedPage) }),
-        setPageSize: (size: number) => updateState({ rowsPerPage: size }),
         setRequestToEdit: (request: PurchaseRequest | null) => updateState({ requestToEdit: request }),
-        setSearchTerm: (term: string) => updateState({ searchTerm: term }),
-        setStatusFilter: (filter: string) => updateState({ statusFilter: filter }),
-        setClassificationFilter: (filter: string) => updateState({ classificationFilter: filter }),
-        setDateFilter: (range: DateRange | undefined) => updateState({ dateFilter: range }),
+        setStatusFilter: (filter: string) => updateState({ statusFilter: filter, currentPage: 0 }),
+        setClassificationFilter: (filter: string) => updateState({ classificationFilter: filter, currentPage: 0 }),
         setShowOnlyMyRequests: (show: boolean) => {
             if (!show && !hasPermission('requests:read:all')) {
                 toast({ title: "Permiso Requerido", description: "No tienes permiso para ver todas las solicitudes.", variant: "destructive"});
                 return;
             }
-            updateState({ showOnlyMyRequests: show });
+            updateState({ showOnlyMyRequests: show, currentPage: 0 });
         },
         setClientSearchTerm: (term: string) => updateState({ clientSearchTerm: term }),
         setClientSearchOpen: (isOpen: boolean) => updateState({ isClientSearchOpen: isOpen }),
@@ -1096,23 +1075,7 @@ export const useRequests = () => {
             }).map(p => ({ value: p.id, label: `[${p.id}] - ${p.description}` }));
         }, [products, debouncedItemSearch]),
         classifications: useMemo(() => Array.from(new Set(products.map(p => p.classification).filter(Boolean))), [products]),
-        filteredRequests: useMemo(() => {
-            let requestsToFilter = state.viewingArchived ? state.archivedRequests : state.activeRequests;
-            
-            const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
-            return requestsToFilter.filter(request => {
-                const product = products.find(p => p.id === request.itemId);
-                const targetText = normalizeText(`${request.consecutive} ${request.clientName} ${request.itemDescription} ${request.purchaseOrder || ''} ${request.erpOrderNumber || ''}`);
-                
-                const searchMatch = debouncedSearchTerm ? searchTerms.every(term => targetText.includes(term)) : true;
-                const statusMatch = state.statusFilter === 'all' || request.status === state.statusFilter;
-                const classificationMatch = state.classificationFilter === 'all' || (product && product.classification === state.classificationFilter);
-                const dateMatch = !state.dateFilter || !state.dateFilter.from || (new Date(request.requiredDate) >= state.dateFilter.from && new Date(request.requiredDate) <= (state.dateFilter.to || state.dateFilter.from));
-                const myRequestsMatch = !state.showOnlyMyRequests || (currentUser?.name && request.requestedBy.toLowerCase() === currentUser.name.toLowerCase()) || (currentUser?.erpAlias && request.erpOrderNumber && request.erpOrderNumber.toLowerCase().includes(currentUser.erpAlias.toLowerCase()));
-
-                return searchMatch && statusMatch && classificationMatch && dateMatch && myRequestsMatch;
-            });
-        }, [state.viewingArchived, state.activeRequests, state.archivedRequests, debouncedSearchTerm, state.statusFilter, state.classificationFilter, products, state.dateFilter, state.showOnlyMyRequests, currentUser?.name, currentUser?.erpAlias]),
+        filteredRequests: state.requests,
         stockLevels: authStockLevels,
         visibleErpOrderLines: useMemo(() => {
             if (!state.showOnlyShortageItems) {
@@ -1149,3 +1112,11 @@ export const useRequests = () => {
 }
 
     
+
+```
+- src/modules/planner/lib/db.ts
+- src/modules/requests/lib/db.ts
+- src/modules/planner/lib/actions.ts
+- src/modules/requests/lib/actions.ts
+- src/app/dashboard/planner/page.tsx
+- src/app/dashboard/requests/page.tsx

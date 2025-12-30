@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Custom hook `usePlanner` for managing the state and logic of the Production Planner page.
  * This hook encapsulates all state and actions for the planner, keeping the UI component clean.
@@ -102,12 +101,11 @@ export const usePlanner = () => {
         isRefreshing: false,
         isNewOrderDialogOpen: false,
         isEditOrderDialogOpen: false,
-        activeOrders: [] as ProductionOrder[],
-        archivedOrders: [] as ProductionOrder[],
+        orders: [] as ProductionOrder[],
         viewingArchived: false,
-        archivedPage: 0,
+        currentPage: 0,
         pageSize: 50,
-        totalArchived: 0,
+        totalItems: 0,
         plannerSettings: null as PlannerSettings | null,
         newOrder: emptyOrder,
         orderToEdit: null as ProductionOrder | null,
@@ -162,11 +160,19 @@ export const usePlanner = () => {
         }
 
         try {
-            const [ settingsData, ordersData ] = await Promise.all([
+            const [ settingsData, ordersResponse ] = await Promise.all([
                 getPlannerSettings(),
                 getProductionOrders({
-                    page: state.viewingArchived ? state.archivedPage : undefined,
-                    pageSize: state.viewingArchived ? state.pageSize : undefined,
+                    page: state.currentPage,
+                    pageSize: state.pageSize,
+                    filters: {
+                        isArchived: state.viewingArchived,
+                        searchTerm: debouncedSearchTerm,
+                        status: state.statusFilter,
+                        classification: state.classificationFilter,
+                        showOnlyMy: state.showOnlyMyOrders ? currentUser?.name : undefined,
+                        dateRange: state.dateFilter
+                    }
                 })
             ]);
             
@@ -174,17 +180,11 @@ export const usePlanner = () => {
 
             const newDynamicConfig = getStatusConfig(settingsData);
             
-            const finalArchivedStatus = settingsData.useWarehouseReception ? 'received-in-warehouse' : 'completed';
-            const archivedStatuses = [finalArchivedStatus, 'canceled'];
-
-            const allOrders = [...ordersData.activeOrders, ...ordersData.archivedOrders];
-            
             updateState({
                 plannerSettings: settingsData,
                 dynamicStatusConfig: newDynamicConfig,
-                activeOrders: allOrders.filter(o => !archivedStatuses.includes(o.status)),
-                archivedOrders: allOrders.filter(o => archivedStatuses.includes(o.status)),
-                totalArchived: ordersData.totalArchivedCount,
+                orders: ordersResponse.orders,
+                totalItems: ordersResponse.totalCount,
             });
 
         } catch (error) {
@@ -198,7 +198,7 @@ export const usePlanner = () => {
             }
         }
         return () => { isMounted = false; };
-    }, [toast, state.viewingArchived, state.pageSize, updateState, state.archivedPage]);
+    }, [toast, updateState, state.currentPage, state.pageSize, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyOrders, state.dateFilter, currentUser?.name]);
     
     useEffect(() => {
         setTitle("Planificador OP");
@@ -212,24 +212,14 @@ export const usePlanner = () => {
         }
 
         if (isAuthReady) {
-            loadInitialData(false);
             loadPrefs();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthReady]);
+    }, [setTitle, isAuthReady, currentUser, updateState]);
     
     useEffect(() => {
-        if (!isAuthReady || state.isLoading) return;
-        let isMounted = true;
-        const reload = async () => {
-            await loadInitialData(false);
-        };
-        if(isMounted) {
-            reload();
-        }
-        return () => { isMounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [state.viewingArchived, state.archivedPage, state.pageSize, isAuthReady]);
+        if (!isAuthReady) return;
+        loadInitialData(false);
+    }, [isAuthReady, loadInitialData]);
 
     const getOrderPermissions = useCallback((order: ProductionOrder): { [key: string]: boolean } => {
         const isPending = order.status === 'pending';
@@ -272,9 +262,9 @@ export const usePlanner = () => {
     const actions = {
         setNewOrderDialogOpen: (isOpen: boolean) => updateState({ isNewOrderDialogOpen: isOpen, activeOrdersForSelectedProduct: [] }),
         setEditOrderDialogOpen: (isOpen: boolean) => updateState({ isEditOrderDialogOpen: isOpen }),
-        setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, archivedPage: 0 }),
-        setArchivedPage: (pageUpdate: (page: number) => number) => updateState({ archivedPage: pageUpdate(state.archivedPage) }),
-        setPageSize: (size: number) => updateState({ pageSize: size, archivedPage: 0 }),
+        setViewingArchived: (isArchived: boolean) => updateState({ viewingArchived: isArchived, currentPage: 0 }),
+        setCurrentPage: (page: number) => updateState({ currentPage: page }),
+        setPageSize: (size: number) => updateState({ pageSize: size, currentPage: 0 }),
         setNewOrder: (partialOrder: Partial<typeof state.newOrder>) => {
             updateState({ newOrder: { ...state.newOrder, ...partialOrder } });
         },
@@ -282,17 +272,17 @@ export const usePlanner = () => {
             updateState({ orderToEdit: order });
         },
         setOrderToUpdate: (order: ProductionOrder | null) => updateState({ orderToUpdate: order }),
-        setSearchTerm: (term: string) => updateState({ searchTerm: term }),
-        setStatusFilter: (status: string[]) => updateState({ statusFilter: status }),
-        setClassificationFilter: (filter: string[]) => updateState({ classificationFilter: filter }),
+        setSearchTerm: (term: string) => updateState({ searchTerm: term, currentPage: 0 }),
+        setStatusFilter: (status: string[]) => updateState({ statusFilter: status, currentPage: 0 }),
+        setClassificationFilter: (filter: string[]) => updateState({ classificationFilter: filter, currentPage: 0 }),
         setShowOnlyMyOrders: (show: boolean) => {
             if (!show && !hasPermission('planner:read:all')) {
                 toast({ title: "Permiso Requerido", description: "No tienes permiso para ver todas las órdenes.", variant: "destructive"});
                 return;
             }
-            updateState({ showOnlyMyOrders: show });
+            updateState({ showOnlyMyOrders: show, currentPage: 0 });
         },
-        setDateFilter: (range: DateRange | undefined) => updateState({ dateFilter: range }),
+        setDateFilter: (range: DateRange | undefined) => updateState({ dateFilter: range, currentPage: 0 }),
         setCustomerSearchTerm: (term: string) => updateState({ customerSearchTerm: term }),
         setCustomerSearchOpen: (isOpen: boolean) => updateState({ isCustomerSearchOpen: isOpen }),
         setProductSearchTerm: (term: string) => {
@@ -360,15 +350,14 @@ export const usePlanner = () => {
             try {
                 const createdOrder = await saveProductionOrder(state.newOrder, currentUser.name);
                 toast({ title: "Orden Creada" });
-                setState(prevState => ({
-                    ...prevState,
+                updateState({
                     isNewOrderDialogOpen: false,
                     newOrder: { ...emptyOrder, deliveryDate: new Date().toISOString().split('T')[0] },
                     customerSearchTerm: '',
                     productSearchTerm: '',
-                    activeOrders: [...prevState.activeOrders, createdOrder],
                     activeOrdersForSelectedProduct: [],
-                }));
+                });
+                await loadInitialData(true);
             } catch (error: any) {
                 logError("Failed to create order", { error: error.message });
                 toast({ title: "Error", variant: "destructive" });
@@ -388,12 +377,10 @@ export const usePlanner = () => {
                     updatedBy: currentUser.name
                 };
                 const updated = await updateProductionOrder(payload);
-                setState(prevState => ({
-                    ...prevState,
-                    activeOrders: prevState.activeOrders.map(o => o.id === updated.id ? updated : o),
-                    archivedOrders: prevState.archivedOrders.map(o => o.id === updated.id ? updated : o),
+                updateState({
+                    orders: state.orders.map(o => o.id === updated.id ? updated : o),
                     isEditOrderDialogOpen: false
-                }));
+                });
                 toast({ title: "Orden Actualizada" });
             } catch (error: any) {
                 logError("Failed to edit order", { error: error.message });
@@ -428,8 +415,7 @@ export const usePlanner = () => {
                 };
                 const updated = await updatePendingAction(payload);
                 updateState({
-                    activeOrders: state.activeOrders.map(o => o.id === updated.id ? updated : o),
-                    archivedOrders: state.archivedOrders.map(o => o.id === updated.id ? updated : o)
+                    orders: state.orders.map(o => o.id === updated.id ? updated : o)
                 });
                 toast({ title: "Solicitud Enviada", description: `Tu solicitud de ${action === 'unapproval-request' ? 'desaprobación' : 'cancelación'} ha sido enviada para revisión.` });
             } catch (error: any) {
@@ -457,8 +443,7 @@ export const usePlanner = () => {
                     });
                     toast({ title: 'Solicitud Rechazada' });
                     updateState({ 
-                        activeOrders: state.activeOrders.map(o => o.id === updated.id ? updated : o),
-                        archivedOrders: state.archivedOrders.map(o => o.id === updated.id ? updated : o),
+                        orders: state.orders.map(o => o.id === updated.id ? updated : o)
                     });
                 }
                 updateState({ isActionDialogOpen: false });
@@ -475,7 +460,7 @@ export const usePlanner = () => {
             if (!state.orderToUpdate || !finalStatus || !currentUser) return;
             updateState({ isSubmitting: true });
             try {
-                const updatedOrder = await updateProductionOrderStatus({ 
+                await updateProductionOrderStatus({ 
                     orderId: state.orderToUpdate.id, 
                     status: finalStatus, 
                     notes: state.statusUpdateNotes, 
@@ -487,18 +472,8 @@ export const usePlanner = () => {
                     reopen: false 
                 });
                 toast({ title: "Estado Actualizado" });
-                setState(prevState => {
-                    const finalStatusValue = prevState.plannerSettings?.useWarehouseReception ? 'received-in-warehouse' : 'completed';
-                    const isArchived = updatedOrder.status === finalStatusValue || updatedOrder.status === 'canceled';
-
-                    return {
-                        ...prevState,
-                        isStatusDialogOpen: false,
-                        isActionDialogOpen: false,
-                        activeOrders: isArchived ? prevState.activeOrders.filter(o => o.id !== updatedOrder.id) : prevState.activeOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
-                        archivedOrders: isArchived ? [...prevState.archivedOrders, updatedOrder] : prevState.archivedOrders.filter(o => o.id !== updatedOrder.id)
-                    };
-                });
+                updateState({ isStatusDialogOpen: false, isActionDialogOpen: false });
+                await loadInitialData(true);
             } catch (error: any) {
                 logError("Failed to update status", { error: error.message });
                 toast({ title: "Error", variant: "destructive" });
@@ -516,8 +491,7 @@ export const usePlanner = () => {
             };
             const updated = await updateProductionOrderDetails({ orderId, ...finalDetails, updatedBy: currentUser.name });
             updateState({ 
-                activeOrders: state.activeOrders.map(o => o.id === orderId ? updated : o),
-                archivedOrders: state.archivedOrders.map(o => o.id === orderId ? updated : o)
+                orders: state.orders.map(o => o.id === orderId ? updated : o)
             });
         },
         
@@ -562,7 +536,7 @@ export const usePlanner = () => {
                     inventory: stock,
                 };
 
-                const existingActive = state.activeOrders.filter(o => o.productId === product.id);
+                const existingActive = state.orders.filter(o => o.productId === product.id && !state.viewingArchived);
                 updateState({ activeOrdersForSelectedProduct: existingActive });
 
                 if (state.orderToEdit) {
@@ -614,8 +588,7 @@ export const usePlanner = () => {
                 setState(prevState => ({
                     ...prevState,
                     isAddNoteDialogOpen: false,
-                    activeOrders: prevState.activeOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
-                    archivedOrders: prevState.archivedOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+                    orders: prevState.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
                 }));
             } catch(error: any) {
                 logError("Failed to add note", { error: error.message });
@@ -794,7 +767,7 @@ export const usePlanner = () => {
                 const updatedOrder = { ...prevState.orderToConfirmModification!, hasBeenModified: false };
                 return {
                     ...prevState,
-                    activeOrders: prevState.activeOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
+                    orders: prevState.orders.map(o => o.id === updatedOrder.id ? updatedOrder : o),
                     orderToConfirmModification: null
                 }
             });
@@ -857,25 +830,7 @@ export const usePlanner = () => {
         classifications: useMemo<string[]>(() => 
             Array.from(new Set(products.map(p => p.classification).filter(Boolean)))
         , [products]),
-        filteredOrders: useMemo(() => {
-            let ordersToFilter = state.viewingArchived ? state.archivedOrders : state.activeOrders;
-            
-            const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
-            
-            return ordersToFilter.filter(order => {
-                const product = products.find(p => p.id === order.productId);
-                const targetText = normalizeText(`${order.consecutive} ${order.customerName} ${order.productDescription} ${order.purchaseOrder || ''}`);
-                
-                const searchMatch = debouncedSearchTerm ? searchTerms.every(term => targetText.includes(term)) : true;
-                
-                const statusMatch = state.statusFilter.length === 0 || state.statusFilter.includes(order.status);
-                const classificationMatch = state.classificationFilter.length === 0 || (product && state.classificationFilter.includes(product.classification));
-                const dateMatch = !state.dateFilter || !state.dateFilter.from || (new Date(order.deliveryDate) >= state.dateFilter.from && new Date(order.deliveryDate) <= (state.dateFilter.to || state.dateFilter.from));
-                const myOrdersMatch = !state.showOnlyMyOrders || !hasPermission('planner:read:all') || (currentUser && order.requestedBy.toLowerCase() === currentUser.name.toLowerCase());
-
-                return searchMatch && statusMatch && classificationMatch && dateMatch && myOrdersMatch;
-            });
-        }, [state.viewingArchived, state.activeOrders, state.archivedOrders, debouncedSearchTerm, state.statusFilter, state.classificationFilter, products, state.dateFilter, state.showOnlyMyOrders, currentUser, hasPermission]),
+        filteredOrders: state.orders,
         stockLevels: stockLevels,
         availableColumns,
     };
