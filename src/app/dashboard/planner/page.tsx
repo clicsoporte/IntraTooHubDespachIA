@@ -340,8 +340,8 @@ export default function PlannerPage() {
                             Refrescar
                         </Button>
                         <div className="flex items-center gap-1">
-                            <Button variant={state.viewingArchived ? "outline" : "secondary"} onClick={() => actions.setViewingArchived(false)}>Activas</Button>
-                            <Button variant={state.viewingArchived ? "secondary" : "outline"} onClick={() => actions.setViewingArchived(true)}>Archivadas</Button>
+                            <Button variant={state.viewingArchived ? "outline" : "secondary"} onClick={() => actions.setViewingArchived(false)}>Activas ({state.totalItems})</Button>
+                            <Button variant={state.viewingArchived ? "secondary" : "outline"} onClick={() => actions.setViewingArchived(true)}>Archivadas ({state.totalItems})</Button>
                         </div>
                         {selectors.hasPermission('planner:create') && (
                             <Dialog open={state.isNewOrderDialogOpen} onOpenChange={actions.setNewOrderDialogOpen}>
@@ -621,7 +621,7 @@ export default function PlannerPage() {
                         <AlertDialogAction onClick={actions.handleConfirmModification}>Sí, Confirmar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </Dialog>
+            </AlertDialog>
 
             <Dialog open={state.isHistoryDialogOpen} onOpenChange={actions.setHistoryDialogOpen}>
                 <DialogContent className="sm:max-w-2xl">
