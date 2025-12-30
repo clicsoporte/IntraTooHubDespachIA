@@ -256,7 +256,7 @@ export async function saveSettings(settings: RequestSettings): Promise<void> {
 }
 
 
-export async function getRequests(options: {
+export async function getRequests(options: { 
     page: number; 
     pageSize: number;
     isArchived: boolean;
@@ -298,6 +298,12 @@ export async function getRequests(options: {
         whereClauses.push(`status IN (${filters.status.map(() => '?').join(',')})`);
         params.push(...filters.status);
         countParams.push(...filters.status);
+    }
+    
+    if (filters.showOnlyMy) {
+        whereClauses.push(`requestedBy = ?`);
+        params.push(filters.showOnlyMy);
+        countParams.push(filters.showOnlyMy);
     }
 
     if (whereClauses.length > 0) {

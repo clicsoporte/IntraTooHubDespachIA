@@ -274,41 +274,69 @@ export async function saveSettings(settings: PlannerSettings): Promise<void> {
 }
 
 export async function getOrders(options: { 
-    page?: number; 
-    pageSize?: number;
-}): Promise<{ activeOrders: ProductionOrder[], archivedOrders: ProductionOrder[], totalArchivedCount: number }> {
+    page: number; 
+    pageSize: number;
+    isArchived: boolean;
+    filters: {
+        searchTerm?: string;
+        status?: string[];
+        classification?: string;
+        showOnlyMy?: string;
+        dateRange?: DateRange;
+    };
+}): Promise<{ orders: ProductionOrder[], totalCount: number }> {
     const db = await connectDb(PLANNER_DB_FILE);
-    
-    const { page = 0, pageSize = 50 } = options;
+    const { page, pageSize, isArchived, filters } = options;
+
     const settings = await getPlannerSettings();
     const finalStatus = settings.useWarehouseReception ? 'received-in-warehouse' : 'completed';
-    const archivedStatuses = `'${finalStatus}', 'canceled'`;
+    const archivedStatuses = [`'${finalStatus}'`, `'canceled'`];
 
-    // Fetch all active orders
-    const activeOrdersRaw = db.prepare(`
-        SELECT * FROM production_orders 
-        WHERE status NOT IN (${archivedStatuses}) 
-        ORDER BY requestDate DESC
-    `).all() as any[];
+    let query = `SELECT * FROM production_orders`;
+    let countQuery = `SELECT COUNT(*) as count FROM production_orders`;
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+    const countParams: any[] = [];
+
+    if (isArchived) {
+        whereClauses.push(`status IN (${archivedStatuses.join(',')})`);
+    } else {
+        whereClauses.push(`status NOT IN (${archivedStatuses.join(',')})`);
+    }
+
+    if (filters.searchTerm) {
+        whereClauses.push(`(consecutive LIKE ? OR customerName LIKE ? OR productDescription LIKE ? OR productId LIKE ?)`);
+        const searchTermParam = `%${filters.searchTerm}%`;
+        params.push(searchTermParam, searchTermParam, searchTermParam, searchTermParam);
+        countParams.push(searchTermParam, searchTermParam, searchTermParam, searchTermParam);
+    }
+
+    if (filters.status && filters.status.length > 0) {
+        whereClauses.push(`status IN (${filters.status.map(() => '?').join(',')})`);
+        params.push(...filters.status);
+        countParams.push(...filters.status);
+    }
     
-    // Fetch paginated archived orders
-    const archivedOrdersRaw = db.prepare(`
-        SELECT * FROM production_orders 
-        WHERE status IN (${archivedStatuses}) 
-        ORDER BY requestDate DESC 
-        LIMIT ? OFFSET ?
-    `).all(pageSize, page * pageSize) as any[];
-        
-    const totalArchivedCount = (db.prepare(`
-        SELECT COUNT(*) as count 
-        FROM production_orders 
-        WHERE status IN (${archivedStatuses})
-    `).get() as { count: number }).count;
+    if (filters.showOnlyMy) {
+        whereClauses.push(`requestedBy = ?`);
+        params.push(filters.showOnlyMy);
+        countParams.push(filters.showOnlyMy);
+    }
 
-    const activeOrders = activeOrdersRaw.map(o => JSON.parse(JSON.stringify(o)));
-    const archivedOrders = archivedOrdersRaw.map(o => JSON.parse(JSON.stringify(o)));
+    if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+        countQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
 
-    return { activeOrders, archivedOrders, totalArchivedCount };
+    const totalCount = (db.prepare(countQuery).get(...countParams) as { count: number }).count;
+    
+    query += ' ORDER BY requestDate DESC LIMIT ? OFFSET ?';
+    params.push(pageSize, page * pageSize);
+
+    const ordersRaw = db.prepare(query).all(...params) as any[];
+    const orders = ordersRaw.map(o => JSON.parse(JSON.stringify(o)));
+
+    return { orders, totalCount };
 }
 
 
@@ -690,5 +718,6 @@ export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promi
 }
 
     
+
 
 

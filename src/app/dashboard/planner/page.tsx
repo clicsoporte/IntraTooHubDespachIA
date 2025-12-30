@@ -331,7 +331,7 @@ export default function PlannerPage() {
     
     return (
         <main className="flex-1 flex flex-col p-4 md:p-6">
-            <div className="sticky top-0 z-10 bg-muted/40 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-4 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 md:pb-6 space-y-6">
+            <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm -mx-4 -mt-4 px-4 pt-4 pb-4 md:-mx-6 md:-mt-6 md:px-6 md:pt-6 md:pb-6 space-y-6">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <h1 className="text-lg font-semibold md:text-2xl">Órdenes de Producción</h1>
                     <div className="flex items-center gap-2 md:gap-4 flex-wrap">
@@ -484,13 +484,13 @@ export default function PlannerPage() {
 
             {state.totalItems > state.pageSize && (
                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p - 1)} disabled={state.currentPage === 0}>
+                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage((p) => p - 1)} disabled={state.currentPage === 0}>
                         <ChevronLeft className="mr-2 h-4 w-4" />Anterior
                     </Button>
                     <span className="text-sm text-muted-foreground">
                         Página {state.currentPage + 1} de {Math.ceil(state.totalItems / state.pageSize)}
                     </span>
-                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p + 1)} disabled={(state.currentPage + 1) * state.pageSize >= state.totalItems}>
+                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage((p) => p + 1)} disabled={(state.currentPage + 1) * state.pageSize >= state.totalItems}>
                         Siguiente<ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
@@ -621,7 +621,7 @@ export default function PlannerPage() {
                         <AlertDialogAction onClick={actions.handleConfirmModification}>Sí, Confirmar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
-            </AlertDialog>
+            </Dialog>
 
             <Dialog open={state.isHistoryDialogOpen} onOpenChange={actions.setHistoryDialogOpen}>
                 <DialogContent className="sm:max-w-2xl">
