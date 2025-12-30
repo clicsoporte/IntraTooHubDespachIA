@@ -21,7 +21,8 @@ import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/mo
 import type { 
     PurchaseRequest, PurchaseRequestStatus, PurchaseRequestPriority, 
     PurchaseRequestHistoryEntry, RequestSettings, Company, DateRange, 
-    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority as PurchaseRequestPriorityType, ErpPurchaseOrderHeader as ErpPOHeader } from '../../core/types';
+    AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, Product, ErpPurchaseOrderHeader 
+} from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/modules/core/hooks/useAuth';
@@ -149,7 +150,7 @@ type State = {
     contextInfoData: PurchaseRequest | null;
     isAddNoteDialogOpen: boolean;
     notePayload: RequestNotePayload | null;
-    erpPoHeaders: ErpPOHeader[];
+    erpPoHeaders: ErpPurchaseOrderHeader[];
     erpPoLines: ErpPurchaseOrderLine[];
     isTransitsDialogOpen: boolean;
     activeTransits: { itemId: string; itemDescription: string; transits: any[] } | null;
@@ -306,7 +307,7 @@ export const useRequests = () => {
                 erpPoHeaders: poHeaders,
                 erpPoLines: poLines,
                 requests: requestsData.requests.map(sanitizeRequest),
-                totalItems: requestsData.totalCount,
+                totalItems: state.viewingArchived ? requestsData.totalArchived : requestsData.totalActive,
             });
 
         } catch (error) {
@@ -328,11 +329,6 @@ export const useRequests = () => {
             loadInitialData(false);
         }
     }, [setTitle, isAuthReady, loadInitialData]);
-
-    useEffect(() => {
-        if (!isAuthReady) return;
-        loadInitialData(false);
-    }, [isAuthReady, loadInitialData]);
 
     // Effect to pre-fill form from URL parameters
     useEffect(() => {
@@ -920,7 +916,7 @@ export const useRequests = () => {
             updateState({ isSubmitting: true });
             try {
                 const payload = { ...state.notePayload, updatedBy: currentUser.name };
-                const updatedRequest = await addNoteToRequest(payload);
+                const updatedRequest = await addNoteServer(payload);
                 toast({ title: "Nota Añadida" });
                 setState(prevState => ({
                     ...prevState,
@@ -1080,8 +1076,8 @@ export const useRequests = () => {
         filteredRequests: state.requests,
         stockLevels: authStockLevels,
         totalItems: state.totalItems,
-        totalActive: state.totalActive,
-        totalArchived: state.totalArchived,
+        totalActive: useMemo(() => state.viewingArchived ? state.totalItems : state.requests.length, [state.viewingArchived, state.requests, state.totalItems]),
+        totalArchived: useMemo(() => state.viewingArchived ? state.requests.length : state.totalItems, [state.viewingArchived, state.requests, state.totalItems]),
         visibleErpOrderLines: useMemo(() => {
             if (!state.showOnlyShortageItems) {
                 return state.erpOrderLines;

@@ -624,3 +624,47 @@ export async function getRolesWithPermission(permission: string): Promise<string
     const roles = await getAllRolesFromMain();
     return roles.filter(role => role.id === 'admin' || role.permissions.includes(permission)).map(role => role.id);
 }
+
+export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {
+    const db = await connectDb(PLANNER_DB_FILE);
+    if (!dateRange.from) {
+        throw new Error("Date 'from' is required.");
+    }
+    const toDate = dateRange.to || new Date();
+    toDate.setHours(23, 59, 59, 999);
+
+    // Get orders completed within the date range
+    const completedOrders = db.prepare(`
+        SELECT DISTINCT p.* 
+        FROM production_orders p
+        JOIN production_order_history h ON p.id = h.orderId
+        WHERE h.status IN ('completed', 'received-in-warehouse')
+        AND h.timestamp BETWEEN ? AND ?
+    `).all(dateRange.from.toISOString(), toDate.toISOString()) as ProductionOrder[];
+
+    // Fetch history for each of those orders
+    if (completedOrders.length === 0) {
+        return [];
+    }
+
+    const orderIds = completedOrders.map(o => o.id);
+    const placeholders = orderIds.map(() => '?').join(',');
+    const allHistory = db.prepare(`
+        SELECT * FROM production_order_history WHERE orderId IN (${placeholders}) ORDER BY timestamp ASC
+    `).all(...orderIds) as ProductionOrderHistoryEntry[];
+
+    const historyMap = new Map<number, ProductionOrderHistoryEntry[]>();
+    allHistory.forEach(h => {
+        if (!historyMap.has(h.orderId)) {
+            historyMap.set(h.orderId, []);
+        }
+        historyMap.get(h.orderId)!.push(h);
+    });
+
+    const result = completedOrders.map(order => ({
+        ...order,
+        history: historyMap.get(order.id) || []
+    }));
+
+    return JSON.parse(JSON.stringify(result));
+}
