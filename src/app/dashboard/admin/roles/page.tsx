@@ -54,7 +54,7 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { permissionGroups, permissionTranslations } from "@/modules/core/lib/data";
+import { permissionGroups, permissionTranslations } from "@/modules/core/lib/permissions";
 
 const emptyRole: Role = {
     id: "",

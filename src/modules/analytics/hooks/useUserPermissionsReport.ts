@@ -15,7 +15,7 @@ import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { format } from 'date-fns';
-import { permissionTranslations } from '@/modules/core/lib/data';
+import { permissionTranslations } from '@/modules/core/lib/permissions';
 
 export interface UserPermissionRow {
     userId: number;
@@ -79,7 +79,7 @@ export function useUserPermissionsReport() {
             });
             updateState({ data: reportData });
         } catch (error: any) {
-            logError("Failed to get user permissions report", { error: error.message });
+            logError("Failed to get user permissions report data", { error: error.message });
             toast({ title: "Error al Generar Reporte", description: error.message, variant: "destructive" });
         } finally {
             updateState({ isLoading: false });

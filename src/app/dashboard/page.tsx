@@ -4,6 +4,7 @@
 'use client';
 
 import { mainTools } from "@/modules/core/lib/data";
+import { analyticsPermissions } from "@/modules/core/lib/permissions";
 import { ToolCard } from "@/components/dashboard/tool-card";
 import { useEffect, useMemo } from "react";
 import type { Tool } from "@/modules/core/types";
@@ -32,7 +33,7 @@ export default function DashboardPage() {
     let tools: Tool[] = [...mainTools];
 
     const hasAdminAccess = userRole.id === 'admin';
-    const hasAnalyticsAccess = hasAdminAccess || userRole.permissions.includes('analytics:read');
+    const hasAnalyticsAccess = hasAdminAccess || userRole.permissions.some(p => analyticsPermissions.includes(p));
 
     // If user has analytics access, add the card to navigate to the analytics section
     if (hasAnalyticsAccess) {

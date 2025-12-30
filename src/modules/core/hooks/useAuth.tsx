@@ -177,10 +177,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     if (user && isReady) {
-      // Periodically poll only for the suggestion count, which is lightweight.
       const interval = setInterval(() => {
-        updateUnreadSuggestionsCount();
-        fetchUnreadNotifications(); // This should be lightweight as well
+        // Run these in parallel and catch potential fetch errors
+        Promise.all([
+            updateUnreadSuggestionsCount(),
+            fetchUnreadNotifications()
+        ]).catch(error => {
+            // This will catch network errors (like "Failed to fetch") if the server action call fails.
+            // It's common during development with hot-reloading or temporary network issues.
+            // We can log it silently to the console without breaking the UI.
+            console.warn("Periodic auth update failed, likely due to network interruption or page unload:", error);
+        });
       }, 30000);
       return () => clearInterval(interval);
     }
