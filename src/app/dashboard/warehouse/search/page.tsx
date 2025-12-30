@@ -362,6 +362,7 @@ export default function WarehouseSearchPage() {
                                         warehouse: stockSettings?.warehouses.find(w => w.id === whId)
                                     }))
                                     .filter(entry => entry.warehouse?.isVisible)
+                                    .sort((a, b) => (a.warehouse?.id || '').localeCompare(b.warehouse?.id || '')) // Sort by warehouse ID
                                 : [];
 
                             return (
