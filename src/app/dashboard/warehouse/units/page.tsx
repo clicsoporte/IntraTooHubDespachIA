@@ -199,7 +199,7 @@ export default function ManageUnitsPage() {
             const qrCodeDataUrl = await QRCode.toDataURL(unit.productId, { errorCorrectionLevel: 'H', width: 200 });
 
             const barcodeCanvas = document.createElement('canvas');
-            jsbarcode(barcodeCanvas, unit.productId, { format: 'CODE128', displayValue: true, fontSize: 14 });
+            jsbarcode(barcodeCanvas, unit.unitCode!, { format: 'CODE128', displayValue: true, fontSize: 14 });
             const barcodeDataUrl = barcodeCanvas.toDataURL('image/png');
 
             const doc = new jsPDF({

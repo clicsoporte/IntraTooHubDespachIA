@@ -45,6 +45,17 @@ export default function PlannerPage() {
         isAuthorized,
     } = usePlanner();
     const { isReady } = useAuth();
+    const {
+        isLoading, isSubmitting, isRefreshing, isNewOrderDialogOpen, isEditOrderDialogOpen, orders, viewingArchived,
+        currentPage, pageSize, totalItems, plannerSettings, newOrder, orderToEdit,
+        searchTerm, statusFilter, classificationFilter, showOnlyMyOrders, dateFilter,
+        customerSearchTerm, isCustomerSearchOpen, productSearchTerm, isProductSearchOpen,
+        isStatusDialogOpen, orderToUpdate, newStatus, statusUpdateNotes, deliveredQuantity,
+        defectiveQuantity, erpPackageNumber, erpTicketNumber, isHistoryDialogOpen, historyOrder,
+        history, isHistoryLoading, isReopenDialogOpen, reopenStep, reopenConfirmationText,
+        dynamicStatusConfig, isAddNoteDialogOpen, notePayload, isActionDialogOpen,
+        activeOrdersForSelectedProduct, visibleColumns, orderToConfirmModification
+    } = state;
 
     if (!isReady) {
         return (
@@ -109,7 +120,7 @@ export default function PlannerPage() {
                     <div className="flex justify-between items-start gap-2">
                         <div>
                             <CardTitle className="text-lg">{order.consecutive} - [{order.productId}] {order.productDescription}</CardTitle>
-                            <CardDescription>Cliente: {order.customerName} {state.plannerSettings?.showCustomerTaxId ? `(${order.customerTaxId})` : ''}</CardDescription>
+                            <CardDescription>Cliente: {order.customerName} {plannerSettings?.showCustomerTaxId ? `(${order.customerTaxId})` : ''}</CardDescription>
                         </div>
                         <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                             {!!order.reopened && <Badge variant="destructive"><RefreshCcw className="mr-1 h-3 w-3" /> Reabierta</Badge>}
@@ -167,28 +178,28 @@ export default function PlannerPage() {
                             </Select>
                         </div>
                         <div className="space-y-1">
-                             <p className={cn("font-semibold text-muted-foreground", !order.machineId && "text-destructive")}>{state.plannerSettings?.assignmentLabel || 'Máquina'}</p>
+                             <p className={cn("font-semibold text-muted-foreground", !order.machineId && "text-destructive")}>{plannerSettings?.assignmentLabel || 'Máquina'}</p>
                             <Select value={order.machineId || 'none'} onValueChange={(value) => actions.handleDetailUpdate(order.id, { machineId: value })}>
                                 <SelectTrigger className={cn("h-8 w-40 border-0 focus:ring-0", !order.machineId && "border-destructive focus:ring-destructive/50")}>
                                     <SelectValue placeholder="Sin Asignar" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Sin Asignar</SelectItem>
-                                    {state.plannerSettings?.machines.map(machine => (
+                                    {plannerSettings?.machines.map(machine => (
                                         <SelectItem key={machine.id} value={machine.id} disabled={!selectors.hasPermission('planner:machine:assign')}>{machine.name}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-1">
-                            <p className={cn("font-semibold text-muted-foreground", !order.shiftId && "text-destructive")}>{state.plannerSettings?.shiftLabel || 'Turno'}</p>
+                            <p className={cn("font-semibold text-muted-foreground", !order.shiftId && "text-destructive")}>{plannerSettings?.shiftLabel || 'Turno'}</p>
                             <Select value={order.shiftId || 'none'} onValueChange={(value) => actions.handleDetailUpdate(order.id, { shiftId: value })}>
                                 <SelectTrigger className={cn("h-8 w-40 border-0 focus:ring-0", !order.shiftId && "border-destructive focus:ring-destructive/50")}>
                                     <SelectValue placeholder="Sin Asignar" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Sin Asignar</SelectItem>
-                                    {state.plannerSettings?.shifts.map(shift => (
+                                    {plannerSettings?.shifts.map(shift => (
                                         <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -242,7 +253,7 @@ export default function PlannerPage() {
                     </div>
                      {order.pendingAction !== 'none' && (
                         <div className="mt-4">
-                            <AlertDialog open={state.isActionDialogOpen && state.orderToUpdate?.id === order.id} onOpenChange={(open) => { if (!open) actions.setActionDialogOpen(false); }}>
+                            <AlertDialog open={isActionDialogOpen && orderToUpdate?.id === order.id} onOpenChange={(open) => { if (!open) actions.setActionDialogOpen(false); }}>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 w-full" onClick={() => { actions.setOrderToUpdate(order); actions.setActionDialogOpen(true); }}>
                                         <AlertTriangle className="mr-2 h-4 w-4 animate-pulse" />
@@ -258,12 +269,12 @@ export default function PlannerPage() {
                                     </AlertDialogHeader>
                                     <div className="py-4 space-y-2">
                                         <Label htmlFor="admin-action-notes">Notas (Requerido para aprobar o rechazar)</Label>
-                                        <Textarea id="admin-action-notes" value={state.statusUpdateNotes} onChange={e => actions.setStatusUpdateNotes(e.target.value)} placeholder="Motivo de la acción..."/>
+                                        <Textarea id="admin-action-notes" value={statusUpdateNotes} onChange={e => actions.setStatusUpdateNotes(e.target.value)} placeholder="Motivo de la acción..."/>
                                     </div>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cerrar</AlertDialogCancel>
-                                        <Button variant="secondary" onClick={() => actions.handleAdminAction(false)} disabled={!state.statusUpdateNotes.trim() || state.isSubmitting}>Rechazar Solicitud</Button>
-                                        <Button onClick={() => actions.handleAdminAction(true)} className={order.pendingAction === 'cancellation-request' ? 'bg-destructive hover:bg-destructive/90' : ''} disabled={!state.statusUpdateNotes.trim() || state.isSubmitting}>Aprobar Solicitud</Button>
+                                        <Button variant="secondary" onClick={() => actions.handleAdminAction(false)} disabled={!statusUpdateNotes.trim() || isSubmitting}>Rechazar Solicitud</Button>
+                                        <Button onClick={() => actions.handleAdminAction(true)} className={order.pendingAction === 'cancellation-request' ? 'bg-destructive hover:bg-destructive/90' : ''} disabled={!statusUpdateNotes.trim() || isSubmitting}>Aprobar Solicitud</Button>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
@@ -283,34 +294,34 @@ export default function PlannerPage() {
     
     const renderFilters = () => (
         <div className="flex flex-col md:flex-row gap-4 items-center">
-            <Input placeholder="Buscar por Nº orden, cliente o producto..." value={state.searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full md:w-64" />
+            <Input placeholder="Buscar por Nº orden, cliente o producto..." value={searchTerm} onChange={(e) => actions.setSearchTerm(e.target.value)} className="w-full md:w-64" />
             <MultiSelectFilter
                 title="Estado"
                 options={Object.entries(selectors.statusConfig).map(([key, { label }]) => ({ value: key, label }))}
-                selectedValues={state.statusFilter}
+                selectedValues={statusFilter}
                 onSelectedChange={actions.setStatusFilter}
                 className="w-full md:w-auto"
             />
             <MultiSelectFilter
                 title="Clasificación"
                 options={selectors.classifications.map(c => ({ value: c, label: c }))}
-                selectedValues={state.classificationFilter}
+                selectedValues={classificationFilter}
                 onSelectedChange={actions.setClassificationFilter}
                 className="w-full md:w-auto"
             />
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant={"outline"} className={cn("w-full md:w-auto justify-start text-left font-normal", !state.dateFilter && "text-muted-foreground")}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />{state.dateFilter?.from ? (state.dateFilter.to ? (`${format(state.dateFilter.from, "LLL dd, y")} - ${format(state.dateFilter.to, "LLL dd, y")}`) : (format(state.dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}
+                    <Button variant={"outline"} className={cn("w-full md:w-auto justify-start text-left font-normal", !dateFilter && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />{dateFilter?.from ? (dateFilter.to ? (`${format(dateFilter.from, "LLL dd, y")} - ${format(dateFilter.to, "LLL dd, y")}`) : (format(dateFilter.from, "LLL dd, y"))) : (<span>Filtrar por fecha</span>)}
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="range" selected={state.dateFilter} onSelect={actions.setDateFilter} />
+                    <Calendar mode="range" selected={dateFilter} onSelect={actions.setDateFilter} />
                 </PopoverContent>
             </Popover>
             <DialogColumnSelector
                 allColumns={selectors.availableColumns}
-                visibleColumns={state.visibleColumns}
+                visibleColumns={visibleColumns}
                 onColumnChange={actions.handleColumnVisibilityChange}
                 onSave={actions.handleSaveColumnVisibility}
             />
@@ -335,16 +346,16 @@ export default function PlannerPage() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <h1 className="text-lg font-semibold md:text-2xl">Órdenes de Producción</h1>
                     <div className="flex items-center gap-2 md:gap-4 flex-wrap">
-                        <Button variant="outline" onClick={() => actions.loadInitialData(true)} disabled={state.isRefreshing || state.isLoading}>
-                            {state.isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                        <Button variant="outline" onClick={() => actions.loadInitialData(true)} disabled={isRefreshing || isLoading}>
+                            {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
                             Refrescar
                         </Button>
                         <div className="flex items-center gap-1">
-                            <Button variant={state.viewingArchived ? "outline" : "secondary"} onClick={() => actions.setViewingArchived(false)}>Activas ({state.totalItems})</Button>
-                            <Button variant={state.viewingArchived ? "secondary" : "outline"} onClick={() => actions.setViewingArchived(true)}>Archivadas ({state.totalItems})</Button>
+                            <Button variant={viewingArchived ? "outline" : "secondary"} onClick={() => actions.setViewingArchived(false)}>Activas ({selectors.totalActiveCount})</Button>
+                            <Button variant={viewingArchived ? "secondary" : "outline"} onClick={() => actions.setViewingArchived(true)}>Archivadas ({selectors.totalArchivedCount})</Button>
                         </div>
                         {selectors.hasPermission('planner:create') && (
-                            <Dialog open={state.isNewOrderDialogOpen} onOpenChange={actions.setNewOrderDialogOpen}>
+                            <Dialog open={isNewOrderDialogOpen} onOpenChange={actions.setNewOrderDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button><FilePlus className="mr-2"/> Nueva Orden</Button>
                                 </DialogTrigger>
@@ -361,11 +372,11 @@ export default function PlannerPage() {
                                                     <SearchInput
                                                         options={selectors.customerOptions}
                                                         onSelect={actions.handleSelectCustomer}
-                                                        value={state.customerSearchTerm}
+                                                        value={customerSearchTerm}
                                                         onValueChange={actions.setCustomerSearchTerm}
                                                         placeholder="Buscar cliente..."
                                                         onKeyDown={actions.handleCustomerInputKeyDown}
-                                                        open={state.isCustomerSearchOpen}
+                                                        open={isCustomerSearchOpen}
                                                         onOpenChange={actions.setCustomerSearchOpen}
                                                     />
                                                 </div>
@@ -374,37 +385,37 @@ export default function PlannerPage() {
                                                     <SearchInput
                                                         options={selectors.productOptions}
                                                         onSelect={actions.handleSelectProduct}
-                                                        value={state.productSearchTerm}
+                                                        value={productSearchTerm}
                                                         onValueChange={actions.setProductSearchTerm}
                                                         placeholder="Buscar producto..."
                                                         onKeyDown={actions.handleProductInputKeyDown}
-                                                        open={state.isProductSearchOpen}
+                                                        open={isProductSearchOpen}
                                                         onOpenChange={actions.setProductSearchOpen}
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="new-order-purchase-order">Nº Orden de Compra (Opcional)</Label>
-                                                    <Input id="new-order-purchase-order" placeholder="Ej: OC-12345" value={state.newOrder.purchaseOrder || ''} onChange={(e) => actions.setNewOrder({ purchaseOrder: e.target.value })} />
+                                                    <Input id="new-order-purchase-order" placeholder="Ej: OC-12345" value={newOrder.purchaseOrder || ''} onChange={(e) => actions.setNewOrder({ purchaseOrder: e.target.value })} />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="new-order-quantity">Cantidad Solicitada</Label>
-                                                    <Input id="new-order-quantity" type="number" placeholder="0.00" value={state.newOrder.quantity || ''} onChange={e => actions.setNewOrder({ quantity: Number(e.target.value) })} required />
+                                                    <Input id="new-order-quantity" type="number" placeholder="0.00" value={newOrder.quantity || ''} onChange={e => actions.setNewOrder({ quantity: Number(e.target.value) })} required />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="new-order-inventory">Inventario Actual (Manual)</Label>
-                                                    <Input id="new-order-inventory" type="number" placeholder="0.00" value={state.newOrder.inventory || ''} onChange={e => actions.setNewOrder({ inventory: Number(e.target.value) })} />
+                                                    <Input id="new-order-inventory" type="number" placeholder="0.00" value={newOrder.inventory || ''} onChange={e => actions.setNewOrder({ inventory: Number(e.target.value) })} />
                                                 </div>
                                                  <div className="space-y-2">
                                                     <Label htmlFor="new-order-inventory-erp">Inventario Actual (ERP)</Label>
-                                                    <Input id="new-order-inventory-erp" value={(selectors.stockLevels.find(s => s.itemId === state.newOrder.productId)?.totalStock ?? 0).toLocaleString()} disabled />
+                                                    <Input id="new-order-inventory-erp" value={(selectors.stockLevels.find(s => s.itemId === newOrder.productId)?.totalStock ?? 0).toLocaleString()} disabled />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="new-order-delivery-date">Fecha de Entrega Requerida</Label>
-                                                    <Input id="new-order-delivery-date" type="date" value={state.newOrder.deliveryDate} onChange={e => actions.setNewOrder({ deliveryDate: e.target.value })} required />
+                                                    <Input id="new-order-delivery-date" type="date" value={newOrder.deliveryDate} onChange={e => actions.setNewOrder({ deliveryDate: e.target.value })} required />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label htmlFor="new-order-priority">Prioridad</Label>
-                                                    <Select value={state.newOrder.priority} onValueChange={(value: typeof state.newOrder.priority) => actions.setNewOrder({priority: value})}>
+                                                    <Select value={newOrder.priority} onValueChange={(value: typeof newOrder.priority) => actions.setNewOrder({priority: value})}>
                                                         <SelectTrigger id="new-order-priority"><SelectValue placeholder="Seleccione una prioridad" /></SelectTrigger>
                                                         <SelectContent>
                                                             {Object.entries(selectors.priorityConfig).map(([key, config]) => (<SelectItem key={key} value={key}>{config.label}</SelectItem>))}
@@ -413,13 +424,13 @@ export default function PlannerPage() {
                                                 </div>
                                                 <div className="space-y-2 col-span-1 md:col-span-2">
                                                     <Label htmlFor="new-order-notes">Notas Adicionales</Label>
-                                                    <Textarea id="new-order-notes" placeholder="Instrucciones especiales, detalles del pedido, etc." value={state.newOrder.notes || ''} onChange={e => actions.setNewOrder({ notes: e.target.value })} />
+                                                    <Textarea id="new-order-notes" placeholder="Instrucciones especiales, detalles del pedido, etc." value={newOrder.notes || ''} onChange={e => actions.setNewOrder({ notes: e.target.value })} />
                                                 </div>
                                             </div>
                                         </ScrollArea>
                                         <DialogFooter>
                                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
-                                            <Button type="submit" disabled={state.isSubmitting}>{state.isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Crear Orden</Button>
+                                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Crear Orden</Button>
                                         </DialogFooter>
                                     </form>
                                 </DialogContent>
@@ -455,9 +466,9 @@ export default function PlannerPage() {
                                 <div className="flex items-center space-x-2 pt-4">
                                     <Checkbox 
                                         id="show-only-my-orders" 
-                                        checked={state.showOnlyMyOrders} 
+                                        checked={showOnlyMyOrders} 
                                         onCheckedChange={(checked) => actions.setShowOnlyMyOrders(checked as boolean)}
-                                        disabled={!state.showOnlyMyOrders && !selectors.hasPermission('planner:read:all')}
+                                        disabled={!showOnlyMyOrders && !selectors.hasPermission('planner:read:all')}
                                     />
                                     <Label htmlFor="show-only-my-orders" className="font-normal">Mostrar solo mis órdenes</Label>
                                 </div>
@@ -468,7 +479,7 @@ export default function PlannerPage() {
             </div>
             
             <div className="flex-1 overflow-auto space-y-4 pt-2">
-                {(state.isLoading && !state.isRefreshing) ? (
+                {(isLoading && !isRefreshing) ? (
                     Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-56 w-full" />)
                 ) : selectors.filteredOrders.length > 0 ? (
                     selectors.filteredOrders.map(renderOrderCard)
@@ -482,133 +493,133 @@ export default function PlannerPage() {
                 )}
             </div>
 
-            {state.totalItems > state.pageSize && (
+            {totalItems > pageSize && (
                  <div className="flex items-center justify-center space-x-2 py-4">
-                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p - 1)} disabled={state.currentPage === 0}>
+                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
                         <ChevronLeft className="mr-2 h-4 w-4" />Anterior
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                        Página {state.currentPage + 1} de {Math.ceil(state.totalItems / state.pageSize)}
+                        Página {currentPage + 1} de {Math.ceil(totalItems / pageSize)}
                     </span>
-                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p + 1)} disabled={(state.currentPage + 1) * state.pageSize >= state.totalItems}>
+                    <Button variant="outline" size="sm" onClick={() => actions.setCurrentPage(p => p + 1)} disabled={(currentPage + 1) * pageSize >= totalItems}>
                         Siguiente<ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </div>
             )}
             
             {/* Dialogs */}
-            <Dialog open={state.isEditOrderDialogOpen} onOpenChange={actions.setEditOrderDialogOpen}>
+            <Dialog open={isEditOrderDialogOpen} onOpenChange={actions.setEditOrderDialogOpen}>
                 <DialogContent className="sm:max-w-3xl">
                     <form onSubmit={actions.handleEditOrder}>
                         <DialogHeader>
-                            <DialogTitle>Editar Orden de Producción - {state.orderToEdit?.consecutive}</DialogTitle>
+                            <DialogTitle>Editar Orden de Producción - {orderToEdit?.consecutive}</DialogTitle>
                             <DialogDescription>Modifique los campos necesarios y guarde los cambios.</DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="h-[60vh] md:h-auto">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
                                 <div className="space-y-2">
                                     <Label>Cliente</Label>
-                                    <Input value={state.orderToEdit?.customerName || ''} disabled />
+                                    <Input value={orderToEdit?.customerName || ''} disabled />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Producto</Label>
-                                    <Input value={state.orderToEdit?.productDescription || ''} disabled />
+                                    <Input value={orderToEdit?.productDescription || ''} disabled />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-order-quantity">Cantidad</Label>
-                                    <Input id="edit-order-quantity" type="number" value={state.orderToEdit?.quantity || ''} onChange={e => { if(state.orderToEdit) actions.setOrderToEdit({ ...state.orderToEdit, quantity: Number(e.target.value) })}} required />
+                                    <Input id="edit-order-quantity" type="number" value={orderToEdit?.quantity || ''} onChange={e => { if(orderToEdit) actions.setOrderToEdit({ ...orderToEdit, quantity: Number(e.target.value) })}} required />
                                 </div>
                                  <div className="space-y-2">
                                     <Label htmlFor="edit-order-delivery-date">Fecha de Entrega</Label>
-                                    <Input id="edit-order-delivery-date" type="date" value={state.orderToEdit?.deliveryDate ? format(parseISO(state.orderToEdit.deliveryDate), 'yyyy-MM-dd') : ''} onChange={e => { if(state.orderToEdit) actions.setOrderToEdit({ ...state.orderToEdit, deliveryDate: e.target.value })}} required />
+                                    <Input id="edit-order-delivery-date" type="date" value={orderToEdit?.deliveryDate ? format(parseISO(orderToEdit.deliveryDate), 'yyyy-MM-dd') : ''} onChange={e => { if(orderToEdit) actions.setOrderToEdit({ ...orderToEdit, deliveryDate: e.target.value })}} required />
                                 </div>
                                  <div className="space-y-2">
                                     <Label htmlFor="edit-order-purchase-order">Nº OC Cliente</Label>
-                                    <Input id="edit-order-purchase-order" value={state.orderToEdit?.purchaseOrder || ''} onChange={e => { if(state.orderToEdit) actions.setOrderToEdit({ ...state.orderToEdit, purchaseOrder: e.target.value })}} />
+                                    <Input id="edit-order-purchase-order" value={orderToEdit?.purchaseOrder || ''} onChange={e => { if(orderToEdit) actions.setOrderToEdit({ ...orderToEdit, purchaseOrder: e.target.value })}} />
                                 </div>
                                 <div className="space-y-2 col-span-1 md:col-span-2">
                                     <Label htmlFor="edit-order-notes">Notas</Label>
-                                    <Textarea id="edit-order-notes" value={state.orderToEdit?.notes || ''} onChange={e => { if(state.orderToEdit) actions.setOrderToEdit({ ...state.orderToEdit, notes: e.target.value })}} />
+                                    <Textarea id="edit-order-notes" value={orderToEdit?.notes || ''} onChange={e => { if(orderToEdit) actions.setOrderToEdit({ ...orderToEdit, notes: e.target.value })}} />
                                 </div>
                             </div>
                         </ScrollArea>
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
-                            <Button type="submit" disabled={state.isSubmitting}>{state.isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Guardar Cambios</Button>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Guardar Cambios</Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={state.isStatusDialogOpen} onOpenChange={actions.setStatusDialogOpen}>
+            <Dialog open={isStatusDialogOpen} onOpenChange={actions.setStatusDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Actualizar Estado de la Orden</DialogTitle>
-                        <DialogDescription>Estás a punto de cambiar el estado a &quot;{state.newStatus ? selectors.statusConfig[state.newStatus]?.label : ''}&quot;.</DialogDescription>
+                        <DialogDescription>Estás a punto de cambiar el estado a &quot;{newStatus ? selectors.statusConfig[newStatus]?.label : ''}&quot;.</DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                        {state.newStatus === 'completed' && (
+                        {newStatus === 'completed' && (
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="status-delivered-quantity">Cantidad Producida</Label>
-                                    <Input id="status-delivered-quantity" type="number" value={state.deliveredQuantity} onChange={(e) => actions.setDeliveredQuantity(e.target.value)} placeholder={`Solicitada: ${state.orderToUpdate?.quantity.toLocaleString()}`} />
+                                    <Input id="status-delivered-quantity" type="number" value={deliveredQuantity} onChange={(e) => actions.setDeliveredQuantity(e.target.value)} placeholder={`Solicitada: ${orderToUpdate?.quantity.toLocaleString()}`} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="status-defective-quantity">Cantidad Defectuosa</Label>
-                                    <Input id="status-defective-quantity" type="number" value={state.defectiveQuantity} onChange={(e) => actions.setDefectiveQuantity(e.target.value)} placeholder="0" />
+                                    <Input id="status-defective-quantity" type="number" value={defectiveQuantity} onChange={(e) => actions.setDefectiveQuantity(e.target.value)} placeholder="0" />
                                 </div>
                             </div>
                         )}
-                        {state.newStatus === 'received-in-warehouse' && (
+                        {newStatus === 'received-in-warehouse' && (
                             <div className="grid grid-cols-2 gap-4">
                                  <div className="space-y-2">
                                     <Label htmlFor="status-erp-package">Nº Paquete ERP</Label>
-                                    <Input id="status-erp-package" value={state.erpPackageNumber} onChange={(e) => actions.setErpPackageNumber(e.target.value)} />
+                                    <Input id="status-erp-package" value={erpPackageNumber} onChange={(e) => actions.setErpPackageNumber(e.target.value)} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="status-erp-ticket">Nº Boleta ERP</Label>
-                                    <Input id="status-erp-ticket" value={state.erpTicketNumber} onChange={(e) => actions.setErpTicketNumber(e.target.value)} />
+                                    <Input id="status-erp-ticket" value={erpTicketNumber} onChange={(e) => actions.setErpTicketNumber(e.target.value)} />
                                 </div>
                             </div>
                         )}
                         <div className="space-y-2">
                             <Label htmlFor="status-notes">Notas (Opcional)</Label>
-                            <Textarea id="status-notes" value={state.statusUpdateNotes} onChange={e => actions.setStatusUpdateNotes(e.target.value)} placeholder="Ej: Aprobado por Gerencia..." />
+                            <Textarea id="status-notes" value={statusUpdateNotes} onChange={e => actions.setStatusUpdateNotes(e.target.value)} placeholder="Ej: Aprobado por Gerencia..." />
                         </div>
                     </div>
                      <DialogFooter>
                         <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                        <Button onClick={() => actions.handleStatusUpdate(state.newStatus || undefined)} disabled={state.isSubmitting}>{state.isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Actualizar Estado</Button>
+                        <Button onClick={() => actions.handleStatusUpdate(newStatus || undefined)} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Actualizar Estado</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-             <Dialog open={state.isReopenDialogOpen} onOpenChange={(isOpen) => { actions.setReopenDialogOpen(isOpen); if (!isOpen) { actions.setReopenStep(0); actions.setReopenConfirmationText(''); }}}>
+             <Dialog open={isReopenDialogOpen} onOpenChange={(isOpen) => { actions.setReopenDialogOpen(isOpen); if (!isOpen) { actions.setReopenStep(0); actions.setReopenConfirmationText(''); }}}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive" /> Reabrir Orden Finalizada</DialogTitle>
-                        <DialogDescription>Estás a punto de reabrir la orden {state.orderToUpdate?.consecutive}. Esta acción es irreversible y moverá la orden de nuevo a &quot;Pendiente&quot;.</DialogDescription>
+                        <DialogDescription>Estás a punto de reabrir la orden {orderToUpdate?.consecutive}. Esta acción es irreversible y moverá la orden de nuevo a &quot;Pendiente&quot;.</DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
                         <div className="flex items-center space-x-2">
                             <Checkbox id="reopen-confirm-checkbox" onCheckedChange={(checked) => actions.setReopenStep(checked ? 1 : 0)} />
                             <Label htmlFor="reopen-confirm-checkbox" className="font-medium text-destructive">Entiendo que esta acción no se puede deshacer.</Label>
                         </div>
-                        {state.reopenStep > 0 && (
+                        {reopenStep > 0 && (
                             <div className="space-y-2">
                                 <Label htmlFor="reopen-confirmation-text">Para confirmar, escribe &quot;REABRIR&quot; en el campo de abajo:</Label>
-                                <Input id="reopen-confirmation-text" value={state.reopenConfirmationText} onChange={(e) => { actions.setReopenConfirmationText(e.target.value.toUpperCase()); if (e.target.value.toUpperCase() === 'REABRIR') {actions.setReopenStep(2);} else {actions.setReopenStep(1);}}} className="border-destructive focus-visible:ring-destructive" />
+                                <Input id="reopen-confirmation-text" value={reopenConfirmationText} onChange={(e) => { actions.setReopenConfirmationText(e.target.value.toUpperCase()); if (e.target.value.toUpperCase() === 'REABRIR') {actions.setReopenStep(2);} else {actions.setReopenStep(1);}}} className="border-destructive focus-visible:ring-destructive" />
                             </div>
                         )}
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                        <Button onClick={actions.handleReopenOrder} disabled={state.reopenStep !== 2 || state.reopenConfirmationText !== 'REABRIR' || state.isSubmitting}>{state.isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Reabrir Orden</Button>
+                        <Button onClick={actions.handleReopenOrder} disabled={reopenStep !== 2 || reopenConfirmationText !== 'REABRIR' || isSubmitting}>{isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Reabrir Orden</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog open={!!state.orderToConfirmModification} onOpenChange={(open) => { if (!open) actions.setOrderToConfirmModification(null); }}>
+            <AlertDialog open={!!orderToConfirmModification} onOpenChange={(open) => { if (!open) actions.setOrderToConfirmModification(null); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Modificación</AlertDialogTitle>
@@ -623,20 +634,20 @@ export default function PlannerPage() {
                 </AlertDialogContent>
             </AlertDialog>
 
-            <Dialog open={state.isHistoryDialogOpen} onOpenChange={actions.setHistoryDialogOpen}>
+            <Dialog open={isHistoryDialogOpen} onOpenChange={actions.setHistoryDialogOpen}>
                 <DialogContent className="sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Historial de Cambios - Orden {state.historyOrder?.consecutive}</DialogTitle>
+                        <DialogTitle>Historial de Cambios - Orden {historyOrder?.consecutive}</DialogTitle>
                         <DialogDescription>Registro de todos los cambios de estado para esta orden.</DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        {state.isHistoryLoading ? (
+                        {isHistoryLoading ? (
                             <div className="flex justify-center items-center h-40"><Loader2 className="animate-spin" /></div>
-                        ) : state.history.length > 0 ? (
+                        ) : history.length > 0 ? (
                             <ScrollArea className="h-96">
                                 <Table><TableHeader><TableRow><TableHead>Fecha y Hora</TableHead><TableHead>Estado</TableHead><TableHead>Usuario</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
                                     <TableBody>
-                                        {state.history.map(entry => (
+                                        {history.map(entry => (
                                             <TableRow key={entry.id}>
                                                 <TableCell>{format(parseISO(entry.timestamp), 'dd/MM/yyyy HH:mm:ss')}</TableCell>
                                                 <TableCell><Badge style={{ backgroundColor: selectors.statusConfig[entry.status]?.color }} className="text-white">{selectors.statusConfig[entry.status]?.label || entry.status}</Badge></TableCell>
@@ -654,24 +665,24 @@ export default function PlannerPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={state.isAddNoteDialogOpen} onOpenChange={actions.setAddNoteDialogOpen}>
+            <Dialog open={isAddNoteDialogOpen} onOpenChange={actions.setAddNoteDialogOpen}>
                 <DialogContent>
                      <DialogHeader>
-                        <DialogTitle>Añadir Nota a la Orden {state.notePayload?.orderId}</DialogTitle>
+                        <DialogTitle>Añadir Nota a la Orden {notePayload?.orderId}</DialogTitle>
                         <DialogDescription>Agrega una nota o actualización a la orden sin cambiar su estado actual.</DialogDescription>
                     </DialogHeader>
                      <div className="py-4 space-y-2">
                         <Label htmlFor="add-note-textarea">Nota</Label>
-                        <Textarea id="add-note-textarea" value={state.notePayload?.notes || ''} onChange={e => actions.setNotePayload({ ...state.notePayload, notes: e.target.value } as PlannerNotePayload)} placeholder="Añade aquí una nota o actualización..." />
+                        <Textarea id="add-note-textarea" value={notePayload?.notes || ''} onChange={e => actions.setNotePayload({ ...notePayload, notes: e.target.value } as PlannerNotePayload)} placeholder="Añade aquí una nota o actualización..." />
                     </div>
                     <DialogFooter>
                         <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                        <Button onClick={actions.handleAddNote} disabled={state.isSubmitting}>{state.isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Añadir Nota</Button>
+                        <Button onClick={actions.handleAddNote} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 animate-spin"/>}Añadir Nota</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {(state.isSubmitting || state.isLoading) && (
+            {(isSubmitting || isLoading) && (
                 <div className="fixed bottom-4 right-4 flex items-center gap-2 rounded-lg bg-primary p-3 text-primary-foreground shadow-lg">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     <span>Procesando...</span>
@@ -680,3 +691,4 @@ export default function PlannerPage() {
         </main>
     );
 }
+
