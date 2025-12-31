@@ -31,7 +31,8 @@ const initialNewUnitState = {
     productId: '',
     humanReadableId: '',
     locationId: null as number | null,
-    notes: ''
+    notes: '',
+    quantity: 1,
 };
 
 const renderLocationPathAsString = (locationId: number, locations: WarehouseLocation[]): string => {
@@ -267,12 +268,16 @@ export default function ManageUnitsPage() {
                             </div>
                         </div>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                                <Label htmlFor="quantity">3. Cantidad en la Unidad</Label>
+                                <Input id="quantity" type="number" value={newUnit.quantity} onChange={(e) => setNewUnit(prev => ({...prev, quantity: Number(e.target.value)}))} placeholder="Ej: 1"/>
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="human-id">3. Identificador Humano (Lote/Tarima)</Label>
+                                <Label htmlFor="human-id">4. Identificador Humano (Lote/Tarima)</Label>
                                 <Input id="human-id" value={newUnit.humanReadableId} onChange={(e) => setNewUnit(prev => ({ ...prev, humanReadableId: e.target.value }))} placeholder="Ej: LOTE-2024-10-A"/>
                             </div>
-                             <div className="space-y-2">
-                                <Label htmlFor="notes">4. Notas (Opcional)</Label>
+                             <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="notes">5. Notas (Opcional)</Label>
                                 <Textarea id="notes" value={newUnit.notes} onChange={(e) => setNewUnit(prev => ({ ...prev, notes: e.target.value }))} placeholder="Ej: Media tarima, producto de alta rotación"/>
                             </div>
                         </div>
