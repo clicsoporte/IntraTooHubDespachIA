@@ -8,7 +8,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
-import { getLocations, getAllItemLocations, addInventoryUnit, getSelectableLocations } from '@/modules/warehouse/lib/actions';
+import { getLocations, getAllItemLocations, addInventoryUnit, getSelectableLocations, assignItemToLocation } from '@/modules/warehouse/lib/actions';
 import type { Product, WarehouseLocation, ItemLocation, InventoryUnit } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
@@ -57,6 +57,7 @@ export const useReceivingWizard = () => {
         isProductSearchOpen: false,
         locationSearchTerm: '',
         isLocationSearchOpen: false,
+        saveAsDefault: true, // New state for the switch
     });
     
     const [debouncedProductSearch] = useDebounce(state.productSearchTerm, 300);
@@ -121,6 +122,7 @@ export const useReceivingWizard = () => {
             suggestedLocations: suggested,
             step: 'select_location',
             isProductSearchOpen: false,
+            saveAsDefault: suggested.length === 0, // CRITICAL: Set switch to ON if no suggestions exist
         });
     }, [authProducts, state.allItemLocations, state.allLocations, updateState]);
     
@@ -135,7 +137,8 @@ export const useReceivingWizard = () => {
         updateState({
             selectedLocationId: locationId,
             newLocationId: locationId,
-            step: 'confirm_suggested'
+            step: 'confirm_suggested',
+            saveAsDefault: false, // Turn off when using an existing suggestion
         });
     };
     
@@ -155,7 +158,9 @@ export const useReceivingWizard = () => {
         if (state.step === 'select_location') {
             updateState({ step: 'select_product', selectedProduct: null, productSearchTerm: '' });
         } else {
-            updateState({ step: 'select_location', newLocationId: null, locationSearchTerm: '' });
+            // When going back from confirm_new, reset saveAsDefault based on original suggestions
+            const hadSuggestions = state.suggestedLocations.length > 0;
+            updateState({ step: 'select_location', newLocationId: null, locationSearchTerm: '', saveAsDefault: !hadSuggestions });
         }
     };
     
@@ -172,6 +177,7 @@ export const useReceivingWizard = () => {
             humanReadableId: '',
             documentId: '',
             lastCreatedUnit: null,
+            saveAsDefault: true,
         });
     };
 
@@ -227,6 +233,10 @@ export const useReceivingWizard = () => {
             };
             const newUnit = await addInventoryUnit(unitData);
             
+            if (state.saveAsDefault) {
+                await assignItemToLocation(unitData.productId, unitData.locationId, null, user.name);
+            }
+            
             updateState({
                 step: 'finished',
                 lastCreatedUnit: newUnit,
@@ -258,6 +268,7 @@ export const useReceivingWizard = () => {
             setQuantity: (qty: string) => updateState({ quantity: qty }),
             setHumanReadableId: (id: string) => updateState({ humanReadableId: id }),
             setDocumentId: (id: string) => updateState({ documentId: id }),
+            setSaveAsDefault: (save: boolean) => updateState({ saveAsDefault: save }),
             handleProductSearchKeyDown,
             handlePrintLabel,
         },

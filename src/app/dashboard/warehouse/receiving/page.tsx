@@ -14,6 +14,7 @@ import { Loader2, PackageCheck, Search, CheckCircle, ArrowRight, List, ArrowLeft
 import { useReceivingWizard } from '@/modules/warehouse/hooks/useReceivingWizard';
 import { SearchInput } from '@/components/ui/search-input';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 
 export default function ReceivingWizardPage() {
     const {
@@ -36,7 +37,8 @@ export default function ReceivingWizardPage() {
         newLocationId,
         quantity,
         humanReadableId,
-        documentId
+        documentId,
+        saveAsDefault,
     } = state;
 
     if (isLoading) {
@@ -154,6 +156,18 @@ export default function ReceivingWizardPage() {
                                     <Input id="documentId" value={documentId} onChange={e => actions.setDocumentId(e.target.value)} placeholder="Ej: Boleta de entrega #5543" />
                                 </div>
                             </div>
+                             {step === 'confirm_new' && (
+                                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+                                    <Label htmlFor="save-default" className="text-sm font-medium">
+                                        Guardar como ubicación predeterminada para este producto
+                                    </Label>
+                                    <Switch
+                                        id="save-default"
+                                        checked={saveAsDefault}
+                                        onCheckedChange={actions.setSaveAsDefault}
+                                    />
+                                </div>
+                            )}
                         </div>
                     )}
 
