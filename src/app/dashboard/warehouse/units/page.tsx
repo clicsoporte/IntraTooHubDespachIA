@@ -93,7 +93,7 @@ export default function ManageUnitsPage() {
     }, [toast, authProducts]);
     
     useEffect(() => {
-        setTitle("Gestión de Unidades de Inventario");
+        setTitle("Gestión de Lotes/Tarimas");
         loadInitialData();
     }, [setTitle, loadInitialData]);
 

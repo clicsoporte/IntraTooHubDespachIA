@@ -176,7 +176,7 @@ export const warehouseTools: Tool[] = [
     },
      {
         id: "assign-item",
-        name: "Catálogo de Ubicaciones",
+        name: "Ubicaciones por Producto",
         description: "Asociar productos a clientes y ubicaciones de forma permanente.",
         href: "/dashboard/warehouse/assign",
         icon: PackagePlus,
@@ -192,7 +192,7 @@ export const warehouseTools: Tool[] = [
     },
     {
         id: "warehouse-units",
-        name: "Gestión de Unidades (QR)",
+        name: "Gestión de Lotes/Tarimas",
         description: "Crear y etiquetar unidades de inventario (lotes/tarimas).",
         href: "/dashboard/warehouse/units",
         icon: QrCode,

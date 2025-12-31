@@ -49,7 +49,7 @@ export const useReceivingWizard = () => {
         suggestedLocations: [] as WarehouseLocation[],
         selectedLocationId: null as number | null,
         newLocationId: null as number | null,
-        quantity: '',
+        quantity: '1',
         humanReadableId: '',
         documentId: '',
         lastCreatedUnit: null as InventoryUnit | null,
@@ -173,7 +173,7 @@ export const useReceivingWizard = () => {
             selectedLocationId: null,
             newLocationId: null,
             locationSearchTerm: '',
-            quantity: '',
+            quantity: '1',
             humanReadableId: '',
             documentId: '',
             lastCreatedUnit: null,
@@ -235,6 +235,9 @@ export const useReceivingWizard = () => {
             
             if (state.saveAsDefault) {
                 await assignItemToLocation(unitData.productId, unitData.locationId, null, user.name);
+                // After saving, re-fetch the item locations to update the local state
+                const updatedItemLocations = await getAllItemLocations();
+                updateState({ allItemLocations: updatedItemLocations });
             }
             
             updateState({
