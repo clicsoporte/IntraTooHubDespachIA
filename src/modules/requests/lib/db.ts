@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server-side functions for the purchase requests database.
  */
@@ -276,7 +275,7 @@ export async function getRequests(options: {
     const finalStatus = settings.useErpEntry ? 'entered-erp' : (settings.useWarehouseReception ? 'received-in-warehouse' : 'ordered');
     const archivedStatuses = [`'${finalStatus}'`, `'canceled'`];
 
-    const buildQueryParts = (isArchivedQuery: boolean) => {
+    const buildQueryParts = async (isArchivedQuery: boolean) => {
         let whereClauses: string[] = [];
         let queryParams: any[] = [];
         
@@ -305,8 +304,8 @@ export async function getRequests(options: {
         return { whereClause: whereClauses.join(' AND '), params: queryParams };
     };
 
-    const activeQueryParts = buildQueryParts(false);
-    const archivedQueryParts = buildQueryParts(true);
+    const activeQueryParts = await buildQueryParts(false);
+    const archivedQueryParts = await buildQueryParts(true);
 
     const totalActive = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${activeQueryParts.whereClause}`).get(...activeQueryParts.params) as { count: number }).count;
     const totalArchived = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${archivedQueryParts.whereClause}`).get(...archivedQueryParts.params) as { count: number }).count;
