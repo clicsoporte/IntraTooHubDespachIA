@@ -514,6 +514,7 @@ export type InventoryUnit = {
     humanReadableId?: string; // e.g. a lot number
     documentId?: string; // e.g. a delivery note
     locationId: number | null;
+    quantity: number;
     notes?: string;
     createdAt: string;
     createdBy: string;
