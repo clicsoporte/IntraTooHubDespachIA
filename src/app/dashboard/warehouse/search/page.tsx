@@ -411,7 +411,7 @@ export default function WarehouseSearchPage() {
                                                     {warehouseEntries.map(entry => (
                                                         <div key={entry.whId} className="flex justify-between items-center p-2 border rounded-md">
                                                             <span className="flex items-center gap-2">
-                                                                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.warehouse?.color || '#CCCCCC' }}></span>
+                                                                <span className="h-4 w-4 rounded-full border" style={{ backgroundColor: entry.warehouse?.color || '#CCCCCC' }}></span>
                                                                 {entry.warehouse?.name} ({entry.whId})
                                                             </span>
                                                             <span className="font-bold text-lg">{entry.qty.toLocaleString()}</span>
