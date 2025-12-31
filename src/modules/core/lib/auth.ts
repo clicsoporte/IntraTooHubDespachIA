@@ -8,7 +8,7 @@
 
 import { connectDb, getAllRoles, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, getUnreadSuggestions, getDbModules } from './db';
 import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-service';
-import type { User, ExchangeRateApiResponse, EmailSettings } from '@/modules/core/types';
+import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import { logInfo, logWarn, logError } from './logger';
 import { headers } from 'next/headers';
@@ -16,6 +16,28 @@ import { getExchangeRate, getEmailSettings } from './api-actions';
 import { NewUserSchema, UserSchema } from './auth-schemas';
 
 const SALT_ROUNDS = 10;
+
+/**
+ * Checks if a user has a specific permission.
+ * Admins are always granted permission.
+ * @param userId - The ID of the user to check.
+ * @param permission - The permission string to validate.
+ * @returns A promise that resolves to true if the user has permission, false otherwise.
+ */
+export async function hasPermission(userId: number, permission: string): Promise<boolean> {
+    const db = await connectDb();
+    const userRoleInfo = db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role: string } | undefined;
+
+    if (!userRoleInfo) return false;
+    if (userRoleInfo.role === 'admin') return true; // Admins have all permissions
+
+    const role = db.prepare('SELECT permissions FROM roles WHERE id = ?').get(userRoleInfo.role) as { permissions: string } | undefined;
+    if (!role) return false;
+
+    const permissions: string[] = JSON.parse(role.permissions);
+    return permissions.includes(permission);
+}
+
 
 /**
  * Attempts to log in a user with the given credentials.

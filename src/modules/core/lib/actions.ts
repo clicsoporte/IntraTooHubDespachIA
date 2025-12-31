@@ -3,6 +3,8 @@
  */
 'use server';
 
+import fs from 'fs';
+import path from 'path';
 import { importAllDataFromFiles as importAllData } from './db';
 import { logWarn } from './logger';
 
@@ -26,4 +28,25 @@ export async function shutdownServer(): Promise<void> {
     setTimeout(() => {
         process.exit(1);
     }, 500);
+}
+
+/**
+ * Cleans up all temporary export files from the server's disk.
+ * @returns {Promise<number>} The number of files deleted.
+ */
+export async function cleanupAllExportFiles(): Promise<number> {
+    const exportDir = path.join(process.cwd(), 'temp_files', 'exports');
+    if (!fs.existsSync(exportDir)) {
+        return 0;
+    }
+    
+    const files = fs.readdirSync(exportDir);
+    let deletedCount = 0;
+    for (const file of files) {
+        if (file.endsWith('.xlsx')) {
+            fs.unlinkSync(path.join(exportDir, file));
+            deletedCount++;
+        }
+    }
+    return deletedCount;
 }
