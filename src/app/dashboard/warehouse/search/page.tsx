@@ -29,6 +29,7 @@ import jsPDF from "jspdf";
 import QRCode from 'qrcode';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import jsbarcode from 'jsbarcode';
 
 type SearchableItem = {
   id: string;
@@ -260,17 +261,49 @@ export default function WarehouseSearchPage() {
         if (!user || !companyData) return;
         try {
             const newUnit = await addInventoryUnit({ productId: product.id, locationId: location.id, createdBy: user.name, notes: 'Etiqueta generada desde búsqueda.', quantity: 1 });
-            
-            // The QR code now only contains the PRODUCT ID
+
             const qrCodeDataUrl = await QRCode.toDataURL(newUnit.productId, { errorCorrectionLevel: 'H', width: 200 });
 
+            const barcodeCanvas = document.createElement('canvas');
+            jsbarcode(barcodeCanvas, newUnit.unitCode!, { format: 'CODE128', displayValue: false });
+            const barcodeDataUrl = barcodeCanvas.toDataURL('image/png');
+
             const doc = new jsPDF({ orientation: 'landscape', unit: 'in', format: [4, 3] });
-            doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.5, 1.5);
-            doc.setFontSize(14).setFont('Helvetica', 'bold').text(`Producto: ${product.id}`, 1.8, 0.4);
-            doc.setFontSize(10).setFont('Helvetica', 'normal').text(doc.splitTextToSize(product.description, 1.9), 1.8, 0.6);
-            doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Ubicación: ${location.code}`, 1.8, 1.3);
-            doc.setFontSize(8).text(`ID Interno: ${newUnit.unitCode}`, 0.2, 2.8);
-            doc.text(`Creado: ${format(new Date(), 'dd/MM/yyyy')}`, 1.8, 2.8);
+            const margin = 0.2;
+            const contentWidth = 4 - (margin * 2);
+            
+            // --- Left Column (QR and Barcode) ---
+            const leftColX = margin;
+            const leftColWidth = 1.2;
+            doc.addImage(qrCodeDataUrl, 'PNG', leftColX, margin, leftColWidth, leftColWidth);
+            doc.addImage(barcodeDataUrl, 'PNG', leftColX, margin + leftColWidth + 0.1, leftColWidth, 0.4);
+            doc.setFontSize(10).text(newUnit.unitCode!, leftColX + leftColWidth / 2, margin + leftColWidth + 0.1 + 0.4 + 0.15, { align: 'center' });
+
+            // --- Right Column (Text Info) ---
+            const rightColX = leftColX + leftColWidth + 0.2;
+            const rightColWidth = contentWidth - leftColWidth - 0.2;
+
+            let currentY = margin + 0.1;
+            doc.setFontSize(14).setFont('Helvetica', 'bold').text(`Producto: ${product.id}`, rightColX, currentY);
+            currentY += 0.2;
+            
+            doc.setFontSize(9).setFont('Helvetica', 'normal');
+            const descLines = doc.splitTextToSize(product.description, rightColWidth);
+            doc.text(descLines, rightColX, currentY);
+            currentY += (descLines.length * 0.15) + 0.2;
+            
+            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Ubicación:`, rightColX, currentY);
+            currentY += 0.15;
+            
+            doc.setFontSize(9).setFont('Helvetica', 'normal');
+            const locLines = doc.splitTextToSize(renderLocationPathAsString(location.id, locations), rightColWidth);
+            doc.text(locLines, rightColX, currentY);
+            
+            // --- Footer ---
+            const footerY = 3 - margin;
+            doc.setFontSize(8).setTextColor(150);
+            doc.text(`Creado: ${format(new Date(), 'dd/MM/yyyy')} por ${user?.name || 'Sistema'}`, 4 - margin, footerY, { align: 'right' });
+
             doc.save(`etiqueta_unidad_${newUnit.unitCode}.pdf`);
             
             toast({ title: "Etiqueta Generada", description: `Se creó la unidad ${newUnit.unitCode} y se generó el PDF.` });

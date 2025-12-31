@@ -199,7 +199,7 @@ export default function ManageUnitsPage() {
             const qrCodeDataUrl = await QRCode.toDataURL(unit.productId, { errorCorrectionLevel: 'H', width: 200 });
 
             const barcodeCanvas = document.createElement('canvas');
-            jsbarcode(barcodeCanvas, unit.unitCode!, { format: 'CODE128', displayValue: true, fontSize: 14 });
+            jsbarcode(barcodeCanvas, unit.unitCode!, { format: 'CODE128', displayValue: false });
             const barcodeDataUrl = barcodeCanvas.toDataURL('image/png');
 
             const doc = new jsPDF({
@@ -208,17 +208,45 @@ export default function ManageUnitsPage() {
                 format: [4, 3] // 4x3 inch label
             });
 
-            doc.addImage(qrCodeDataUrl, 'PNG', 0.2, 0.2, 1.2, 1.2);
-            doc.addImage(barcodeDataUrl, 'PNG', 0.2, 1.5, 1.2, 0.5);
-            doc.setFontSize(10).text(unit.unitCode!, 0.8, 2.2, { align: 'center' });
+            const margin = 0.2;
+            const contentWidth = 4 - (margin * 2);
+            
+            // --- Left Column (QR and Barcode) ---
+            const leftColX = margin;
+            const leftColWidth = 1.2;
+            doc.addImage(qrCodeDataUrl, 'PNG', leftColX, margin, leftColWidth, leftColWidth);
+            doc.addImage(barcodeDataUrl, 'PNG', leftColX, margin + leftColWidth + 0.1, leftColWidth, 0.4);
+            doc.setFontSize(10).text(unit.unitCode!, leftColX + leftColWidth / 2, margin + leftColWidth + 0.1 + 0.4 + 0.15, { align: 'center' });
 
-            doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Producto: ${product?.id || 'N/A'}`, 1.6, 0.4);
-            doc.setFontSize(9).setFont('Helvetica', 'normal').text(doc.splitTextToSize(product?.description || 'Descripción no disponible', 2.2), 1.6, 0.6);
-            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Lote/ID: ${unit.humanReadableId || 'N/A'}`, 1.6, 1.2);
-            doc.text(`Documento: ${unit.documentId || 'N/A'}`, 1.6, 1.4);
-            doc.text(`Ubicación:`, 1.6, 1.8);
-            doc.setFontSize(8).setFont('Helvetica', 'normal').text(renderLocationPathAsString(location?.id || 0, allLocations), 1.6, 1.95);
-            doc.setFontSize(8).text(`Creado: ${format(new Date(unit.createdAt), 'dd/MM/yyyy')} por ${user?.name || 'Sistema'}`, 3.8, 2.8, { align: 'right' });
+            // --- Right Column (Text Info) ---
+            const rightColX = leftColX + leftColWidth + 0.2;
+            const rightColWidth = contentWidth - leftColWidth - 0.2;
+
+            let currentY = margin + 0.1;
+            doc.setFontSize(12).setFont('Helvetica', 'bold').text(`Producto: ${product?.id || 'N/A'}`, rightColX, currentY);
+            currentY += 0.2;
+            
+            doc.setFontSize(9).setFont('Helvetica', 'normal');
+            const descLines = doc.splitTextToSize(product?.description || 'Descripción no disponible', rightColWidth);
+            doc.text(descLines, rightColX, currentY);
+            currentY += (descLines.length * 0.15) + 0.2;
+            
+            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Lote/ID: ${unit.humanReadableId || 'N/A'}`, rightColX, currentY);
+            currentY += 0.15;
+            doc.text(`Documento: ${unit.documentId || 'N/A'}`, rightColX, currentY);
+            currentY += 0.25;
+
+            doc.setFontSize(10).setFont('Helvetica', 'bold').text(`Ubicación:`, rightColX, currentY);
+            currentY += 0.15;
+            
+            doc.setFontSize(9).setFont('Helvetica', 'normal');
+            const locLines = doc.splitTextToSize(renderLocationPathAsString(location?.id || 0, allLocations), rightColWidth);
+            doc.text(locLines, rightColX, currentY);
+            
+            // --- Footer ---
+            const footerY = 3 - margin;
+            doc.setFontSize(8).setTextColor(150);
+            doc.text(`Creado: ${format(new Date(), 'dd/MM/yyyy')} por ${user?.name || 'Sistema'}`, 4 - margin, footerY, { align: 'right' });
 
             doc.save(`etiqueta_unidad_${unit.unitCode}.pdf`);
 
