@@ -109,6 +109,17 @@ const renderLocationPath = (locationId: number | null | undefined, locations: Wa
     );
 };
 
+const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
+    if (!locationId) return "N/A";
+    const path: any[] = [];
+    let current = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
 
 export default function WarehouseSearchPage() {
     useAuthorization(['warehouse:access']);
