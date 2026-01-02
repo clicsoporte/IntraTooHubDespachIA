@@ -269,6 +269,10 @@ export default function AssignItemPage() {
             const pageHeight = doc.internal.pageSize.getHeight();
     
             doc.addImage(qrCodeDataUrl, 'PNG', margin, margin, 100, 100);
+            
+            doc.setFontSize(9);
+            doc.setTextColor(150);
+            doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - margin, margin, { align: 'right' });
     
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(150);
@@ -282,7 +286,7 @@ export default function AssignItemPage() {
             const descriptionLines = doc.splitTextToSize(product.description, pageWidth - margin * 2);
             doc.text(descriptionLines, pageWidth / 2, currentY + 40, { align: "center" });
     
-            const bottomY = pageHeight - margin - 50;
+            const bottomY = pageHeight - margin - 55;
             
             if (client) {
               doc.setFontSize(24);
@@ -300,10 +304,6 @@ export default function AssignItemPage() {
             
             const locationLines = doc.splitTextToSize(locationString, pageWidth - (margin * 2) - 100);
             doc.text(locationLines, margin, bottomY + 30);
-    
-            doc.setFontSize(9);
-            doc.setTextColor(150);
-            doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - margin, pageHeight - margin);
     
             doc.save(`etiqueta_rack_${product.id}.pdf`);
         } catch (error: any) {
