@@ -35,7 +35,9 @@ export function NotificationBell() {
 
     const handleMarkAsRead = async (notification: Notification) => {
         if (!user || notification.isRead) return;
-        if (!notification.isSuggestion && typeof notification.id === 'number') {
+        // Simplified logic: only notifications from the main DB (with a number ID) can be marked as read this way.
+        // Suggestion notifications are handled implicitly when the suggestions page is visited.
+        if (typeof notification.id === 'number') {
             await markNotificationAsRead(notification.id, user.id);
         }
         await fetchUnreadNotifications();
