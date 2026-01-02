@@ -116,7 +116,7 @@ export default function AssignItemPage() {
         if (exactMatch) {
             results.push({ value: exactMatch.id, label: `[${exactMatch.id}] ${exactMatch.description}` });
         }
-        results.push(...partialMatches.map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` })));
+        results.push(...partialMatches.map(p => ({ value: p.id, label: `[${exactMatch.id}] ${exactMatch.description}` })));
         
         return results;
     }, [authProducts, debouncedProductSearch]);
@@ -261,47 +261,49 @@ export default function AssignItemPage() {
         }
     
         try {
-            // QR Code now contains only the product ID
             const qrCodeDataUrl = await QRCode.toDataURL(product.id, { errorCorrectionLevel: 'H', width: 200 });
             
             const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
+            const margin = 40;
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
     
-            doc.addImage(qrCodeDataUrl, 'PNG', 40, 40, 100, 100);
-
+            doc.addImage(qrCodeDataUrl, 'PNG', margin, margin, 100, 100);
+    
             doc.setFont("Helvetica", "bold");
             doc.setFontSize(150);
-            const productCodeLines = doc.splitTextToSize(product.id, pageWidth - 80);
+            const productCodeLines = doc.splitTextToSize(product.id, pageWidth - margin * 2);
             let currentY = pageHeight / 2 - 80;
             doc.text(productCodeLines, pageWidth / 2, currentY, { align: "center" });
             currentY += (productCodeLines.length * 100);
     
             doc.setFont("Helvetica", "normal");
             doc.setFontSize(52);
-            const descriptionLines = doc.splitTextToSize(product.description, pageWidth - 80);
+            const descriptionLines = doc.splitTextToSize(product.description, pageWidth - margin * 2);
             doc.text(descriptionLines, pageWidth / 2, currentY + 40, { align: "center" });
     
-            const bottomY = pageHeight - 40;
+            const bottomY = pageHeight - margin;
             
             if (client) {
               doc.setFontSize(24);
               doc.setFont("Helvetica", "bold");
-              doc.text("Cliente:", 40, bottomY - 70);
+              doc.text("Cliente:", margin, bottomY - 70);
               doc.setFont("Helvetica", "normal");
-              doc.text(client.name, 120, bottomY - 70);
+              doc.text(client.name, margin + 80, bottomY - 70);
             }
             
             doc.setFontSize(28);
             doc.setFont("Helvetica", "bold");
-            doc.text("Ubicación:", 40, bottomY - 20);
+            doc.text("Ubicación:", margin, bottomY - 20);
             doc.setFont("Helvetica", "normal");
             doc.setFontSize(36);
-            doc.text(locationString, 40, bottomY + 20);
+            
+            const locationLines = doc.splitTextToSize(locationString, pageWidth - (margin * 2) - 100);
+            doc.text(locationLines, margin, bottomY + 20);
     
             doc.setFontSize(9);
             doc.setTextColor(150);
-            doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - 40, bottomY, { align: "right" });
+            doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - margin, bottomY, { align: "right" });
     
             doc.save(`etiqueta_rack_${product.id}.pdf`);
         } catch (error: any) {
