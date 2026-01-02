@@ -11,11 +11,13 @@ import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-s
 import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
 import { logInfo, logWarn, logError } from './logger';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { getExchangeRate, getEmailSettings } from './api-actions';
 import { NewUserSchema, UserSchema } from './auth-schemas';
 
 const SALT_ROUNDS = 10;
+const SESSION_COOKIE_NAME = 'clic-tools-session';
+const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
 
 /**
  * Checks if a user has a specific permission.
@@ -57,6 +59,15 @@ export async function login(email: string, passwordProvided: string, clientInfo:
       const isMatch = await bcrypt.compare(passwordProvided, user.password);
       if (isMatch) {
         const { password, ...userWithoutPassword } = user;
+        
+        // Create session cookie
+        cookies().set(SESSION_COOKIE_NAME, String(user.id), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: SESSION_DURATION / 1000, // seconds
+            path: '/',
+        });
+
         await logInfo(`User '${user.name}' logged in successfully.`, logMeta);
         return { user: userWithoutPassword as User, forcePasswordChange: !!user.forcePasswordChange };
       }
@@ -71,12 +82,26 @@ export async function login(email: string, passwordProvided: string, clientInfo:
 }
 
 
-export async function logout(userId: number): Promise<void> {
-    const db = await connectDb();
-    const user = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as { name: string } | undefined;
-    if (user) {
-        await logInfo(`User '${user.name}' logged out.`, { userId });
+export async function logout(): Promise<void> {
+    const cookieStore = cookies();
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+    
+    if (sessionCookie && sessionCookie.value) {
+        const userId = Number(sessionCookie.value);
+        const db = await connectDb();
+        const user = db.prepare('SELECT name FROM users WHERE id = ?').get(userId) as { name: string } | undefined;
+        if (user) {
+            await logInfo(`User '${user.name}' logged out.`, { userId });
+        }
     }
+    
+    // Invalidate the cookie
+    cookieStore.set(SESSION_COOKIE_NAME, '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 0,
+        path: '/',
+    });
 }
 
 /**
@@ -277,6 +302,36 @@ export async function comparePasswords(userId: number, password: string, clientI
       await logWarn('Password comparison failed during settings update/recovery.', clientInfo);
     }
     return isMatch;
+}
+
+/**
+ * Retrieves the currently authenticated user based on the session cookie.
+ * This is a server-only function.
+ * @returns {Promise<User | null>} The user object or null if not authenticated.
+ */
+export async function getCurrentUser(): Promise<User | null> {
+    const cookieStore = cookies();
+    const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
+
+    if (!sessionCookie || !sessionCookie.value) {
+        return null;
+    }
+
+    const userId = Number(sessionCookie.value);
+    if (isNaN(userId)) {
+        return null;
+    }
+
+    const db = await connectDb();
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as User | undefined;
+
+    if (!user) {
+        return null;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword as User;
 }
 
 /**

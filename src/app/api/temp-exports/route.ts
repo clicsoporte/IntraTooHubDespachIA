@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
-import { getCurrentUser } from '@/modules/core/lib/auth-client';
+import { getCurrentUser } from '@/modules/core/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -24,8 +24,7 @@ const TEMP_EXPORT_DIR = path.join(process.cwd(), 'temp_files', 'exports');
  * @returns {Promise<NextResponse>} A response object containing the file stream or an error.
  */
 export async function GET(request: NextRequest) {
-    // A robust server-side session check (e.g., Next-Auth, encrypted cookies) would be essential here for a public app.
-    // For this LAN app, we use the client-side session check as a basic guard.
+    // This now uses the server-side, cookie-based `getCurrentUser` function.
     const user = await getCurrentUser();
     if (!user) {
         return new NextResponse('Unauthorized: You must be logged in to download files.', { status: 401 });

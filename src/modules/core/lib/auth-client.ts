@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file contains client-side functions for interacting with server-side authentication logic.
  * This abstraction layer prevents direct DB access from the client and ensures that server-side
@@ -16,48 +15,34 @@ import {
     logout as logoutServer,
     getInitialAuthData as getInitialAuthDataServer,
     sendPasswordRecoveryEmail as sendRecoveryEmailServer,
+    getCurrentUser as getCurrentUserServer,
 } from '@/modules/core/lib/auth';
 
-const CURRENT_USER_ID_KEY = 'currentUserId';
-
 /**
- * Logs in a user and stores their ID in session storage.
+ * Logs in a user by calling the server-side login function which sets a session cookie.
  * @param {string} email - The user's email.
  * @param {string} password - The password provided by the user.
  * @returns {Promise<{ user: User | null, forcePasswordChange: boolean }>} A promise that resolves to the login result.
  */
 export async function login(email: string, password: string, clientInfo: { ip: string; host: string; }): Promise<{ user: User | null, forcePasswordChange: boolean }> {
-    const result = await loginServer(email, password, clientInfo);
-    if (result.user) {
-        sessionStorage.setItem(CURRENT_USER_ID_KEY, String(result.user.id));
-    }
-    return result;
+    return await loginServer(email, password, clientInfo);
 }
 
 /**
- * Logs out the current user by removing their ID from session storage.
+ * Logs out the current user by invalidating the session cookie on the server.
  */
 export async function logout() {
-    const userId = sessionStorage.getItem(CURRENT_USER_ID_KEY);
-    if (userId) {
-        await logoutServer(Number(userId));
-    }
-    sessionStorage.removeItem(CURRENT_USER_ID_KEY);
+    await logoutServer();
 }
 
 /**
- * Retrieves the currently logged-in user from the server.
- * Reads the user ID from session storage and fetches the full user object.
+ * Retrieves the currently logged-in user from the server by leveraging the server-side cookie.
+ * This is now a simple pass-through to the server action.
  * @returns {Promise<User | null>} A promise that resolves to the user object, or null if no user is logged in.
  */
 export async function getCurrentUser(): Promise<User | null> {
-    const currentUserId = sessionStorage.getItem(CURRENT_USER_ID_KEY);
-    if (!currentUserId) return null;
-
-    const allUsers = await getAllUsersServer();
-    if (!allUsers) return null; // Safe guard against undefined return
-    const user = allUsers.find(u => u.id === Number(currentUserId));
-    return user || null;
+    // This now calls the server-side function which handles cookie validation.
+    return await getCurrentUserServer();
 }
 
 /**

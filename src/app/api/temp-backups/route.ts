@@ -11,8 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
 import { Readable } from 'stream';
-import { getCurrentUser } from '@/modules/core/lib/auth-client';
-import { hasPermission } from '@/modules/core/lib/auth';
+import { getCurrentUser, hasPermission } from '@/modules/core/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,10 +25,7 @@ const dbDirectory = path.join(process.cwd(), 'dbs');
  * @returns {Promise<NextResponse>} A response object containing the file stream or an error.
  */
 export async function GET(request: NextRequest) {
-    // Note: The client-side `getCurrentUser` is a placeholder for session validation.
-    // In a real-world scenario, this check should be done via server-side session
-    // validation (e.g., parsing an encrypted cookie or using Next-Auth).
-    // For this LAN app, we proceed but add a server-side permission check.
+    // This now uses the server-side, cookie-based `getCurrentUser` function.
     const user = await getCurrentUser();
     if (!user) {
         return new NextResponse('Unauthorized: No active session.', { status: 401 });
