@@ -8,14 +8,9 @@
 import { AuthForm } from "@/components/auth/auth-form";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Network } from "lucide-react";
-import React from "react";
 import { headers } from "next/headers";
+import React from "react";
 
 // This is the critical fix for the production cache issue.
 // It forces Next.js to re-evaluate this page on every request, ensuring

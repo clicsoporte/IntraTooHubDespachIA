@@ -36,7 +36,7 @@ interface AuthContextType {
   notifications: Notification[];
   unreadNotificationsCount: number;
   fetchUnreadNotifications: () => Promise<void>;
-  refreshAuth: () => Promise<void>;
+  refreshAuth: () => Promise<User | null>;
   redirectAfterLogin: (path?: string) => void;
   logout: () => void;
   refreshExchangeRate: () => Promise<void>;
@@ -103,7 +103,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
 
-  const loadAuthData = useCallback(async () => {
+  const loadAuthData = useCallback(async (): Promise<User | null> => {
     setIsReady(false);
     try {
       const currentUser = await getCurrentUserClient();
@@ -111,7 +111,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (!currentUser) {
           setUser(null);
           setIsReady(true);
-          return;
+          return null;
       }
       
       const data = await getInitialAuthData();
@@ -140,11 +140,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       } else {
         setUserRole(null);
       }
+      return currentUser;
     } catch (error) {
       console.error("Failed to load authentication context data:", error);
       setUser(null);
       setUserRole(null);
       setCompanyData(null);
+      return null;
     } finally {
       setIsReady(true);
     }

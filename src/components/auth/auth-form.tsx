@@ -115,8 +115,12 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
           setAuthStep("force_change");
         } else {
           // **THE FIX**: First, await the context update, then redirect.
-          await refreshAuth();
-          redirectAfterLogin();
+          const user = await refreshAuth();
+          if (user) {
+            redirectAfterLogin();
+          } else {
+            throw new Error("La sesión no se pudo establecer después del login.");
+          }
         }
       } else {
         toast({ title: "Credenciales Incorrectas", variant: "destructive" });
