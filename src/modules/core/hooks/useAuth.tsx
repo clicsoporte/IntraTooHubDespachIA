@@ -36,7 +36,7 @@ interface AuthContextType {
   notifications: Notification[];
   unreadNotificationsCount: number;
   fetchUnreadNotifications: () => Promise<void>;
-  refreshAuth: () => Promise<User | null>;
+  refreshAuth: (userFromLogin?: User) => Promise<User | null>;
   redirectAfterLogin: (path?: string) => void;
   logout: () => void;
   refreshExchangeRate: () => Promise<void>;
@@ -103,10 +103,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, []);
 
-  const loadAuthData = useCallback(async (): Promise<User | null> => {
+  const loadAuthData = useCallback(async (userFromLogin?: User): Promise<User | null> => {
     setIsReady(false);
     try {
-      const currentUser = await getCurrentUserClient();
+      // If a user object is passed (from login), use it directly. Otherwise, fetch from server.
+      const currentUser = userFromLogin || await getCurrentUserClient();
       
       if (!currentUser) {
           setUser(null);

@@ -114,8 +114,8 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
           setUserForPasswordChange(loginResult.user);
           setAuthStep("force_change");
         } else {
-          // **THE FIX**: First, await the context update, then redirect.
-          const user = await refreshAuth();
+          // Pass the user object directly to refreshAuth to avoid race conditions
+          const user = await refreshAuth(loginResult.user);
           if (user) {
             redirectAfterLogin();
           } else {
