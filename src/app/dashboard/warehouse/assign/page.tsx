@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Page for associating products with clients and warehouse locations.
  * This tool allows users to create a catalog-like mapping, indicating where
@@ -271,8 +272,8 @@ export default function AssignItemPage() {
             doc.addImage(qrCodeDataUrl, 'PNG', margin, margin, 100, 100);
             
             doc.setFont("Helvetica", "normal");
+            doc.setTextColor(0);
             doc.setFontSize(9);
-            doc.setTextColor(0); // Set text to black
             doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - margin, margin, { align: 'right' });
             
             doc.setFont("Helvetica", "bold");

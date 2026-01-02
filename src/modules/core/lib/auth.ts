@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Server-side authentication and user management functions.
  * These functions interact directly with the database to handle user data.
@@ -58,7 +59,8 @@ export async function login(email: string, passwordProvided: string, clientInfo:
     if (user && user.password) {
       const isMatch = await bcrypt.compare(passwordProvided, user.password);
       if (isMatch) {
-        const { password, ...userWithoutPassword } = user;
+        // Correctly exclude the password from the returned object.
+        const { password: _, ...userWithoutPassword } = user;
         
         // Create session cookie
         cookies().set(SESSION_COOKIE_NAME, String(user.id), {
@@ -128,7 +130,7 @@ async function getAllUsersWithPasswords(): Promise<User[]> {
 export async function getAllUsers(): Promise<User[]> {
     const users = await getAllUsersWithPasswords();
     return users.map(u => {
-        const { password, ...userWithoutPassword } = u;
+        const { password: _, ...userWithoutPassword } = u;
         return userWithoutPassword;
     }) as User[];
 }
@@ -145,7 +147,7 @@ export async function getAllUsersForReport(): Promise<User[]> {
         const users = stmt.all() as User[];
         // Ensure passwords are never sent to the client.
         return users.map(u => {
-            const { password, ...userWithoutPassword } = u;
+            const { password: _, ...userWithoutPassword } = u;
             return userWithoutPassword;
         }) as User[];
     } catch (error: any) {
@@ -202,7 +204,7 @@ export async function addUser(userData: Omit<User, 'id' | 'avatar' | 'recentActi
     forcePasswordChange: userToCreate.forcePasswordChange ? 1 : 0,
   });
 
-  const { password, ...userWithoutPassword } = userToCreate;
+  const { password: _, ...userWithoutPassword } = userToCreate;
   await logInfo(`Admin added a new user: ${userToCreate.name}`, { role: userToCreate.role });
   return userWithoutPassword as User;
 }
@@ -329,7 +331,7 @@ export async function getCurrentUser(): Promise<User | null> {
         return null;
     }
 
-    const { password, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword as User;
 }
 

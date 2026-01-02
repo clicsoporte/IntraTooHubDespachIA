@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
@@ -126,6 +127,7 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             }
         };
 
+        // Run these first
         checkAndRecreateForeignKey('locations', 'parentId', 
             `CREATE TABLE locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT UNIQUE NOT NULL, type TEXT NOT NULL, parentId INTEGER, isLocked INTEGER DEFAULT 0, lockedBy TEXT, lockedBySessionId TEXT, FOREIGN KEY (parentId) REFERENCES locations(id) ON DELETE CASCADE);`,
             'id, name, code, type, parentId, isLocked, lockedBy, lockedBySessionId');
@@ -137,10 +139,6 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
         checkAndRecreateForeignKey('item_locations', 'locationId',
             `CREATE TABLE item_locations (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, locationId INTEGER NOT NULL, clientId TEXT, updatedBy TEXT, updatedAt TEXT, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE, UNIQUE (itemId, locationId, clientId));`,
             'id, itemId, locationId, clientId, updatedBy, updatedAt');
-        
-        checkAndRecreateForeignKey('inventory_units', 'locationId',
-            `CREATE TABLE inventory_units (id INTEGER PRIMARY KEY AUTOINCREMENT, unitCode TEXT UNIQUE, productId TEXT NOT NULL, humanReadableId TEXT, documentId TEXT, locationId INTEGER, quantity REAL DEFAULT 1, notes TEXT, createdAt TEXT NOT NULL, createdBy TEXT NOT NULL, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE);`,
-            'id, unitCode, productId, humanReadableId, documentId, locationId, quantity, notes, createdAt, createdBy');
         
         const movementsCreateSql = `CREATE TABLE movements (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, quantity REAL NOT NULL, fromLocationId INTEGER, toLocationId INTEGER, timestamp TEXT NOT NULL, userId INTEGER NOT NULL, notes TEXT, FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE CASCADE, FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE CASCADE);`;
         
@@ -160,10 +158,17 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
         if (!locationsTableInfo.some(c => c.name === 'isLocked')) db.exec('ALTER TABLE locations ADD COLUMN isLocked INTEGER DEFAULT 0');
         if (!locationsTableInfo.some(c => c.name === 'lockedBy')) db.exec('ALTER TABLE locations ADD COLUMN lockedBy TEXT');
         if (!locationsTableInfo.some(c => c.name === 'lockedBySessionId')) db.exec('ALTER TABLE locations ADD COLUMN lockedBySessionId TEXT');
-
-        const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
-        if (!unitsTableInfo.some(c => c.name === 'documentId')) db.exec('ALTER TABLE inventory_units ADD COLUMN documentId TEXT');
-        if (!unitsTableInfo.some(c => c.name === 'quantity')) db.exec('ALTER TABLE inventory_units ADD COLUMN quantity REAL DEFAULT 1');
+        
+        // This migration needs to happen AFTER the recreation check
+        const unitsTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units'`).get();
+        if (unitsTableExists) {
+             checkAndRecreateForeignKey('inventory_units', 'locationId',
+                `CREATE TABLE inventory_units (id INTEGER PRIMARY KEY AUTOINCREMENT, unitCode TEXT UNIQUE, productId TEXT NOT NULL, humanReadableId TEXT, documentId TEXT, locationId INTEGER, quantity REAL DEFAULT 1, notes TEXT, createdAt TEXT NOT NULL, createdBy TEXT NOT NULL, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE);`,
+                'id, unitCode, productId, humanReadableId, documentId, locationId, quantity, notes, createdAt, createdBy');
+            const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
+            if (!unitsTableInfo.some(c => c.name === 'documentId')) db.exec('ALTER TABLE inventory_units ADD COLUMN documentId TEXT');
+            if (!unitsTableInfo.some(c => c.name === 'quantity')) db.exec('ALTER TABLE inventory_units ADD COLUMN quantity REAL DEFAULT 1');
+        }
 
 
     } catch (error) {

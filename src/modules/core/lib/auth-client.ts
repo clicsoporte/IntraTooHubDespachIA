@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file contains client-side functions for interacting with server-side authentication logic.
  * This abstraction layer prevents direct DB access from the client and ensures that server-side

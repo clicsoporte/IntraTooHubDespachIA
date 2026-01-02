@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Simplified warehouse search page, optimized for mobile devices and scanners.
  * This component provides a minimal UI for warehouse workers to quickly look up items
@@ -55,8 +56,7 @@ const renderLocationPath = (locationId: number | null | undefined, locations: Wa
     while (current) {
         path.unshift(current);
         const parentId = current.parentId;
-        if (!parentId) break;
-        current = locations.find(l => l.id === parentId);
+        current = parentId ? locations.find(l => l.id === parentId) : undefined;
     }
 
     return (
@@ -137,7 +137,8 @@ export default function SimpleWarehouseSearchPage() {
             const exactMatch = products.find(p => p.id.toLowerCase() === searchLower);
             setSelectedItem(exactMatch || null);
             setSearchTerm(''); // Clear input for next scan
-            inputRef.current?.focus(); // Re-focus
+            // Re-focus after state has had a chance to update
+            setTimeout(() => inputRef.current?.focus(), 0);
         }
     };
 
