@@ -42,7 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/modules/core/hooks/use-toast";
 import { logInfo, logWarn } from "@/modules/core/lib/logger";
 import type { Role } from "@/modules/core/types";
-import { PlusCircle, Trash2, RefreshCw, Copy } from "lucide-react";
+import { PlusCircle, Trash2, RefreshCw, Copy, Edit2 } from "lucide-react";
 import { getAllRoles, saveAllRoles, resetDefaultRoles } from "@/modules/core/lib/db";
 import { usePageTitle } from "@/modules/core/hooks/usePageTitle";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,12 +69,13 @@ export default function RolesPage() {
     const [isLoading, setIsLoading] = useState(true);
     
     // State for dialogs
-    const [isAddRoleDialogOpen, setAddRoleDialogOpen] = useState(false);
+    const [isRoleFormOpen, setRoleFormOpen] = useState(false);
     const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
 
-    // State for form data (add, copy)
+    // State for form data (add, copy, edit)
     const [roleFormData, setRoleFormData] = useState<Role>(emptyRole);
     const [formTitle, setFormTitle] = useState("Crear Nuevo Rol");
+    const [isEditing, setIsEditing] = useState(false);
 
     const { setTitle } = usePageTitle();
 
@@ -129,21 +130,35 @@ export default function RolesPage() {
             toast({ title: "Error", description: "ID y Nombre son requeridos.", variant: "destructive" });
             return;
         }
-        if (roles.some(role => role.id === roleFormData.id)) {
-             toast({ title: "Error", description: "El ID del rol ya existe.", variant: "destructive" });
-            return;
-        }
 
-        const updatedRoles = [...roles, roleFormData];
+        let updatedRoles;
+
+        if (isEditing) {
+            updatedRoles = roles.map(role => role.id === roleFormData.id ? roleFormData : role);
+            toast({ title: `Rol Actualizado`, description: `El rol "${roleFormData.name}" ha sido actualizado.` });
+            await logInfo(`Role updated`, { role: roleFormData.name });
+        } else {
+            if (roles.some(role => role.id === roleFormData.id)) {
+                toast({ title: "Error", description: "El ID del rol ya existe.", variant: "destructive" });
+                return;
+            }
+            updatedRoles = [...roles, roleFormData];
+            toast({ title: `Rol Creado`, description: `El rol "${roleFormData.name}" ha sido añadido.` });
+            await logInfo(`New role created`, { role: roleFormData.name });
+        }
+        
         setRoles(updatedRoles);
         await saveAllRoles(updatedRoles);
         
-        toast({ title: `Rol Creado`, description: `El rol "${roleFormData.name}" ha sido añadido.` });
-        await logInfo(`New role created`, { role: roleFormData.name });
-        
-        setRoleFormData(emptyRole);
-        setAddRoleDialogOpen(false);
+        setRoleFormOpen(false);
     }
+
+    const openNewBlankDialog = () => {
+        setFormTitle("Crear Nuevo Rol");
+        setRoleFormData(emptyRole);
+        setIsEditing(false);
+        setRoleFormOpen(true);
+    };
 
     const openCopyDialog = (roleToCopy: Role) => {
         setFormTitle(`Copia de: ${roleToCopy.name}`);
@@ -152,14 +167,17 @@ export default function RolesPage() {
             name: `${roleToCopy.name} (Copia)`,
             permissions: [...roleToCopy.permissions]
         });
-        setAddRoleDialogOpen(true);
+        setIsEditing(false);
+        setRoleFormOpen(true);
     };
 
-    const openNewBlankDialog = () => {
-        setFormTitle("Crear Nuevo Rol en Blanco");
-        setRoleFormData(emptyRole);
-        setAddRoleDialogOpen(true);
+    const openEditDialog = (roleToEdit: Role) => {
+        setFormTitle(`Editar Rol: ${roleToEdit.name}`);
+        setRoleFormData({ ...roleToEdit });
+        setIsEditing(true);
+        setRoleFormOpen(true);
     };
+
 
     const handleDeleteRole = async () => {
         if (!roleToDelete) return;
@@ -250,6 +268,10 @@ export default function RolesPage() {
                     <Badge variant="secondary" className="w-fit">{role.id}</Badge>
                   </div>
                   <div className="flex items-center gap-2">
+                     <Button variant="outline" size="sm" onClick={() => openEditDialog(role)}>
+                        <Edit2 className="mr-2 h-4 w-4" />
+                        Editar
+                    </Button>
                      <Button variant="outline" size="sm" onClick={() => openCopyDialog(role)}>
                         <Copy className="mr-2 h-4 w-4" />
                         Copiar
@@ -310,7 +332,7 @@ export default function RolesPage() {
             <Button onClick={handleSaveAll}>Guardar Cambios</Button>
           </CardFooter>
         </Card>
-         <Dialog open={isAddRoleDialogOpen} onOpenChange={setAddRoleDialogOpen}>
+         <Dialog open={isRoleFormOpen} onOpenChange={setRoleFormOpen}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>{formTitle}</DialogTitle>
@@ -326,6 +348,7 @@ export default function RolesPage() {
                                 id="role-id"
                                 value={roleFormData.id}
                                 onChange={e => setRoleFormData({...roleFormData, id: e.target.value.toLowerCase().replace(/\s/g, '-')})}
+                                disabled={isEditing}
                             />
                         </div>
                         <div className="space-y-2">

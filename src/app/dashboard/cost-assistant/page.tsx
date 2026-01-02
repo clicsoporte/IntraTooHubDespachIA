@@ -24,8 +24,10 @@ import { Separator } from '@/components/ui/separator';
 import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 
 export default function CostAssistantPage() {
+    const { isAuthorized } = useAuthorization(['cost-assistant:access']);
     const {
         state,
         actions,
@@ -48,7 +50,7 @@ export default function CostAssistantPage() {
         { id: 'profitPerLine', label: 'Ganancia por Línea', defaultVisible: true, className: 'min-w-[180px] text-right', tooltip: 'Ganancia total para esta línea de productos (Cantidad x Ganancia por unidad).' },
     ];
 
-    if (!isReady) {
+    if (!isReady || isAuthorized === null) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
                 <Skeleton className="h-40 w-full" />
@@ -59,6 +61,10 @@ export default function CostAssistantPage() {
                 <Skeleton className="h-96 w-full" />
             </main>
         );
+    }
+    
+    if (isAuthorized === false) {
+      return null;
     }
 
     return (

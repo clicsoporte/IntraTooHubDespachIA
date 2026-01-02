@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Layout for the Warehouse section.
  * This layout ensures that any child pages within the /warehouse route

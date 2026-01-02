@@ -1,5 +1,3 @@
-
-
 /**
  * @fileoverview The main Quoter page.
  * This component provides the user interface for creating, managing, and generating quotes.
@@ -89,6 +87,7 @@ import { format, parseISO, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import type { HaciendaExemptionApiResponse } from "@/modules/core/types";
+import { useAuthorization } from "@/modules/core/hooks/useAuthorization";
 
 const taxes = [
   { name: "IVA 13%", value: 0.13 },
@@ -103,6 +102,8 @@ function isApiSuccess(data: any): data is HaciendaExemptionApiResponse {
 }
 
 export default function QuoterPage() {
+  const { isAuthorized } = useAuthorization(['quotes:create']);
+
   const {
     state,
     actions,
@@ -112,8 +113,7 @@ export default function QuoterPage() {
 
   const { isReady } = useAuth();
 
-
-  if (!isReady) {
+  if (!isReady || isAuthorized === null) {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <Card>
@@ -140,6 +140,10 @@ export default function QuoterPage() {
         </Card>
       </main>
     );
+  }
+
+  if (isAuthorized === false) {
+    return null; // Or a dedicated 'Access Denied' component
   }
 
   return (
