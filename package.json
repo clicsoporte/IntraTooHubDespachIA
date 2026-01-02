@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 9003",
-    "build": "rm -rf .next && next build",
+    "build": "next build",
     "start": "next start -p 9003",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
