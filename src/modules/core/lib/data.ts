@@ -218,17 +218,13 @@ export const warehouseTools: Tool[] = [
 
 /**
  * Default roles and their permissions.
+ * The 'viewer' role has been removed. Only the 'admin' role is defined by default.
  */
 export const initialRoles: Role[] = [
   {
     id: "admin",
     name: "Admin",
     permissions: allAdminPermissions,
-  },
-  {
-    id: "viewer",
-    name: "Usuario Básico (Solo Consulta)",
-    permissions: ["dashboard:access"],
   },
 ];
 

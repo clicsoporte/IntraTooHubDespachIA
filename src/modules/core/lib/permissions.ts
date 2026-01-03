@@ -8,7 +8,7 @@ export const allAdminPermissions = [
     "dashboard:access", "quotes:create", "quotes:generate", "quotes:drafts:create", "quotes:drafts:read", "quotes:drafts:delete",
     "requests:read", "requests:read:all", "requests:create", "requests:create:duplicate", "requests:edit:pending", "requests:edit:approved", "requests:reopen", "requests:notes:add", "requests:status:review", "requests:status:pending-approval", "requests:status:approve", "requests:status:ordered", "requests:status:received-in-warehouse", "requests:status:entered-erp", "requests:status:cancel", "requests:status:unapproval-request", "requests:status:unapproval-request:approve", "requests:status:revert-to-approved",
     "planner:read", "planner:read:all", "planner:create", "planner:edit:pending", "planner:edit:approved", "planner:reopen", "planner:receive", "planner:status:review", "planner:status:approve", "planner:status:in-progress", "planner:status:on-hold", 
-    "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request",
+    "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:status:unapprove-request:approve",
     "planner:priority:update", "planner:machine:assign", "planner:schedule",
     "cost-assistant:access", "cost-assistant:drafts:read-write",
     "warehouse:access", "warehouse:search:full", "warehouse:search:simple", 
@@ -34,7 +34,7 @@ export const permissionGroups = {
     "Solicitud de Compra (Acciones de Aprobador)": ["requests:reopen", "requests:status:approve", "requests:status:ordered", "requests:status:received-in-warehouse", "requests:status:entered-erp", "requests:status:cancel", "requests:status:revert-to-approved", "requests:status:unapproval-request", "requests:status:unapproval-request:approve"],
     "Planificador de Producción (Lectura y Creación)": ["planner:read", "planner:read:all", "planner:create"],
     "Planificador de Producción (Edición y Acciones)": ["planner:edit:pending", "planner:edit:approved", "planner:reopen", "planner:receive", "planner:status:review", "planner:status:approve", "planner:status:in-progress", "planner:status:on-hold", 
-    "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:priority:update", "planner:machine:assign", "planner:schedule"],
+    "planner:status:completed", "planner:status:cancel", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:status:unapprove-request:approve", "planner:priority:update", "planner:machine:assign", "planner:schedule"],
     "Asistente de Costos": ["cost-assistant:access", "cost-assistant:drafts:read-write"],
     "Gestión de Almacenes": [
         "warehouse:access", "warehouse:search:full", "warehouse:search:simple",
@@ -64,7 +64,7 @@ export const permissionTranslations: { [key: string]: string } = {
     "requests:edit:pending": "Compras: Editar (Pendientes)", "requests:edit:approved": "Compras: Editar (Aprobadas)", "requests:status:review": "Compras: Enviar a Revisión", "requests:status:pending-approval": "Compras: Enviar a Aprobación", "requests:reopen": "Compras: Reabrir", "requests:status:approve": "Compras: Aprobar", "requests:status:ordered": "Compras: Marcar como Ordenada", "requests:status:received-in-warehouse": "Compras: Recibir en Bodega", "requests:status:entered-erp": "Compras: Ingresar a ERP", "requests:status:cancel": "Compras: Cancelar", "requests:status:revert-to-approved": "Compras: Revertir a Aprobada", "requests:status:unapproval-request": "Compras: Solicitar Desaprobación", "requests:status:unapproval-request:approve": "Compras: Aprobar Desaprobación",
     "planner:read": "Plan.: Leer Órdenes", "planner:read:all": "Plan.: Leer Todas las Órdenes", "planner:create": "Plan.: Crear Órdenes",
     "planner:edit:pending": "Plan.: Editar (Pendientes)", "planner:edit:approved": "Plan.: Editar (Aprobadas)", "planner:reopen": "Plan.: Reabrir Órdenes", "planner:receive": "Plan.: Recibir en Bodega", "planner:status:review": "Plan.: Enviar a Revisión", "planner:status:approve": "Plan.: Cambiar a Aprobada", "planner:status:in-progress": "Plan.: Cambiar a En Progreso", "planner:status:on-hold": "Plan.: Cambiar a En Espera", 
-    "planner:status:completed": "Plan.: Cambiar a Completada", "planner:status:cancel": "Plan.: Cancelar (Pendientes)", "planner:status:cancel-approved": "Plan.: Cancelar (Aprobadas)", "planner:priority:update": "Plan.: Cambiar Prioridad", "planner:machine:assign": "Plan.: Asignar Máquina", "planner:status:unapprove-request": "Plan.: Solicitar Desaprobación", "planner:schedule": "Plan.: Programar Fechas",
+    "planner:status:completed": "Plan.: Cambiar a Completada", "planner:status:cancel": "Plan.: Cancelar (Pendientes)", "planner:status:cancel-approved": "Plan.: Cancelar (Aprobadas)", "planner:priority:update": "Plan.: Cambiar Prioridad", "planner:machine:assign": "Plan.: Asignar Máquina", "planner:status:unapprove-request": "Plan.: Solicitar Desaprobación", "planner:status:unapprove-request:approve": "Plan.: Aprobar Desaprobación", "planner:schedule": "Plan.: Programar Fechas",
     "cost-assistant:access": "Asist. Costos: Acceso", "cost-assistant:drafts:read-write": "Asist. Costos: Guardar Borradores",
     "warehouse:access": "Almacén: Acceso General", "warehouse:search:full": "Almacén: Consulta Completa", "warehouse:search:simple": "Almacén: Búsqueda Rápida", 
     "warehouse:receiving-wizard:use": "Almacén: Usar Asist. Recepción", "warehouse:population-wizard:use": "Almacén: Usar Asist. Poblado", "warehouse:inventory-count:create": "Almacén: Registrar Conteo",
@@ -109,3 +109,41 @@ export const analyticsPermissions = [
     "analytics:physical-inventory-report:read",
     "analytics:receiving-report:read",
 ];
+
+export const permissionTree: Record<string, string[]> = {
+    // Top-level Access
+    "admin:access": ["users:read", "roles:read", "admin:settings:general", "admin:settings:api", "admin:settings:planner", "admin:settings:requests", "admin:settings:warehouse", "admin:settings:stock", "admin:settings:cost-assistant", "admin:suggestions:read", "admin:import:run", "admin:logs:read", "admin:maintenance:backup"],
+    "analytics:read": ["analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read"],
+    "warehouse:access": ["warehouse:search:full", "warehouse:search:simple", "warehouse:receiving-wizard:use", "warehouse:population-wizard:use", "warehouse:inventory-count:create", "warehouse:item-assignment:create", "warehouse:locations:create", "warehouse:units:create", "warehouse:locks:manage"],
+    "requests:read": ["requests:read:all", "requests:create"],
+    "planner:read": ["planner:read:all", "planner:create"],
+
+    // Second-level dependencies
+    "users:read": ["users:create", "users:update", "users:delete"],
+    "roles:read": ["roles:create", "roles:update", "roles:delete"],
+    "admin:import:run": ["admin:import:files", "admin:import:sql", "admin:import:sql-config"],
+    "admin:logs:read": ["admin:logs:clear"],
+    "admin:maintenance:backup": ["admin:maintenance:restore", "admin:maintenance:reset"],
+
+    "requests:create": ["requests:notes:add", "requests:edit:pending", "requests:create:duplicate"],
+    "requests:edit:pending": ["requests:status:review"],
+    "requests:status:review": ["requests:status:pending-approval"],
+    "requests:status:pending-approval": ["requests:status:approve"],
+    "requests:status:approve": ["requests:edit:approved", "requests:status:ordered", "requests:status:cancel", "requests:status:unapproval-request"],
+    "requests:status:ordered": ["requests:status:received-in-warehouse", "requests:status:revert-to-approved"],
+    "requests:status:received-in-warehouse": ["requests:status:entered-erp"],
+    "requests:status:unapproval-request": ["requests:status:unapproval-request:approve"],
+
+    "planner:create": ["planner:edit:pending", "planner:status:review"],
+    "planner:status:review": ["planner:status:approve"],
+    "planner:status:approve": ["planner:edit:approved", "planner:status:in-progress", "planner:status:on-hold", "planner:status:completed", "planner:status:cancel-approved", "planner:status:unapprove-request", "planner:priority:update", "planner:machine:assign", "planner:schedule"],
+    "planner:status:on-hold": ["planner:status:in-progress"], // Can resume
+    "planner:status:completed": ["planner:receive", "planner:reopen"],
+    "planner:status:cancel-approved": ["planner:reopen"],
+    "planner:status:unapprove-request": ["planner:status:unapprove-request:approve"],
+
+
+    "warehouse:locations:create": ["warehouse:locations:update", "warehouse:locations:delete"],
+    "warehouse:item-assignment:create": ["warehouse:item-assignment:delete"],
+    "warehouse:units:create": ["warehouse:units:delete"],
+};

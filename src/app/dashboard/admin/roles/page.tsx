@@ -54,7 +54,7 @@ import {
     AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { permissionGroups, permissionTranslations } from "@/modules/core/lib/permissions";
+import { permissionGroups, permissionTranslations, permissionTree } from "@/modules/core/lib/permissions";
 
 const emptyRole: Role = {
     id: "",
@@ -93,28 +93,36 @@ export default function RolesPage() {
         }
     }, [isAuthorized, fetchRoles, setTitle]);
     
-    const handlePermissionChange = (roleId: string, permission: string, checked: boolean) => {
-        setRoles(currentRoles => 
-            currentRoles.map(role => {
-                if (role.id === roleId) {
-                    const newPermissions = checked
-                        ? [...role.permissions, permission]
-                        : role.permissions.filter(p => p !== permission);
-                    return { ...role, permissions: newPermissions };
-                }
-                return role;
-            })
-        );
-    }
+    const getParentPermissions = (permission: string): string[] => {
+        const parents: string[] = [];
+        for (const parent in permissionTree) {
+            if (permissionTree[parent as keyof typeof permissionTree]?.includes(permission)) {
+                parents.push(parent);
+                parents.push(...getParentPermissions(parent));
+            }
+        }
+        return parents;
+    };
     
+    const getChildPermissions = (permission: string): string[] => {
+        const children = permissionTree[permission as keyof typeof permissionTree] || [];
+        return children.flatMap(child => [child, ...getChildPermissions(child)]);
+    };
+
     const handleFormPermissionChange = (permission: string, checked: boolean) => {
         setRoleFormData(currentRole => {
-            const newPermissions = checked
-                ? [...currentRole.permissions, permission]
-                : currentRole.permissions.filter(p => p !== permission);
-            return { ...currentRole, permissions: newPermissions };
-        })
-    }
+            const currentPermissions = new Set(currentRole.permissions);
+            if (checked) {
+                currentPermissions.add(permission);
+                getParentPermissions(permission).forEach(p => currentPermissions.add(p));
+            } else {
+                currentPermissions.delete(permission);
+                getChildPermissions(permission).forEach(p => currentPermissions.delete(p));
+            }
+            return { ...currentRole, permissions: Array.from(currentPermissions) };
+        });
+    };
+
 
     const handleSaveAll = async () => {
         await saveAllRoles(roles);
@@ -235,14 +243,14 @@ export default function RolesPage() {
                         <AlertDialogTrigger asChild>
                             <Button variant="outline">
                                 <RefreshCw className="mr-2 h-4 w-4" />
-                                Restablecer Roles
+                                Restablecer Rol Admin
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>¿Restablecer Roles por Defecto?</AlertDialogTitle>
+                                <AlertDialogTitle>¿Restablecer Rol de Administrador?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción restaurará los roles por defecto (&apos;admin&apos; y &apos;viewer&apos;) a sus permisos originales.
+                                    Esta acción restaurará el rol &apos;admin&apos; a sus permisos originales (todos).
                                     Los roles personalizados que hayas creado no se verán afectados.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -270,13 +278,13 @@ export default function RolesPage() {
                   <div className="flex items-center gap-2">
                      <Button variant="outline" size="sm" onClick={() => openEditDialog(role)}>
                         <Edit2 className="mr-2 h-4 w-4" />
-                        Editar
+                        Editar Permisos
                     </Button>
                      <Button variant="outline" size="sm" onClick={() => openCopyDialog(role)}>
                         <Copy className="mr-2 h-4 w-4" />
                         Copiar
                     </Button>
-                    {role.id !== 'admin' && role.id !== 'viewer' && (
+                    {role.id !== 'admin' && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon" onClick={() => setRoleToDelete(role)}>
@@ -299,37 +307,11 @@ export default function RolesPage() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <Accordion type="multiple" className="w-full">
-                        {Object.entries(permissionGroups).map(([groupName, permissions]) => (
-                            <AccordionItem value={`${role.id}-${groupName}`} key={`${role.id}-${groupName}`}>
-                                <AccordionTrigger>{groupName}</AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pl-2">
-                                        {permissions.map((permission) => (
-                                            <div key={`${role.id}-${permission}`} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                id={`${role.id}-${permission}`}
-                                                checked={role.permissions.includes(permission)}
-                                                onCheckedChange={(checked) => handlePermissionChange(role.id, permission, checked === true)}
-                                                disabled={role.id === 'admin'}
-                                                />
-                                                <Label htmlFor={`${role.id}-${permission}`} className={`font-normal text-sm ${role.id === 'admin' ? 'text-muted-foreground' : ''}`}>
-                                                {permissionTranslations[permission as keyof typeof permissionTranslations] || permission}
-                                                </Label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        ))}
-                    </Accordion>
-                </CardContent>
               </Card>
             ))}
           </CardContent>
           <CardFooter className="border-t px-6 py-4">
-            <Button onClick={handleSaveAll}>Guardar Cambios</Button>
+            <p className="text-sm text-muted-foreground">La gestión de permisos se guarda automáticamente al crear, editar o eliminar roles.</p>
           </CardFooter>
         </Card>
          <Dialog open={isRoleFormOpen} onOpenChange={setRoleFormOpen}>
@@ -348,7 +330,7 @@ export default function RolesPage() {
                                 id="role-id"
                                 value={roleFormData.id}
                                 onChange={e => setRoleFormData({...roleFormData, id: e.target.value.toLowerCase().replace(/\s/g, '-')})}
-                                disabled={isEditing}
+                                disabled={isEditing || roleFormData.id === 'admin'}
                             />
                         </div>
                         <div className="space-y-2">
@@ -357,13 +339,14 @@ export default function RolesPage() {
                                 id="role-name"
                                 value={roleFormData.name}
                                 onChange={e => setRoleFormData({...roleFormData, name: e.target.value})}
+                                disabled={roleFormData.id === 'admin'}
                             />
                         </div>
                     </div>
                     <div className="space-y-4">
                         <h4 className="font-medium">Permisos</h4>
                         <ScrollArea className="h-72 w-full rounded-md border p-4">
-                            <Accordion type="multiple" className="w-full">
+                            <Accordion type="multiple" className="w-full" defaultValue={Object.keys(permissionGroups)}>
                                 {Object.entries(permissionGroups).map(([groupName, permissions]) => (
                                     <AccordionItem value={groupName} key={groupName}>
                                         <AccordionTrigger>{groupName}</AccordionTrigger>
@@ -375,8 +358,9 @@ export default function RolesPage() {
                                                     id={`form-${permission}`}
                                                     checked={roleFormData.permissions.includes(permission)}
                                                     onCheckedChange={(checked) => handleFormPermissionChange(permission, checked === true)}
+                                                    disabled={roleFormData.id === 'admin'}
                                                     />
-                                                    <Label htmlFor={`form-${permission}`} className="font-normal text-sm">
+                                                    <Label htmlFor={`form-${permission}`} className={`font-normal text-sm ${roleFormData.id === 'admin' ? 'text-muted-foreground' : ''}`}>
                                                     {permissionTranslations[permission as keyof typeof permissionTranslations] || permission}
                                                     </Label>
                                                 </div>
@@ -391,7 +375,7 @@ export default function RolesPage() {
                 </div>
                 <DialogFooter>
                     <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-                    <Button onClick={handleFormSubmit}>Guardar Rol</Button>
+                    <Button onClick={handleFormSubmit} disabled={roleFormData.id === 'admin'}>Guardar Rol</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
