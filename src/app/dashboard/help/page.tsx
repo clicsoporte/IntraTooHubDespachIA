@@ -312,9 +312,9 @@ export default function HelpPage() {
                 </p>
                  <Alert variant="destructive">
                     <LockKeyhole className="h-4 w-4" />
-                    <AlertTitle>¡Mejora de Seguridad Próximamente!</AlertTitle>
+                    <AlertTitle>¡Mejora de Seguridad Crítica Implementada!</AlertTitle>
                     <AlertDescription>
-                       El sistema de autenticación se está fortaleciendo para usar cookies seguras en lugar de almacenamiento local. Este cambio, que se implementará en la v2.1.0, hará que el proceso sea aún más seguro.
+                       El sistema de autenticación ahora utiliza **cookies seguras y `httpOnly`**. Esto significa que tu sesión es gestionada por el servidor, haciendo imposible que sea manipulada desde el navegador y previniendo la suplantación de identidad.
                     </AlertDescription>
                 </Alert>
 
@@ -643,7 +643,7 @@ export default function HelpPage() {
                 </div>
                  <ul className="list-disc space-y-3 pl-6 mt-4">
                     <li>
-                        <strong>Búsqueda Rápida (<QrCode className="inline h-4 w-4"/>):</strong> Una interfaz simple, ideal para celulares, que permite escanear un código QR o buscar rápidamente un artículo para ver su ubicación e inventario.
+                        <strong>Búsqueda Rápida (<QrCode className="inline h-4 w-4"/>):</strong> Una interfaz simple, ideal para celulares, que permite escanear un código QR o buscar rápidamente un artículo para ver su ubicación e inventario. **Mejora:** Ahora el cursor se re-enfoca automáticamente para permitir escaneos continuos.
                     </li>
                      <li>
                         <strong>Asistente de Poblado (<Wand2 className="inline h-4 w-4 text-indigo-500" />):</strong> Permite poblar masivamente las ubicaciones de un rack de forma guiada, ideal para el ingreso de mercadería nueva. Incluye un sistema para retomar sesiones interrumpidas y ahora muestra un indicador de `(Finalizado)` en los niveles que ya se completaron.
@@ -658,7 +658,7 @@ export default function HelpPage() {
                         <strong>Reporte de Inventario Físico (<ClipboardCheck className="inline h-4 w-4"/>):</strong> (En Analíticas) Es la contraparte de la toma de inventario. Muestra una tabla comparando la `Cantidad Contada` vs. el `Stock del ERP` y resalta las diferencias, lista para exportar y realizar ajustes.
                     </li>
                     <li>
-                        <strong>Consulta de Almacén (<Search className="inline h-4 w-4"/>):</strong> La herramienta completa para buscar artículos y ver sus ubicaciones y stock del ERP desglosado por bodega.
+                        <strong>Consulta de Almacén (<Search className="inline h-4 w-4"/>):</strong> Herramienta completa y responsiva para buscar artículos y ver sus ubicaciones y stock del ERP desglosado por bodega.
                     </li>
                     <li>
                         <strong>Gestión de Ubicaciones (<Map className="inline h-4 w-4"/>):</strong> Aquí es donde se construye el &quot;árbol&quot; real de tu almacén, creando las ubicaciones físicas (ej: &quot;Rack 01&quot;) y anidándolas según la jerarquía que un administrador haya definido.
@@ -779,10 +779,8 @@ export default function HelpPage() {
                         <div><h4 className="font-semibold">Mantenimiento</h4>
                             <p>Herramientas críticas, ahora separadas en secciones para mayor claridad y seguridad:</p>
                             <ul className="list-disc pl-5 text-sm space-y-1 mt-2">
+                                <li><strong>Centro de Verificación:</strong> Audita la integridad y estructura de todas las bases de datos para asegurar que las tablas y columnas sean correctas, una herramienta vital después de una actualización.</li>
                                 <li><strong>Backups y Puntos de Restauración:</strong> Gestiona backups de **todo el sistema**. Crea un &quot;Punto de Restauración&quot; antes de una actualización y restáuralo si algo sale mal.</li>
-                                <li>
-                                    <strong>Auditoría de Bases de Datos:</strong> Verifica la integridad y estructura de todas las bases de datos para asegurar que las tablas y columnas sean correctas, una herramienta vital después de una actualización.
-                                </li>
                                 <li><strong>Zona de Peligro:</strong> Acciones que afectan módulos **individuales**. Aquí puedes restaurar la base de datos de un solo módulo (ej: `planner.db`) desde un archivo que subas, o resetear un módulo a su estado de fábrica. Estas acciones requieren confirmación estricta para evitar accidentes.</li>
                             </ul>
                         </div>
@@ -818,7 +816,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Actualizar y Reconstruir.</strong> Abre una terminal en la carpeta del proyecto, ejecuta `npm install --omit=dev` para instalar cualquier nueva dependencia y luego `npm run build` para compilar la nueva versión.
                     </li>
                     <li>
-                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a <strong>Administración &gt; Mantenimiento &gt; Auditoría y Verificación</strong> y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
+                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a <strong>Administración &gt; Mantenimiento &gt; Centro de Verificación</strong> y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
                     </li>
                 </ol>
                 <Alert variant="destructive">
