@@ -527,9 +527,11 @@ export async function updateStatus(payload: UpdateStatusPayload): Promise<Produc
                 erpTicketNumber = @erpTicketNumber,
                 previousStatus = @previousStatus,
                 pendingAction = 'none',
-                hasBeenModified = CASE WHEN @reopen = 1 THEN 0 ELSE hasBeenModified END
+                hasBeenModified = CASE WHEN @reopened = 1 THEN 0 ELSE hasBeenModified END
             WHERE id = @orderId
         `);
+        
+        const booleanReopened = reopen ? 1 : (currentOrder.reopened ? 1 : 0);
 
         stmt.run({
             status,
@@ -537,7 +539,7 @@ export async function updateStatus(payload: UpdateStatusPayload): Promise<Produc
             updatedBy,
             approvedBy,
             orderId,
-            reopened: reopen ? 1 : (currentOrder.reopened ? 1 : 0),
+            reopened: booleanReopened,
             deliveredQuantity: deliveredQuantity !== undefined ? deliveredQuantity : currentOrder.deliveredQuantity,
             defectiveQuantity: defectiveQuantity !== undefined ? defectiveQuantity : currentOrder.defectiveQuantity,
             erpPackageNumber: erpPackageNumber !== undefined ? erpPackageNumber : currentOrder.erpPackageNumber,
@@ -553,6 +555,7 @@ export async function updateStatus(payload: UpdateStatusPayload): Promise<Produc
     const updatedOrder = db.prepare('SELECT * FROM production_orders WHERE id = ?').get(orderId) as ProductionOrder;
     return updatedOrder;
 }
+
 
 export async function updateDetails(payload: UpdateOrderDetailsPayload): Promise<ProductionOrder> {
     const db = await connectDb(PLANNER_DB_FILE);

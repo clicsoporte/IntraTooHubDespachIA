@@ -301,22 +301,44 @@ export async function getRequests(options: {
             queryParams.push(filters.showOnlyMy);
         }
 
+        if (filters.dateRange?.from) {
+            whereClauses.push("requestDate >= ?");
+            queryParams.push(filters.dateRange.from.toISOString());
+        }
+        if (filters.dateRange?.to) {
+            const toDate = new Date(filters.dateRange.to);
+            toDate.setHours(23, 59, 59, 999);
+            whereClauses.push("requestDate <= ?");
+            queryParams.push(toDate.toISOString());
+        }
+
+        if (filters.classification && filters.classification !== 'all') {
+            const mainDb = await connectDb();
+            const productIds = mainDb.prepare(`SELECT id FROM products WHERE classification = ?`).all(filters.classification).map((p: any) => p.id);
+            if (productIds.length > 0) {
+                whereClauses.push(`itemId IN (${productIds.map(() => '?').join(',')})`);
+                queryParams.push(...productIds);
+            } else {
+                whereClauses.push('1 = 0');
+            }
+        }
+
         return { whereClause: whereClauses.join(' AND '), params: queryParams };
     };
 
     const activeQueryParts = await buildQueryParts(false);
     const archivedQueryParts = await buildQueryParts(true);
 
-    const totalActive = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${activeQueryParts.whereClause}`).get(...activeQueryParts.params) as { count: number }).count;
-    const totalArchived = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${archivedQueryParts.whereClause}`).get(...archivedQueryParts.params) as { count: number }).count;
+    const totalActive = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${activeQueryParts.whereClause || '1=1'}`).get(...activeQueryParts.params) as { count: number }).count;
+    const totalArchived = (db.prepare(`SELECT COUNT(*) as count FROM purchase_requests WHERE ${archivedQueryParts.whereClause || '1=1'}`).get(...archivedQueryParts.params) as { count: number }).count;
     
     const targetQueryParts = isArchived ? archivedQueryParts : activeQueryParts;
-    let finalQuery = `SELECT * FROM purchase_requests WHERE ${targetQueryParts.whereClause} ORDER BY requestDate DESC LIMIT ? OFFSET ?`;
+    let finalQuery = `SELECT * FROM purchase_requests WHERE ${targetQueryParts.whereClause || '1=1'} ORDER BY requestDate DESC LIMIT ? OFFSET ?`;
     let finalParams = [...targetQueryParts.params, pageSize, page * pageSize];
     
     const requestsRaw = db.prepare(finalQuery).all(...finalParams) as any[];
     const requests = requestsRaw.map(sanitizeRequest);
-
+    
     return { requests, totalActive, totalArchived };
 }
 
