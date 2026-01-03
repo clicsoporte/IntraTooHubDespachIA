@@ -31,12 +31,6 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import jsbarcode from 'jsbarcode';
 
-type SearchableItem = {
-  id: string;
-  type: 'product' | 'customer';
-  searchText: string;
-};
-
 type SearchResultItem = {
     product: Product;
     physicalLocations: {
@@ -176,61 +170,40 @@ export default function WarehouseSearchPage() {
         }
     };
 
-    const searchOptions = useMemo(() => {
-        if (debouncedSearchTerm.length < 2) return [];
-        const searchTerms = normalizeText(debouncedSearchTerm).split(' ').filter(Boolean);
-        if (searchTerms.length === 0) return [];
-        
-        const productResults = products
-            .filter(p => searchTerms.every(term => normalizeText(`${p.id} ${p.description}`).includes(term)))
-            .map(p => ({ value: `product-${p.id}`, label: `[ARTÍCULO] ${p.id} - ${p.description}` }));
-        const customerResults = customers
-            .filter(c => searchTerms.every(term => normalizeText(`${c.id} ${c.name}`).includes(term)))
-            .map(c => ({ value: `customer-${c.id}`, label: `[CLIENTE] ${c.id} - ${c.name}` }));
-            
-        return [...productResults, ...customerResults];
-    }, [debouncedSearchTerm, products, customers]);
-
     const filteredItems = useMemo((): SearchResultItem[] => {
-        let itemsToShow: Product[] = [];
+        // Start with all products
+        let results: Product[] = [...products];
     
-        // If a specific search term exists, filter products and customers
+        // 1. Apply global text search
         if (debouncedSearchTerm) {
             const searchLower = normalizeText(debouncedSearchTerm);
-            const customerItems = itemLocations
-                .filter(il => customers.some(c => c.id === il.clientId && normalizeText(c.name).includes(searchLower)))
-                .map(il => il.itemId);
-            
-            itemsToShow = products.filter(p =>
-                normalizeText(`${p.id} ${p.description}`).includes(searchLower) ||
-                customerItems.includes(p.id)
+            const customerItemIds = new Set(
+                itemLocations
+                    .filter(il => customers.some(c => c.id === il.clientId && normalizeText(c.name).includes(searchLower)))
+                    .map(il => il.itemId)
             );
-        } else {
-            // If no search term, show all products
-            itemsToShow = [...products];
+            results = results.filter(p =>
+                normalizeText(`${p.id} ${p.description}`).includes(searchLower) ||
+                customerItemIds.has(p.id)
+            );
         }
 
-        let results = itemsToShow.map(product => {
+        // 2. Apply classification filter
+        if (classificationFilter.length > 0) {
+            results = results.filter(p => classificationFilter.includes(p.classification));
+        }
+
+        // 3. Map to SearchResultItem and apply filters that depend on related data
+        let searchResultItems = results.map(product => {
             const productInventory = inventory.filter(inv => inv.itemId === product.id);
             const productItemLocations = itemLocations.filter(il => il.itemId === product.id);
-
             const physicalLocations = [
-                ...productInventory.map(inv => ({
-                    path: renderLocationPath(inv.locationId, locations),
-                    quantity: inv.quantity,
-                    location: locations.find(l => l.id === inv.locationId),
-                })),
-                ...productItemLocations.map(il => ({
-                    path: renderLocationPath(il.locationId, locations),
-                    clientId: il.clientId || undefined,
-                    location: locations.find(l => l.id === il.locationId),
-                }))
+                ...productInventory.map(inv => ({ path: renderLocationPath(inv.locationId, locations), quantity: inv.quantity, location: locations.find(l => l.id === inv.locationId) })),
+                ...productItemLocations.map(il => ({ path: renderLocationPath(il.locationId, locations), clientId: il.clientId || undefined, location: locations.find(l => l.id === il.locationId) }))
             ];
-            
             const uniqueLocations = Array.from(new Map(physicalLocations.map(item => [item.location?.id, item])).values());
+            const client = customers.find(c => productItemLocations.some(il => il.clientId === c.id));
             
-            const client = customers.find(c => itemLocations.some(il => il.clientId === c.id && il.itemId === product.id));
-
             return {
                 product: product,
                 physicalLocations: uniqueLocations,
@@ -239,22 +212,21 @@ export default function WarehouseSearchPage() {
             };
         });
 
-        // Apply secondary filters
-        if (classificationFilter.length > 0) {
-            results = results.filter(item => classificationFilter.includes(item.product.classification));
-        }
+        // 4. Apply ERP warehouse filter
         if (warehouseFilter.length > 0) {
-            results = results.filter(item => 
-                item.erpStock && Object.keys(item.erpStock.stockByWarehouse).some(whId => warehouseFilter.includes(whId))
+            searchResultItems = searchResultItems.filter(item => 
+                item.erpStock && Object.keys(item.erpStock.stockByWarehouse).some(whId => warehouseFilter.includes(whId) && item.erpStock!.stockByWarehouse[whId] > 0)
             );
         }
+
+        // 5. Apply physical location filter
         if (locationFilter.length > 0) {
-             results = results.filter(item => 
+            searchResultItems = searchResultItems.filter(item => 
                 item.physicalLocations.some(loc => loc.location && locationFilter.includes(String(loc.location.id)))
             );
         }
 
-        return results.sort((a, b) => a.product.id.localeCompare(b.product.id));
+        return searchResultItems.sort((a, b) => a.product.id.localeCompare(b.product.id));
 
     }, [debouncedSearchTerm, products, customers, inventory, itemLocations, stock, locations, classificationFilter, warehouseFilter, locationFilter]);
     
