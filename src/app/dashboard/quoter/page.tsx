@@ -81,6 +81,7 @@ import {
   AlertTriangle,
   Info,
   Columns3,
+  CreditCard,
 } from "lucide-react";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,6 +90,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import type { HaciendaExemptionApiResponse } from "@/modules/core/types";
 import { useAuthorization } from "@/modules/core/hooks/useAuthorization";
+import { Badge } from "@/components/ui/badge";
 
 const taxes = [
   { name: "IVA 13%", value: 0.13 },
@@ -103,7 +105,7 @@ function isApiSuccess(data: any): data is HaciendaExemptionApiResponse {
 }
 
 export default function QuoterPage() {
-  const { isAuthorized } = useAuthorization(['quotes:create']);
+  const { isAuthorized } = useAuthorization(['quotes:create', 'quotes:generate', 'quotes:drafts:read']);
 
   const {
     state,
@@ -268,7 +270,8 @@ export default function QuoterPage() {
                 {state.selectedCustomer && (
                   <Card className="bg-muted/50 text-sm">
                     <CardHeader className="p-3">
-                      <CardTitle className="text-base">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <CreditCard className="h-4 w-4"/>
                         Info de Cliente desde ERP
                       </CardTitle>
                     </CardHeader>
@@ -311,8 +314,8 @@ export default function QuoterPage() {
                         Estado:{" "}
                         <span className="font-medium text-foreground">
                           {state.selectedCustomer.active === "S"
-                            ? "Activo"
-                            : "Inactivo"}
+                            ? <Badge variant="default" className="bg-green-600">Activo</Badge>
+                            : <Badge variant="destructive">Inactivo</Badge>}
                         </span>
                       </div>
                     </CardContent>

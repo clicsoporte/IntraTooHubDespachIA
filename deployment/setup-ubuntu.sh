@@ -78,19 +78,26 @@ echo -e "${GREEN}Node.js y npm instalados correctamente.${NC}"
 node -v
 npm -v
 
-# --- Paso 3: Instalar las dependencias del proyecto ---
-echo -e "\n${YELLOW}Paso 3: Instalando las dependencias del proyecto con npm...${NC}"
+# --- Paso 3: Crear carpetas necesarias (si es una instalación nueva) ---
+echo -e "\n${YELLOW}Paso 3: Creando carpetas para bases de datos y archivos temporales...${NC}"
+mkdir -p dbs
+mkdir -p temp_files/exports
+echo -e "${GREEN}Carpetas 'dbs' y 'temp_files/exports' aseguradas.${NC}"
+
+
+# --- Paso 4: Instalar las dependencias del proyecto ---
+echo -e "\n${YELLOW}Paso 4: Instalando las dependencias del proyecto con npm...${NC}"
 # Usamos --omit=dev para instalar solo las dependencias de producción
 npm install --omit=dev
 echo -e "${GREEN}Dependencias de producción instaladas.${NC}"
 
-# --- Paso 4: Construir la aplicación para producción ---
-echo -e "\n${YELLOW}Paso 4: Construyendo la aplicación para producción (npm run build)...${NC}"
+# --- Paso 5: Construir la aplicación para producción ---
+echo -e "\n${YELLOW}Paso 5: Construyendo la aplicación para producción (npm run build)...${NC}"
 npm run build
 echo -e "${GREEN}Aplicación construida exitosamente.${NC}"
 
-# --- Paso 5: Instalar y configurar PM2 para mantener la aplicación en ejecución ---
-echo -e "\n${YELLOW}Paso 5: Instalando y configurando el gestor de procesos PM2...${NC}"
+# --- Paso 6: Instalar y configurar PM2 para mantener la aplicación en ejecución ---
+echo -e "\n${YELLOW}Paso 6: Instalando y configurando el gestor de procesos PM2...${NC}"
 # Se instala pm2 globalmente si no existe
 if ! command -v pm2 &> /dev/null
 then
@@ -126,4 +133,6 @@ echo -e "Puedes ver los logs en tiempo real con: ${YELLOW}pm2 logs $APP_NAME${NC
 echo -e "\nPor defecto, la aplicación debería estar accesible en el puerto definido en package.json (ej: 9003)."
 echo -e "Asegúrate de que el firewall (si está activo) permita el tráfico en ese puerto."
 echo -e "Ejemplo de comando para UFW: ${YELLOW}sudo ufw allow 9003${NC}"
-echo -e "\n${YELLOW}RECORDATORIO:${NC} Si es la primera vez que ejecutas la aplicación, asegúrate de crear el archivo ${YELLOW}.env.local${NC} con las credenciales de SQL Server o SMTP si las necesitas."
+echo -e "\n${YELLOW}RECORDATORIO:${NC} Si es la primera vez que ejecutas la aplicación, asegúrate de crear el archivo ${YELLOW}.env.local${NC} con las credenciales necesarias."
+echo -e "Puedes usar el archivo .env.example como plantilla."
+
