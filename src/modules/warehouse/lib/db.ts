@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
@@ -350,7 +349,22 @@ export async function updateLocation(location: WarehouseLocation): Promise<Wareh
 
 export async function deleteLocation(id: number, userName: string): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
+    
+    // Check for dependencies before deleting
+    const inventoryCount = db.prepare('SELECT COUNT(*) as count FROM inventory WHERE locationId = ?').get(id) as { count: number };
+    const itemLocationCount = db.prepare('SELECT COUNT(*) as count FROM item_locations WHERE locationId = ?').get(id) as { count: number };
+    const childrenCount = db.prepare('SELECT COUNT(*) as count FROM locations WHERE parentId = ?').get(id) as { count: number };
+
+    if (inventoryCount.count > 0 || itemLocationCount.count > 0) {
+        throw new Error("No se puede eliminar la ubicación porque contiene inventario o asignaciones de productos. Por favor, mueva o elimine el contenido primero.");
+    }
+    
+    if (childrenCount.count > 0) {
+        throw new Error("No se puede eliminar la ubicación porque tiene ubicaciones hijas. Por favor, elimine las ubicaciones anidadas primero.");
+    }
+
     db.prepare('DELETE FROM locations WHERE id = ?').run(id);
+    await logWarn(`Warehouse location with ID ${id} was deleted by user ${userName}.`);
 }
 
 

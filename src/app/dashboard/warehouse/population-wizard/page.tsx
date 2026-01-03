@@ -263,6 +263,25 @@ export default function PopulationWizardPage() {
     const resumeSession = async () => {
         if (!user || !existingSession) return;
         setIsLoading(true);
+
+        // --- VALIDATION LOGIC ---
+        const locationMap = new Map(allLocations.map(l => [l.id, l]));
+        const rackExists = locationMap.has(existingSession.rackId);
+        const allLevelsExist = existingSession.levelIds.every(id => locationMap.has(id));
+
+        if (!rackExists || !allLevelsExist) {
+            toast({
+                title: "Sesión Corrupta",
+                description: "El rack o los niveles guardados en esta sesión ya no existen. La sesión será abandonada.",
+                variant: "destructive",
+                duration: 7000
+            });
+            await abandonSession();
+            setIsLoading(false);
+            return;
+        }
+        // --- END VALIDATION ---
+
         try {
             await handleSelectRack(String(existingSession.rackId));
             setSelectedLevelIds(new Set(existingSession.levelIds));

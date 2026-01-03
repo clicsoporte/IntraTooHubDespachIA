@@ -118,6 +118,11 @@ export default function SimpleWarehouseSearchPage() {
         }
     }, [setTitle, loadData, isReady]);
 
+    // Effect to auto-focus input on page load/reload
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, [isLoading]);
+
     // This effect triggers the automatic search when the debounced term changes.
     useEffect(() => {
         if (debouncedSearchTerm) {
@@ -127,12 +132,12 @@ export default function SimpleWarehouseSearchPage() {
             
             // Clear input after search to prepare for next scan
             if (exactMatch) {
+                // Clear the search term for the next scan after a brief delay
                 setTimeout(() => {
                     setSearchTerm('');
                     inputRef.current?.focus();
-                }, 500); // A small delay to let the user see the result of their scan
+                }, 500);
             }
-
         } else {
             setSelectedItem(null);
         }

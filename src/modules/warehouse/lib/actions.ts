@@ -75,7 +75,6 @@ export async function updateLocation(location: WarehouseLocation): Promise<Wareh
     return updatedLocation;
 }
 export async function deleteLocation(id: number, userName: string): Promise<void> {
-    await logWarn(`Warehouse location with ID ${id} deleted by user ${userName}.`);
     return deleteLocationServer(id, userName);
 }
 export const getInventoryForItem = async (itemId: string): Promise<WarehouseInventoryItem[]> => getInventoryForItemServer(itemId);
