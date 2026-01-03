@@ -281,6 +281,13 @@ export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params
     const transaction = db.transaction(() => {
         if (type === 'rack') {
             const { name, prefix, levels, positions, depth, parentId } = params;
+
+            // Check for existing code before trying to insert
+            const existing = db.prepare('SELECT id FROM locations WHERE code = ?').get(prefix);
+            if (existing) {
+                throw new Error(`El código de prefijo '${prefix}' ya está en uso. Por favor, elige otro.`);
+            }
+
             const rackType = settings.locationLevels.find(l => l.name.toLowerCase().includes('rack'))?.type || 'rack';
             const info = db.prepare('INSERT INTO locations (name, code, type, parentId) VALUES (?, ?, ?, ?)').run(name, prefix, rackType, parentId || null);
             const rackId = info.lastInsertRowid as number;
@@ -310,6 +317,12 @@ export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params
             }
         } else if (type === 'clone') {
             const { sourceRackId, newName, newPrefix } = params;
+
+            const existing = db.prepare('SELECT id FROM locations WHERE code = ?').get(newPrefix);
+            if (existing) {
+                throw new Error(`El nuevo código de prefijo '${newPrefix}' ya está en uso.`);
+            }
+
             const allLocations = db.prepare('SELECT * FROM locations').all() as WarehouseLocation[];
             const sourceRack = allLocations.find(l => l.id === Number(sourceRackId));
             if (!sourceRack) throw new Error('Rack de origen no encontrado.');
