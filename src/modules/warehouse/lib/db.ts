@@ -268,6 +268,13 @@ export async function getSelectableLocations(): Promise<WarehouseLocation[]> {
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { name, code, type, parentId } = location;
+
+    // Validate for duplicate code before attempting to insert.
+    const existing = db.prepare('SELECT id FROM locations WHERE code = ?').get(code);
+    if (existing) {
+        throw new Error(`El código de ubicación '${code}' ya está en uso. Por favor, elige otro.`);
+    }
+
     const info = db.prepare('INSERT INTO locations (name, code, type, parentId) VALUES (?, ?, ?, ?)').run(name, code, type, parentId ?? null);
     const newLocation = db.prepare('SELECT * FROM locations WHERE id = ?').get(info.lastInsertRowid) as WarehouseLocation;
     return newLocation;
