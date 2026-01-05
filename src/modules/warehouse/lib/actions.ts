@@ -30,9 +30,12 @@ import {
     releaseLock as releaseLockServer,
     forceReleaseLock as forceReleaseLockServer,
     getChildLocations as getChildLocationsServer,
+    searchDocuments as searchDocumentsServer,
+    getInvoiceData as getInvoiceDataServer,
+    logDispatch as logDispatchServer,
 } from './db';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { logInfo, logWarn } from '@/modules/core/lib/logger';
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
@@ -110,3 +113,8 @@ export const lockEntity = async (payload: { entityIds: number[]; userName: strin
 export const releaseLock = async (entityIds: number[], userId: number): Promise<void> => releaseLockServer(entityIds, userId);
 export const forceReleaseLock = async (locationId: number): Promise<void> => forceReleaseLockServer(locationId);
 export const getChildLocations = async (parentIds: number[]): Promise<WarehouseLocation[]> => getChildLocationsServer(parentIds);
+
+// --- Dispatch Check Actions ---
+export const searchDocuments = async (searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> => searchDocumentsServer(searchTerm);
+export const getInvoiceData = async (documentId: string): Promise<{ header: ErpInvoiceHeader; lines: ErpInvoiceLine[] } | null> => getInvoiceDataServer(documentId);
+export const logDispatch = async (dispatchData: any): Promise<void> => logDispatchServer(dispatchData);

@@ -12,4 +12,5 @@ export const warehouseSchema: ExpectedSchema = {
     'inventory_units': ['id', 'unitCode', 'productId', 'humanReadableId', 'documentId', 'locationId', 'quantity', 'notes', 'createdAt', 'createdBy'],
     'movements': ['id', 'itemId', 'quantity', 'fromLocationId', 'toLocationId', 'timestamp', 'userId', 'notes'],
     'warehouse_config': ['key', 'value'],
+    'dispatch_logs': ['id', 'documentId', 'documentType', 'verifiedAt', 'verifiedByUserId', 'verifiedByUserName', 'items', 'notes'],
 };

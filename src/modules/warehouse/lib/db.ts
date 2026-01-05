@@ -3,8 +3,8 @@
  */
 "use server";
 
-import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
-import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User } from '@/modules/core/types';
+import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain, getAllErpOrderHeaders } from '@/modules/core/lib/db';
+import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
 
@@ -77,6 +77,17 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
         CREATE TABLE IF NOT EXISTS warehouse_config (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS dispatch_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            documentId TEXT NOT NULL,
+            documentType TEXT NOT NULL,
+            verifiedAt TEXT NOT NULL,
+            verifiedByUserId INTEGER NOT NULL,
+            verifiedByUserName TEXT NOT NULL,
+            items TEXT NOT NULL, -- JSON array of verified items
+            notes TEXT
         );
     `;
     db.exec(schema);
@@ -168,6 +179,23 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
             if (!unitsTableInfo.some(c => c.name === 'documentId')) db.exec('ALTER TABLE inventory_units ADD COLUMN documentId TEXT');
             if (!unitsTableInfo.some(c => c.name === 'quantity')) db.exec('ALTER TABLE inventory_units ADD COLUMN quantity REAL DEFAULT 1');
+        }
+
+        const dispatchLogTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='dispatch_logs'`).get();
+        if (!dispatchLogTable) {
+            console.log("MIGRATION (warehouse.db): Creating 'dispatch_logs' table.");
+            db.exec(`
+                CREATE TABLE dispatch_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    documentId TEXT NOT NULL,
+                    documentType TEXT NOT NULL,
+                    verifiedAt TEXT NOT NULL,
+                    verifiedByUserId INTEGER NOT NULL,
+                    verifiedByUserName TEXT NOT NULL,
+                    items TEXT NOT NULL, -- JSON array of verified items
+                    notes TEXT
+                );
+            `);
         }
 
 
@@ -653,4 +681,44 @@ export async function getChildLocations(parentIds: number[]): Promise<WarehouseL
     // De-duplicate in case of complex structures
     const uniqueChildren = Array.from(new Map(allChildren.map(item => [item.id, item])).values());
     return JSON.parse(JSON.stringify(uniqueChildren));
+}
+
+// --- Dispatch Check Actions ---
+export async function searchDocuments(searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> {
+    const db = await connectDb();
+    const likeTerm = `%${searchTerm}%`;
+    const invoices = db.prepare(`
+        SELECT FACTURA as id, 'Factura' as type, CLIENTE as clientId, NOMBRE_CLIENTE as clientName 
+        FROM erp_invoice_headers 
+        WHERE id LIKE ? OR NOMBRE_CLIENTE LIKE ? OR CLIENTE LIKE ?
+    `).all(likeTerm, likeTerm, likeTerm) as any[];
+
+    const orders = db.prepare(`
+        SELECT PEDIDO as id, 'Pedido' as type, CLIENTE as clientId, '' as clientName 
+        FROM erp_order_headers 
+        WHERE id LIKE ? OR CLIENTE LIKE ?
+    `).all(likeTerm, likeTerm) as any[];
+
+    return JSON.parse(JSON.stringify([...invoices, ...orders].slice(0, 10)));
+}
+
+
+export async function getInvoiceData(documentId: string): Promise<{ header: ErpInvoiceHeader, lines: ErpInvoiceLine[] } | null> {
+    const db = await connectDb();
+    const header = db.prepare(`SELECT * FROM erp_invoice_headers WHERE FACTURA = ?`).get(documentId) as ErpInvoiceHeader | undefined;
+    if (!header) return null;
+    const lines = db.prepare(`SELECT * FROM erp_invoice_lines WHERE FACTURA = ? ORDER BY LINEA ASC`).all(documentId) as ErpInvoiceLine[];
+    return JSON.parse(JSON.stringify({ header, lines }));
+}
+
+
+export async function logDispatch(dispatchData: any): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    db.prepare(`
+        INSERT INTO dispatch_logs (documentId, documentType, verifiedAt, verifiedByUserId, verifiedByUserName, items, notes)
+        VALUES (@documentId, @documentType, datetime('now'), @userId, @userName, @items, @notes)
+    `).run({
+        ...dispatchData,
+        items: JSON.stringify(dispatchData.items),
+    });
 }
