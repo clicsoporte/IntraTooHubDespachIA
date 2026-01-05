@@ -1,10 +1,11 @@
+
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
 "use server";
 
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
-import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
+import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
 
@@ -690,21 +691,28 @@ export async function searchDocuments(searchTerm: string): Promise<{ id: string,
     const db = await connectDb();
     const likeTerm = `%${searchTerm}%`;
 
+    // Query for invoices and remissions
     const invoices = db.prepare(`
-        SELECT FACTURA as id, 'Factura' as type, CLIENTE as clientId, NOMBRE_CLIENTE as clientName 
+        SELECT FACTURA as id, TIPO_DOCUMENTO as typeCode, CLIENTE as clientId, NOMBRE_CLIENTE as clientName 
         FROM erp_invoice_headers 
-        WHERE FACTURA LIKE ? OR NOMBRE_CLIENTE LIKE ? OR CLIENTE LIKE ?
-    `).all(likeTerm, likeTerm, likeTerm) as any[];
+        WHERE (FACTURA LIKE ? OR NOMBRE_CLIENTE LIKE ? OR CLIENTE LIKE ? OR PEDIDO LIKE ?)
+          AND TIPO_DOCUMENTO IN ('F', 'R')
+    `).all(likeTerm, likeTerm, likeTerm, likeTerm) as any[];
 
-    // This query now joins with customers to get the name for orders.
+    // Query for sales orders
     const orders = db.prepare(`
-        SELECT h.PEDIDO as id, 'Pedido' as type, h.CLIENTE as clientId, c.name as clientName
+        SELECT h.PEDIDO as id, 'P' as typeCode, h.CLIENTE as clientId, c.name as clientName
         FROM erp_order_headers h
         LEFT JOIN customers c ON h.CLIENTE = c.id
         WHERE h.PEDIDO LIKE ? OR h.CLIENTE LIKE ? OR c.name LIKE ?
     `).all(likeTerm, likeTerm, likeTerm) as any[];
 
-    return JSON.parse(JSON.stringify([...invoices, ...orders].slice(0, 10)));
+    const combinedResults = [...invoices, ...orders].map(r => ({
+        ...r,
+        type: r.typeCode === 'F' ? 'Factura' : (r.typeCode === 'R' ? 'Remisión' : 'Pedido')
+    })).slice(0, 10);
+
+    return JSON.parse(JSON.stringify(combinedResults));
 }
 
 
@@ -726,4 +734,10 @@ export async function logDispatch(dispatchData: any): Promise<void> {
         ...dispatchData,
         items: JSON.stringify(dispatchData.items),
     });
+}
+
+export async function getDispatchLogs(): Promise<DispatchLog[]> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const logs = db.prepare('SELECT * FROM dispatch_logs ORDER BY verifiedAt DESC').all() as DispatchLog[];
+    return JSON.parse(JSON.stringify(logs));
 }

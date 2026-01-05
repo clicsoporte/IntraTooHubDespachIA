@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Client-side functions for interacting with the warehouse module's server-side DB functions.
  * This abstraction layer ensures components only call client-safe functions.
@@ -33,9 +34,10 @@ import {
     searchDocuments as searchDocumentsServer,
     getInvoiceData as getInvoiceDataServer,
     logDispatch as logDispatchServer,
+    getDispatchLogs as getDispatchLogsServer,
 } from './db';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
 import { logInfo, logWarn } from '@/modules/core/lib/logger';
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
@@ -118,3 +120,4 @@ export const getChildLocations = async (parentIds: number[]): Promise<WarehouseL
 export const searchDocuments = async (searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> => searchDocumentsServer(searchTerm);
 export const getInvoiceData = async (documentId: string): Promise<{ header: ErpInvoiceHeader; lines: ErpInvoiceLine[] } | null> => getInvoiceDataServer(documentId);
 export const logDispatch = async (dispatchData: any): Promise<void> => logDispatchServer(dispatchData);
+export const getDispatchLogs = async (): Promise<DispatchLog[]> => getDispatchLogsServer();

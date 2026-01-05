@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file contains the initial or default data for the application.
  * This data is used to populate the database on its first run.
@@ -403,6 +404,14 @@ export const analyticsTools: Tool[] = [
         href: "/dashboard/analytics/receiving-report",
         icon: ClipboardList,
         bgColor: "bg-teal-600",
+    },
+    {
+        id: "analytics:dispatch-report:read",
+        name: "Reporte de Despachos",
+        description: "Auditar las verificaciones de despacho realizadas.",
+        href: "/dashboard/analytics/dispatch-report",
+        icon: ClipboardList,
+        bgColor: 'bg-sky-700',
     },
     {
         id: "analytics:user-permissions:read",

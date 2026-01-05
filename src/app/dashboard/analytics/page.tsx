@@ -48,6 +48,9 @@ export default function AnalyticsDashboardPage() {
              if (tool.id === 'receiving-report') {
                 return hasPermission('analytics:receiving-report:read');
             }
+             if (tool.id === 'dispatch-report') {
+                return hasPermission('analytics:dispatch-report:read');
+            }
             // Add other tool checks here as they are created
             return true;
         });
