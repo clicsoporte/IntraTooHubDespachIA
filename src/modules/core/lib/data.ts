@@ -159,6 +159,14 @@ export const warehouseTools: Tool[] = [
         bgColor: 'bg-blue-600',
     },
     {
+        id: "warehouse-dispatch-check",
+        name: "Chequeo de Despacho",
+        description: "Verificar artículos de una factura antes de cargar al camión.",
+        href: "/dashboard/warehouse/dispatch-check",
+        icon: ClipboardCheck,
+        bgColor: 'bg-sky-700',
+    },
+    {
         id: 'receiving-wizard',
         name: 'Asistente de Recepción',
         description: 'Registrar producto terminado o compras y generar etiquetas.',

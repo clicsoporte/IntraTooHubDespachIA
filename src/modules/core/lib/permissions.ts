@@ -18,6 +18,7 @@ export const allAdminPermissions = [
     "warehouse:item-assignment:create", "warehouse:item-assignment:delete",
     "warehouse:locations:create", "warehouse:locations:update", "warehouse:locations:delete",
     "warehouse:units:create", "warehouse:units:delete", "warehouse:locks:manage",
+    "warehouse:dispatch-check:use", "warehouse:dispatch-check:manual-override", "warehouse:dispatch-check:switch-mode", "warehouse:dispatch-check:send-email", "warehouse:dispatch-check:send-email-external",
     "hacienda:query",
     "analytics:read", "analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read",
     "users:create", "users:read", "users:update", "users:delete",
@@ -45,6 +46,7 @@ export const permissionGroups = {
         "warehouse:item-assignment:create", "warehouse:item-assignment:delete",
         "warehouse:locations:create", "warehouse:locations:update", "warehouse:locations:delete",
         "warehouse:units:create", "warehouse:units:delete", "warehouse:locks:manage",
+        "warehouse:dispatch-check:use", "warehouse:dispatch-check:manual-override", "warehouse:dispatch-check:switch-mode", "warehouse:dispatch-check:send-email", "warehouse:dispatch-check:send-email-external",
     ],
     "Consultas Hacienda": ["hacienda:query"],
     "Analíticas y Reportes": ["analytics:read", "analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read"],
@@ -75,6 +77,7 @@ export const permissionTranslations: { [key: string]: string } = {
     "warehouse:item-assignment:create": "Almacén: Asignar Ubic./Prod.", "warehouse:item-assignment:delete": "Almacén: Eliminar Asignación",
     "warehouse:locations:create": "Almacén: Crear Ubicaciones", "warehouse:locations:update": "Almacén: Editar Ubicaciones", "warehouse:locations:delete": "Almacén: Eliminar Ubicaciones",
     "warehouse:units:create": "Almacén: Crear Lotes/QR", "warehouse:units:delete": "Almacén: Eliminar Lotes/QR", "warehouse:locks:manage": "Almacén: Gestionar Bloqueos",
+    "warehouse:dispatch-check:use": "Despacho: Usar Módulo", "warehouse:dispatch-check:manual-override": "Despacho: Anular Manualmente", "warehouse:dispatch-check:switch-mode": "Despacho: Cambiar Modo", "warehouse:dispatch-check:send-email": "Despacho: Enviar Email", "warehouse:dispatch-check:send-email-external": "Despacho: Enviar Email (Externo)",
     "hacienda:query": "Hacienda: Realizar Consultas",
     "analytics:read": "Analíticas: Acceso", "analytics:purchase-suggestions:read": "Analíticas: Sugerencias Compra", "analytics:purchase-report:read": "Analíticas: Reporte Compras", "analytics:production-report:read": "Analíticas: Reporte Producción", "analytics:transits-report:read": "Analíticas: Reporte Tránsitos", "analytics:user-permissions:read": "Analíticas: Reporte Permisos", "analytics:physical-inventory-report:read": "Analíticas: Reporte Inv. Físico", "analytics:receiving-report:read": "Analíticas: Reporte Recepciones",
     "users:create": "Usuarios: Crear", "users:read": "Usuarios: Leer", "users:update": "Usuarios: Actualizar", "users:delete": "Usuarios: Eliminar",
@@ -118,7 +121,7 @@ export const permissionTree: Record<string, string[]> = {
     // Top-level Access
     "admin:access": ["users:read", "roles:read", "admin:settings:general", "admin:settings:api", "admin:settings:planner", "admin:settings:requests", "admin:settings:warehouse", "admin:settings:stock", "admin:settings:cost-assistant", "admin:suggestions:read", "admin:import:run", "admin:logs:read", "admin:maintenance:backup"],
     "analytics:read": ["analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read"],
-    "warehouse:access": ["warehouse:search:full", "warehouse:search:simple", "warehouse:receiving-wizard:use", "warehouse:population-wizard:use", "warehouse:inventory-count:create", "warehouse:item-assignment:create", "warehouse:locations:create", "warehouse:units:create", "warehouse:locks:manage"],
+    "warehouse:access": ["warehouse:search:full", "warehouse:search:simple", "warehouse:receiving-wizard:use", "warehouse:population-wizard:use", "warehouse:inventory-count:create", "warehouse:item-assignment:create", "warehouse:locations:create", "warehouse:units:create", "warehouse:locks:manage", "warehouse:dispatch-check:use"],
     "requests:read": ["requests:read:all", "requests:create"],
     "planner:read": ["planner:read:all", "planner:create"],
 
@@ -154,4 +157,6 @@ export const permissionTree: Record<string, string[]> = {
     "warehouse:locations:create": ["warehouse:locations:update", "warehouse:locations:delete"],
     "warehouse:item-assignment:create": ["warehouse:item-assignment:delete"],
     "warehouse:units:create": ["warehouse:units:delete"],
+    "warehouse:dispatch-check:use": ["warehouse:dispatch-check:manual-override", "warehouse:dispatch-check:switch-mode", "warehouse:dispatch-check:send-email"],
+    "warehouse:dispatch-check:send-email": ["warehouse:dispatch-check:send-email-external"],
 };
