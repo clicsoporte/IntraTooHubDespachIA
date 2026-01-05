@@ -18,9 +18,17 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { HAlignType, FontStyle } from 'jspdf-autotable';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, CheckCircle, XCircle, Info, ClipboardCheck, Circle, FileDown, Mail, ArrowRight, ArrowLeft, Printer, AlertTriangle } from 'lucide-react';
+import { Loader2, Search, CheckCircle, XCircle, Info, ClipboardCheck, Circle, FileDown, Mail, ArrowRight, Hourglass, ArrowLeft, Printer, AlertTriangle } from 'lucide-react';
 import { SearchInput } from '@/components/ui/search-input';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type WizardStep = 'initial' | 'verifying' | 'finished';
 
@@ -228,7 +236,7 @@ export function useDispatchCheck() {
             );
             updateState({ verificationItems: newItems });
         } else {
-            actions.handleIndicatorClick(targetItem.lineId);
+            handleIndicatorClick(targetItem.lineId);
         }
     }, [state.isStrictMode, state.verificationItems, updateState]);
     
@@ -236,12 +244,11 @@ export function useDispatchCheck() {
         if (e.key !== 'Enter' || !state.scannedCode.trim()) return;
         e.preventDefault();
 
-        const scanned = state.scannedCode.trim().toLowerCase();
+        const scanned = state.scannedCode.trim();
         
-        // Find by barcode first, then by item code, case-insensitively
         const targetItem = state.verificationItems.find(item => 
-            (item.barcode?.toLowerCase() === scanned) || 
-            (item.itemCode.toLowerCase() === scanned)
+            (item.barcode?.toLowerCase() === scanned.toLowerCase()) || 
+            (item.itemCode.toLowerCase() === scanned.toLowerCase())
         );
 
         updateState({ scannedCode: '', lastScannedProductCode: targetItem?.itemCode || null });
@@ -413,6 +420,7 @@ export function useDispatchCheck() {
                         documentId: state.currentDocument.id,
                         document: state.currentDocument,
                         items: state.verificationItems,
+                        verifiedBy: user.name,
                     });
                 }
             } else if (action === 'pdf') {

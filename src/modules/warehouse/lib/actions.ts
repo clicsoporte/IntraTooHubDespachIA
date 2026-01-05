@@ -34,11 +34,11 @@ import {
     getInvoiceData as getInvoiceDataServer,
     logDispatch as logDispatchServer,
     getDispatchLogs as getDispatchLogsServer,
-    sendDispatchEmail as sendDispatchEmailServer
 } from './db';
+import { sendEmail } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
 import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
-import { logInfo, logWarn } from '@/modules/core/lib/logger';
+import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
 export async function saveWarehouseSettings(settings: WarehouseSettings): Promise<void> {
@@ -121,13 +121,86 @@ export const searchDocuments = async (searchTerm: string): Promise<{ id: string,
 export const getInvoiceData = async (documentId: string): Promise<{ header: ErpInvoiceHeader; lines: ErpInvoiceLine[] } | null> => getInvoiceDataServer(documentId);
 export const logDispatch = async (dispatchData: any): Promise<void> => logDispatchServer(dispatchData);
 export const getDispatchLogs = async (): Promise<DispatchLog[]> => getDispatchLogsServer();
-export const sendDispatchEmail = async (payload: { 
+
+export async function sendDispatchEmail(payload: { 
     to: string[]; 
     cc: string; 
     body: string; 
-    pdfBuffer: string; 
+    pdfBuffer: string; // Base64 encoded string
     fileName: string; 
     documentId: string;
-    document: any;
-    items: { itemCode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[]
-}): Promise<void> => sendDispatchEmailServer(payload);
+    document: any; // The full currentDocument object
+    items: { itemCode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[],
+    verifiedBy: string,
+}): Promise<void> {
+    const { to, cc, body, pdfBuffer, fileName, documentId, items, document, verifiedBy } = payload;
+    
+    if (!to || to.length === 0) {
+        logWarn('sendDispatchEmail called without recipients.', { documentId });
+        return;
+    }
+
+    const tableRows = items.map(item => {
+        let statusColor = '#000000'; // Black
+        if (item.verifiedQuantity > item.requiredQuantity) statusColor = '#dc2626'; // Red
+        else if (item.verifiedQuantity === item.requiredQuantity) statusColor = '#16a34a'; // Green
+        else if (item.verifiedQuantity > 0) statusColor = '#f59e0b'; // Amber
+        return `
+            <tr style="border-bottom: 1px solid #ddd;">
+                <td style="padding: 8px;">${item.itemCode}</td>
+                <td style="padding: 8px;">${item.description}</td>
+                <td style="padding: 8px; text-align: right;">${item.requiredQuantity}</td>
+                <td style="padding: 8px; text-align: right; color: ${statusColor}; font-weight: bold;">${item.verifiedQuantity}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const htmlBody = `
+        <p>Se adjunta el comprobante de despacho para el documento ${documentId}.</p>
+        <hr>
+        <h3>Datos del Despacho:</h3>
+        <p>
+            <strong>Cliente:</strong> ${document.clientName}<br>
+            <strong>Cédula:</strong> ${document.clientId}<br>
+            <strong>Dirección de Envío:</strong> ${document.shippingAddress}<br>
+            <strong>Verificado por:</strong> ${verifiedBy}
+        </p>
+        <hr>
+        ${body ? `<p><strong>Mensaje Adicional:</strong></p><p>${body.replace(/\n/g, '<br>')}</p><hr>` : ''}
+        <h3>Resumen del Despacho:</h3>
+        <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 14px;">
+            <thead>
+                <tr style="background-color: #f2f2f2; text-align: left;">
+                    <th style="padding: 8px;">Código</th>
+                    <th style="padding: 8px;">Descripción</th>
+                    <th style="padding: 8px; text-align: right;">Requerido</th>
+                    <th style="padding: 8px; text-align: right;">Verificado</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
+    `;
+
+    try {
+        await sendEmail({
+            to: to,
+            cc: cc,
+            subject: `Comprobante de Despacho - ${documentId}`,
+            html: htmlBody,
+            attachments: [
+                {
+                    filename: fileName,
+                    content: pdfBuffer,
+                    encoding: 'base64',
+                    contentType: 'application/pdf',
+                },
+            ],
+        });
+        logInfo(`Dispatch email sent for document ${documentId}`, { to, cc });
+    } catch (error: any) {
+        logError("Failed to send dispatch email", { error: error.message, documentId });
+        throw new Error("No se pudo enviar el correo de despacho. Verifica la configuración de SMTP.");
+    }
+}
