@@ -35,6 +35,7 @@ import {
     getInvoiceData as getInvoiceDataServer,
     logDispatch as logDispatchServer,
     getDispatchLogs as getDispatchLogsServer,
+    sendDispatchEmail as sendDispatchEmailServer
 } from './db';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
 import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
@@ -121,3 +122,4 @@ export const searchDocuments = async (searchTerm: string): Promise<{ id: string,
 export const getInvoiceData = async (documentId: string): Promise<{ header: ErpInvoiceHeader; lines: ErpInvoiceLine[] } | null> => getInvoiceDataServer(documentId);
 export const logDispatch = async (dispatchData: any): Promise<void> => logDispatchServer(dispatchData);
 export const getDispatchLogs = async (): Promise<DispatchLog[]> => getDispatchLogsServer();
+export const sendDispatchEmail = async (payload: { to: string[]; cc: string; body: string; pdfBuffer: string; fileName: string; documentId: string; }): Promise<void> => sendDispatchEmailServer(payload);

@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Hook to manage the state and logic for the Dispatch Check module.
  */
@@ -15,7 +16,8 @@ import { useDebounce } from 'use-debounce';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format, parseISO } from 'date-fns';
-import type { HAlignType } from 'jspdf-autotable';
+import { es } from 'date-fns/locale';
+import type { HAlignType, FontStyle } from 'jspdf-autotable';
 
 type WizardStep = 'initial' | 'verifying' | 'finished';
 
@@ -50,7 +52,6 @@ type ConfirmationState = {
 } | null;
 
 type ErrorState = {
-    type: 'info' | 'error';
     title: string;
     message: string;
 } | null;
@@ -90,7 +91,7 @@ export function useDispatchCheck() {
     const { isAuthorized, hasPermission } = useAuthorization(['warehouse:dispatch-check:use']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user, products, users: allUsers, companyData } = useAuth();
+    const { user, products, users, companyData } = useAuth();
     
     const scannerInputRef = useRef<HTMLInputElement>(null);
     const quantityInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
@@ -221,12 +222,12 @@ export function useDispatchCheck() {
         updateState({ scannedCode: '', lastScannedProductCode: targetItem?.itemCode || null });
 
         if (!targetItem) {
-            updateState({ errorState: { type: 'error', title: "Artículo Incorrecto", message: `El código "${scanned}" no corresponde a ningún artículo de este despacho.` } });
+            updateState({ errorState: { title: "Artículo Incorrecto", message: `El código "${scanned}" no corresponde a ningún artículo de este despacho.` } });
             return;
         }
 
         if (targetItem.verifiedQuantity >= targetItem.requiredQuantity) {
-            updateState({ errorState: { type: 'info', title: "Cantidad Completa", message: `Ya se verificaron todas las unidades de "${targetItem.description}".` } });
+            updateState({ errorState: { title: "Cantidad Completa", message: `Ya se verificaron todas las unidades de "${targetItem.description}".` } });
             return;
         }
         
@@ -270,6 +271,7 @@ export function useDispatchCheck() {
     };
 
     const handleIndicatorClick = (lineId: number) => {
+        if (state.isStrictMode) return; // Not allowed in strict mode
         const targetItem = state.verificationItems.find(item => item.lineId === lineId);
         if (targetItem) {
              updateState({
@@ -302,7 +304,6 @@ export function useDispatchCheck() {
         if (targetItem && newQty > targetItem.requiredQuantity) {
             updateState({ 
                 errorState: {
-                    type: 'info',
                     title: 'Cantidad Excedida',
                     message: `Has verificado ${newQty} unidades, pero solo se requieren ${targetItem.requiredQuantity}.`
                 }
@@ -315,6 +316,7 @@ export function useDispatchCheck() {
             ),
         });
     };
+
 
     const handleModeChange = async (isStrictMode: boolean) => {
         updateState({ isStrictMode });
@@ -357,7 +359,7 @@ export function useDispatchCheck() {
                 item.itemCode,
                 item.description,
                 { content: item.requiredQuantity.toString(), styles: { halign: 'right' as HAlignType } },
-                { content: item.verifiedQuantity.toString(), styles: { halign: 'right' as HAlignType, textColor, fontStyle: 'bold' as const } }
+                { content: item.verifiedQuantity.toString(), styles: { halign: 'right' as HAlignType, textColor, fontStyle: 'bold' as FontStyle } }
             ];
         });
 
@@ -377,29 +379,6 @@ export function useDispatchCheck() {
         return { buffer: pdfBuffer, fileName };
     };
 
-    const handleFinalizeAndAction = async (action: 'finish' | 'pdf' | 'email') => {
-        if (!user || !state.currentDocument) return;
-
-        const hasDiscrepancy = state.verificationItems.some(item => item.requiredQuantity !== item.verifiedQuantity);
-        if (hasDiscrepancy) {
-            updateState({
-                confirmationState: {
-                    title: 'Finalizar con Discrepancias',
-                    message: 'Existen diferencias entre las cantidades requeridas y las verificadas. ¿Estás seguro de que deseas finalizar y registrar este despacho?',
-                    confirmText: 'Sí, Completar',
-                    cancelText: 'Cancelar',
-                    onConfirm: () => {
-                        updateState({ confirmationState: null });
-                        proceedWithFinalize(action);
-                    },
-                    onCancel: () => updateState({ confirmationState: null })
-                }
-            });
-        } else {
-            proceedWithFinalize(action);
-        }
-    };
-    
     const proceedWithFinalize = async (action: 'finish' | 'pdf' | 'email') => {
         if (!user || !state.currentDocument) return;
         updateState({ isSubmitting: true });
@@ -449,18 +428,41 @@ export function useDispatchCheck() {
             updateState({ isSubmitting: false });
         }
     };
+    
+    const handleFinalizeAndAction = async (action: 'finish' | 'pdf' | 'email') => {
+        if (!user || !state.currentDocument) return;
+
+        const hasDiscrepancy = state.verificationItems.some(item => item.requiredQuantity !== item.verifiedQuantity);
+        if (hasDiscrepancy) {
+            updateState({
+                confirmationState: {
+                    title: 'Finalizar con Discrepancias',
+                    message: 'Existen diferencias entre las cantidades requeridas y las verificadas. ¿Estás seguro de que deseas finalizar y registrar este despacho?',
+                    confirmText: 'Sí, Completar',
+                    cancelText: 'Cancelar',
+                    onConfirm: () => {
+                        updateState({ confirmationState: null });
+                        proceedWithFinalize(action);
+                    },
+                    onCancel: () => updateState({ confirmationState: null })
+                }
+            });
+        } else {
+            proceedWithFinalize(action);
+        }
+    };
 
 
     const [debouncedUserSearch] = useDebounce(state.userSearchTerm, 300);
     const userOptions = useMemo(() => {
         if (debouncedUserSearch.length < 2) return [];
-        return allUsers
+        return users
             .filter(u => u.name.toLowerCase().includes(debouncedUserSearch.toLowerCase()) || u.email.toLowerCase().includes(debouncedUserSearch.toLowerCase()))
             .map(u => ({ value: String(u.id), label: `${u.name} (${u.email})` }));
-    }, [debouncedUserSearch, allUsers]);
+    }, [debouncedUserSearch, users]);
 
     const handleUserSelect = (userId: string) => {
-        const userToAdd = allUsers.find(u => String(u.id) === userId);
+        const userToAdd = users.find(u => String(u.id) === userId);
         if (userToAdd && !state.selectedUsers.some(u => u.id === userToAdd.id)) {
             updateState({
                 selectedUsers: [...state.selectedUsers, userToAdd],

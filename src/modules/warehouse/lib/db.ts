@@ -5,6 +5,7 @@
 "use server";
 
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
+import { sendEmail } from '@/modules/core/lib/email-service';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
@@ -740,4 +741,31 @@ export async function getDispatchLogs(): Promise<DispatchLog[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const logs = db.prepare('SELECT * FROM dispatch_logs ORDER BY verifiedAt DESC').all() as DispatchLog[];
     return JSON.parse(JSON.stringify(logs));
+}
+
+export async function sendDispatchEmail(payload: { to: string[]; cc: string; body: string; pdfBuffer: string; fileName: string; documentId: string; }): Promise<void> {
+    const { to, cc, body, pdfBuffer, fileName, documentId } = payload;
+    if (!to || to.length === 0) {
+        logWarn('sendDispatchEmail called without recipients.', { documentId });
+        return;
+    }
+    try {
+        await sendEmail({
+            to: to,
+            cc: cc,
+            subject: `Comprobante de Despacho - ${documentId}`,
+            html: `<p>Se adjunta el comprobante de despacho para el documento ${documentId}.</p><p><strong>Mensaje Adicional:</strong></p><p>${body || 'No hay mensaje adicional.'}</p>`,
+            attachments: [
+                {
+                    filename: fileName,
+                    content: Buffer.from(pdfBuffer, 'base64'),
+                    contentType: 'application/pdf',
+                },
+            ],
+        });
+        logInfo(`Dispatch email sent for document ${documentId}`, { to, cc });
+    } catch (error: any) {
+        logError("Failed to send dispatch email", { error: error.message, documentId });
+        throw new Error("No se pudo enviar el correo de despacho. Verifica la configuración de SMTP.");
+    }
 }
