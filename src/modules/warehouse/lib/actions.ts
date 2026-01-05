@@ -17,7 +17,7 @@ import {
     getItemLocations as getItemLocationsServer,
     getAllItemLocations as getAllItemLocationsServer,
     assignItemToLocation as assignItemToLocationServer,
-    unassignItemToLocation as unassignItemFromLocationServer,
+    unassignItemFromLocation as unassignItemFromLocationServer,
     getWarehouseData as getWarehouseDataServer,
     getMovements as getMovementsServer,
     addInventoryUnit as addInventoryUnitServer,
@@ -74,7 +74,7 @@ export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Prom
 
 export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params: any; }): Promise<void> {
     await addBulkLocationsServer(payload);
-    await logInfo(`Bulk locations created via wizard`, { payload });
+    await logInfo('Bulk locations created via wizard', { payload });
 }
 
 export async function updateLocation(location: WarehouseLocation): Promise<WarehouseLocation> {
@@ -145,11 +145,9 @@ export async function sendDispatchEmail(payload: {
         let statusColor = '#000000'; // Black
         let diffText = difference === 0 ? '' : (difference > 0 ? `+${difference}` : String(difference));
 
-        if (difference > 0) { // Sobrante
+        if (difference !== 0) {
             statusColor = '#dc2626'; // Red
-        } else if (difference < 0) { // Faltante
-            statusColor = '#f59e0b'; // Amber
-        } else { // Completo
+        } else {
             statusColor = '#16a34a'; // Green
         }
         
@@ -158,9 +156,9 @@ export async function sendDispatchEmail(payload: {
                 <td style="padding: 8px;">${item.itemCode}</td>
                 <td style="padding: 8px;">${item.barcode || 'N/A'}</td>
                 <td style="padding: 8px;">${item.description}</td>
-                <td style="padding: 8px; text-align: center;">${item.requiredQuantity}</td>
-                <td style="padding: 8px; text-align: center; color: ${statusColor}; font-weight: bold;">${item.verifiedQuantity}</td>
-                <td style="padding: 8px; text-align: center; color: ${statusColor}; font-weight: bold;">${diffText}</td>
+                <td style="padding: 8px; text-align: right;">${item.requiredQuantity}</td>
+                <td style="padding: 8px; text-align: right; color: ${statusColor}; font-weight: bold;">${item.verifiedQuantity}</td>
+                <td style="padding: 8px; text-align: right; color: ${statusColor}; font-weight: bold;">${diffText}</td>
             </tr>
         `;
     }).join('');
@@ -168,9 +166,9 @@ export async function sendDispatchEmail(payload: {
     const htmlBody = `
         <p>Se ha completado la verificación de despacho para el documento <strong>${document.id}</strong>.</p>
         <hr>
-        <h3>Datos del Despacho:</h3>
+        <h3>Datos del Cliente:</h3>
         <p>
-            <strong>Cliente:</strong> ${document.clientName} (${document.clientId})<br>
+            <strong>Nombre:</strong> ${document.clientName}<br>
             <strong>Cédula:</strong> ${document.clientTaxId || 'No disponible'}<br>
             <strong>Dirección de Envío:</strong> ${document.shippingAddress}<br>
             <strong>Verificado por:</strong> ${verifiedBy}
@@ -184,9 +182,9 @@ export async function sendDispatchEmail(payload: {
                     <th style="padding: 8px;">Código</th>
                     <th style="padding: 8px;">Cod. Barras</th>
                     <th style="padding: 8px;">Descripción</th>
-                    <th style="padding: 8px; text-align: center;">Requerido</th>
-                    <th style="padding: 8px; text-align: center;">Verificado</th>
-                    <th style="padding: 8px; text-align: center;">Diferencia</th>
+                    <th style="padding: 8px; text-align: right;">Requerido</th>
+                    <th style="padding: 8px; text-align: right;">Verificado</th>
+                    <th style="padding: 8px; text-align: right;">Diferencia</th>
                 </tr>
             </thead>
             <tbody>
