@@ -3,7 +3,7 @@
  */
 "use server";
 
-import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain, getAllErpOrderHeaders } from '@/modules/core/lib/db';
+import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
@@ -103,6 +103,7 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
         ],
         unitPrefix: 'U',
         nextUnitNumber: 1,
+        dispatchNotificationEmails: '',
     };
     db.prepare(`
         INSERT OR IGNORE INTO warehouse_config (key, value) VALUES ('settings', ?)
@@ -218,6 +219,7 @@ export async function getWarehouseSettings(): Promise<WarehouseSettings> {
         ],
         unitPrefix: 'U',
         nextUnitNumber: 1,
+        dispatchNotificationEmails: '',
     };
     try {
         const row = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string } | undefined;
@@ -687,17 +689,20 @@ export async function getChildLocations(parentIds: number[]): Promise<WarehouseL
 export async function searchDocuments(searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> {
     const db = await connectDb();
     const likeTerm = `%${searchTerm}%`;
+
     const invoices = db.prepare(`
         SELECT FACTURA as id, 'Factura' as type, CLIENTE as clientId, NOMBRE_CLIENTE as clientName 
         FROM erp_invoice_headers 
-        WHERE id LIKE ? OR NOMBRE_CLIENTE LIKE ? OR CLIENTE LIKE ?
+        WHERE FACTURA LIKE ? OR NOMBRE_CLIENTE LIKE ? OR CLIENTE LIKE ?
     `).all(likeTerm, likeTerm, likeTerm) as any[];
 
+    // This query now joins with customers to get the name for orders.
     const orders = db.prepare(`
-        SELECT PEDIDO as id, 'Pedido' as type, CLIENTE as clientId, '' as clientName 
-        FROM erp_order_headers 
-        WHERE id LIKE ? OR CLIENTE LIKE ?
-    `).all(likeTerm, likeTerm) as any[];
+        SELECT h.PEDIDO as id, 'Pedido' as type, h.CLIENTE as clientId, c.name as clientName
+        FROM erp_order_headers h
+        LEFT JOIN customers c ON h.CLIENTE = c.id
+        WHERE h.PEDIDO LIKE ? OR h.CLIENTE LIKE ? OR c.name LIKE ?
+    `).all(likeTerm, likeTerm, likeTerm) as any[];
 
     return JSON.parse(JSON.stringify([...invoices, ...orders].slice(0, 10)));
 }
