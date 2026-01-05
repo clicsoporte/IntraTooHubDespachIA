@@ -1,4 +1,3 @@
-
 // This file was restored to its stable version.
 // The previous content was causing compilation issues.
 'use client';
@@ -173,7 +172,7 @@ export default function PurchaseRequestPage() {
                                             <Pencil className="mr-2"/> Editar Solicitud
                                         </DropdownMenuItem>
                                         {selectors.hasPermission('requests:notes:add') && <DropdownMenuItem onSelect={() => actions.openAddNoteDialog(request)}><Pencil className="mr-2"/> Añadir Nota</DropdownMenuItem>}
-                                        {selectors.hasPermission('requests:edit:pending') && <DropdownMenuItem onSelect={() => actions.openCostAnalysisDialog(request)}><DollarSign className="mr-2" /> Analizar Costo</DropdownMenuItem>}
+                                        {selectors.hasPermission('requests:view:cost') && <DropdownMenuItem onSelect={() => actions.openCostAnalysisDialog(request)}><DollarSign className="mr-2" /> Analizar Costo</DropdownMenuItem>}
                                         <DropdownMenuItem onSelect={() => actions.handleExportSingleRequestPDF(request)}><FileDown className="mr-2"/> Exportar a PDF</DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuLabel>Cambio de Estado</DropdownMenuLabel>
@@ -230,12 +229,12 @@ export default function PurchaseRequestPage() {
                             <><div className="space-y-1"><p className="font-semibold text-muted-foreground">Cant. Recibida</p><p className="font-bold text-lg text-green-600">{request.deliveredQuantity.toLocaleString()}</p></div>
                                  <div className="space-y-1"><p className="font-semibold text-muted-foreground">Diferencia</p><p className={cn("font-bold text-lg",(request.deliveredQuantity - request.quantity) > 0 && "text-blue-600",(request.deliveredQuantity - request.quantity) < 0 && "text-destructive")}>{(request.deliveredQuantity - request.quantity).toLocaleString()}</p></div></>
                          )}
-                         <div className="space-y-1"><p className="font-semibold text-muted-foreground">Precio Venta (s/IVA)</p><p>{request.unitSalePrice ? `${request.salePriceCurrency || 'CRC'} ${request.unitSalePrice.toLocaleString()}` : 'N/A'}</p></div>
-                         {request.analysis && typeof request.analysis === 'object' && 'cost' in request.analysis && request.analysis.cost !== undefined && (
-                            <>
-                                <div className="space-y-1"><p className="font-semibold text-muted-foreground">Costo (Análisis)</p><p className='font-mono text-sm'>{request.analysis.cost ? request.analysis.cost.toLocaleString() : 'N/A'}</p></div>
-                                <div className="space-y-1"><p className="font-semibold text-muted-foreground">Margen (Análisis)</p><p className={cn(request.analysis.margin < 0 && 'text-destructive font-bold')}>{(request.analysis.margin * 100).toFixed(2)}%</p></div>
-                            </>
+                         {selectors.hasPermission('requests:view:sale-price') && <div className="space-y-1"><p className="font-semibold text-muted-foreground">Precio Venta (s/IVA)</p><p>{request.unitSalePrice ? `${request.salePriceCurrency || 'CRC'} ${request.unitSalePrice.toLocaleString()}` : 'N/A'}</p></div>}
+                         {selectors.hasPermission('requests:view:cost') && request.analysis && typeof request.analysis === 'object' && 'cost' in request.analysis && request.analysis.cost !== undefined && (
+                            <div className="space-y-1"><p className="font-semibold text-muted-foreground">Costo (Análisis)</p><p className='font-mono text-sm'>{request.analysis.cost ? request.analysis.cost.toLocaleString() : 'N/A'}</p></div>
+                         )}
+                         {selectors.hasPermission('requests:view:margin') && request.analysis && typeof request.analysis === 'object' && 'margin' in request.analysis && request.analysis.margin !== undefined && (
+                            <div className="space-y-1"><p className="font-semibold text-muted-foreground">Margen (Análisis)</p><p className={cn(request.analysis.margin < 0 && 'text-destructive font-bold')}>{(request.analysis.margin * 100).toFixed(2)}%</p></div>
                          )}
                         {request.purchaseOrder && <div className="space-y-1"><p className="font-semibold text-muted-foreground">Nº OC Cliente</p><p>{request.purchaseOrder}</p></div>}
                         {request.manualSupplier && <div className="space-y-1"><p className="font-semibold text-muted-foreground">Proveedor</p><p>{request.manualSupplier}</p></div>}

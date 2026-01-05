@@ -110,6 +110,7 @@ export type Product = {
     unit: string;           // UNIDAD_VENTA
     isBasicGood: 'S' | 'N'; // CANASTA_BASICA
     cabys: string;          // CODIGO_HACIENDA
+    barcode?: string;       // CODIGO_BARRAS_VENT
 };
 
 /**
@@ -484,6 +485,7 @@ export type WarehouseLocation = {
     parentId?: number | null; // For hierarchical structure
     isLocked?: 0 | 1;
     lockedBy?: string | null;
+    lockedBySessionId?: string;
 };
 
 /** Tracks physical quantity in a specific location */
@@ -622,7 +624,7 @@ export type InventoryItem = {
 
 // --- SQL Import Types ---
 export type ImportQuery = {
-    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines';
+    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines' | 'erp_invoice_headers' | 'erp_invoice_lines';
     query: string;
 }
 
@@ -730,6 +732,48 @@ export type ErpOrderLine = {
     CANTIDAD_PEDIDA: number;
     PRECIO_UNITARIO: number;
 };
+
+// --- ERP Invoice Import Types (NEW) ---
+export type ErpInvoiceHeader = {
+    CLIENTE: string;
+    NOMBRE_CLIENTE: string;
+    TIPO_DOCUMENTO: string;
+    FACTURA: string;
+    PEDIDO: string;
+    FACTURA_ORIGINAL: string;
+    FECHA: string | Date;
+    FECHA_ENTREGA: string | Date;
+    ANULADA: string;
+    EMBARCAR_A: string;
+    DIRECCION_FACTURA: string;
+    OBSERVACIONES: string;
+    RUTA: string;
+    USUARIO: string;
+    USUARIO_ANULA: string;
+    ZONA: string;
+    VENDEDOR: string;
+    REIMPRESO: number;
+};
+
+export type ErpInvoiceLine = {
+    FACTURA: string;
+    TIPO_DOCUMENTO: string;
+    LINEA: number;
+    BODEGA: string;
+    PEDIDO: string;
+    ARTICULO: string;
+    ANULADA: string;
+    FECHA_FACTURA: string | Date;
+    CANTIDAD: number;
+    PRECIO_UNITARIO: number;
+    TOTAL_IMPUESTO1: number;
+    PRECIO_TOTAL: number;
+    DESCRIPCION: string;
+    DOCUMENTO_ORIGEN: string;
+    CANT_DESPACHADA: number;
+    ES_CANASTA_BASICA: string;
+};
+
 
 // --- ERP Purchase Order (Transit) Types ---
 export type ErpPurchaseOrderHeader = {

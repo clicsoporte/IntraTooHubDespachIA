@@ -12,7 +12,7 @@ export const mainDbSchema: ExpectedSchema = {
     'logs': ['id', 'timestamp', 'type', 'message', 'details'],
     'api_settings': ['id', 'exchangeRateApi', 'haciendaExemptionApi', 'haciendaTributariaApi'],
     'customers': ['id', 'name', 'address', 'phone', 'taxId', 'currency', 'creditLimit', 'paymentCondition', 'salesperson', 'active', 'email', 'electronicDocEmail'],
-    'products': ['id', 'description', 'classification', 'lastEntry', 'active', 'notes', 'unit', 'isBasicGood', 'cabys'],
+    'products': ['id', 'description', 'classification', 'lastEntry', 'active', 'notes', 'unit', 'isBasicGood', 'cabys', 'barcode'],
     'exemptions': ['code', 'description', 'customer', 'authNumber', 'startDate', 'endDate', 'percentage', 'docType', 'institutionName', 'institutionCode'],
     'quote_drafts': ['id', 'createdAt', 'userId', 'customerId', 'customerDetails', 'lines', 'totals', 'notes', 'currency', 'exchangeRate', 'purchaseOrderNumber', 'deliveryAddress', 'deliveryDate', 'sellerName', 'sellerType', 'quoteDate', 'validUntilDate', 'paymentTerms', 'creditDays'],
     'exemption_laws': ['docType', 'institutionName', 'authNumber'],
@@ -29,5 +29,7 @@ export const mainDbSchema: ExpectedSchema = {
     'erp_order_lines': ['PEDIDO', 'PEDIDO_LINEA', 'ARTICULO', 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO'],
     'erp_purchase_order_headers': ['ORDEN_COMPRA', 'PROVEEDOR', 'FECHA_HORA', 'ESTADO', 'CreatedBy'],
     'erp_purchase_order_lines': ['ORDEN_COMPRA', 'ARTICULO', 'CANTIDAD_ORDENADA'],
+    'erp_invoice_headers': ['CLIENTE', 'NOMBRE_CLIENTE', 'TIPO_DOCUMENTO', 'FACTURA', 'PEDIDO', 'FACTURA_ORIGINAL', 'FECHA', 'FECHA_ENTREGA', 'ANULADA', 'EMBARCAR_A', 'DIRECCION_FACTURA', 'OBSERVACIONES', 'RUTA', 'USUARIO', 'USUARIO_ANULA', 'ZONA', 'VENDEDOR', 'REIMPRESO'],
+    'erp_invoice_lines': ['FACTURA', 'TIPO_DOCUMENTO', 'LINEA', 'BODEGA', 'PEDIDO', 'ARTICULO', 'ANULADA', 'FECHA_FACTURA', 'CANTIDAD', 'PRECIO_UNITARIO', 'TOTAL_IMPUESTO1', 'PRECIO_TOTAL', 'DESCRIPCION', 'DOCUMENTO_ORIGEN', 'CANT_DESPACHADA', 'ES_CANASTA_BASICA'],
     'stock_settings': ['key', 'value'],
 };
