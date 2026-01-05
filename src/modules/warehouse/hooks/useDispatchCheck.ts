@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Hook to manage the state and logic for the Dispatch Check module.
  */
@@ -18,6 +17,10 @@ import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { HAlignType, FontStyle } from 'jspdf-autotable';
+import { Button } from '@/components/ui/button';
+import { Loader2, Search, CheckCircle, XCircle, Info, ClipboardCheck, Circle, FileDown, Mail, ArrowRight, ArrowLeft, Printer, AlertTriangle } from 'lucide-react';
+import { SearchInput } from '@/components/ui/search-input';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
 type WizardStep = 'initial' | 'verifying' | 'finished';
 
@@ -408,6 +411,7 @@ export function useDispatchCheck() {
                         pdfBuffer: pdfData.buffer.toString('base64'),
                         fileName: pdfData.fileName,
                         documentId: state.currentDocument.id,
+                        document: state.currentDocument,
                         items: state.verificationItems,
                     });
                 }
@@ -511,7 +515,6 @@ export function useDispatchCheck() {
         setIsUserSearchOpen: (isOpen: boolean) => updateState({ isUserSearchOpen: isOpen }),
         setExternalEmail: (email: string) => updateState({ externalEmail: email }),
         setEmailBody: (body: string) => updateState({ emailBody: body }),
-        setConfirmationState: (confirmation: ConfirmationState) => updateState({ confirmationState: confirmation }),
     };
 
     return {

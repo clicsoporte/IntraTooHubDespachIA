@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Client-side functions for interacting with the warehouse module's server-side DB functions.
  * This abstraction layer ensures components only call client-safe functions.
@@ -128,6 +127,7 @@ export const sendDispatchEmail = async (payload: {
     body: string; 
     pdfBuffer: string; 
     fileName: string; 
-    documentId: string; 
+    documentId: string;
+    document: any;
     items: { itemCode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[]
 }): Promise<void> => sendDispatchEmailServer(payload);

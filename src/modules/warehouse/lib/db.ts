@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
@@ -695,16 +694,16 @@ export async function searchDocuments(searchTerm: string): Promise<{ id: string,
     const query = `
         SELECT FACTURA as id, TIPO_DOCUMENTO as typeCode, CLIENTE as clientId, NOMBRE_CLIENTE as clientName 
         FROM erp_invoice_headers 
-        WHERE (FACTURA LIKE ?)
+        WHERE (FACTURA LIKE @term OR PEDIDO LIKE @term)
           AND TIPO_DOCUMENTO IN ('F', 'R')
         UNION ALL
         SELECT h.PEDIDO as id, 'P' as typeCode, h.CLIENTE as clientId, c.name as clientName
         FROM erp_order_headers h
         LEFT JOIN customers c ON h.CLIENTE = c.id
-        WHERE h.PEDIDO LIKE ?
+        WHERE h.PEDIDO LIKE @term
     `;
 
-    const results = db.prepare(query).all(likeTerm, likeTerm) as any[];
+    const results = db.prepare(query).all({ term: likeTerm }) as any[];
     
     const combinedResults = results.map(r => ({
         ...r,
@@ -741,7 +740,6 @@ export async function getDispatchLogs(): Promise<DispatchLog[]> {
     return JSON.parse(JSON.stringify(logs));
 }
 
-
 export async function sendDispatchEmail(payload: { 
     to: string[]; 
     cc: string; 
@@ -749,9 +747,10 @@ export async function sendDispatchEmail(payload: {
     pdfBuffer: string; // Base64 encoded string
     fileName: string; 
     documentId: string;
+    document: any; // The full currentDocument object
     items: { itemCode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[]
 }): Promise<void> {
-    const { to, cc, body, pdfBuffer, fileName, documentId, items } = payload;
+    const { to, cc, body, pdfBuffer, fileName, documentId, items, document } = payload;
     
     if (!to || to.length === 0) {
         logWarn('sendDispatchEmail called without recipients.', { documentId });
@@ -775,8 +774,15 @@ export async function sendDispatchEmail(payload: {
 
     const htmlBody = `
         <p>Se adjunta el comprobante de despacho para el documento ${documentId}.</p>
-        ${body ? `<p><strong>Mensaje Adicional:</strong></p><p>${body.replace(/\n/g, '<br>')}</p>` : ''}
         <hr>
+        <h3>Datos del Cliente:</h3>
+        <p>
+            <strong>Nombre:</strong> ${document.clientName}<br>
+            <strong>Cédula:</strong> ${document.clientId}<br>
+            <strong>Dirección de Envío:</strong> ${document.shippingAddress}
+        </p>
+        <hr>
+        ${body ? `<p><strong>Mensaje Adicional:</strong></p><p>${body.replace(/\n/g, '<br>')}</p><hr>` : ''}
         <h3>Resumen del Despacho:</h3>
         <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 14px;">
             <thead>

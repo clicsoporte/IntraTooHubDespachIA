@@ -83,16 +83,19 @@ function createTransporter(settings: EmailSettings) {
  * @param options.to Recipient's email address.
  * @param options.subject The email subject.
  * @param options.html The HTML body of the email.
+ * @param options.attachments Optional array of attachments.
  */
-export async function sendEmail({ to, subject, html }: { to: string | string[], subject: string, html: string }) {
+export async function sendEmail(options: { to: string | string[], cc?: string, subject: string, html: string, attachments?: any[] }) {
     const settings = await getEmailSettings();
     const transporter = createTransporter(settings as EmailSettings);
 
     await transporter.sendMail({
         from: `"${settings.smtpUser}" <${settings.smtpUser}>`, // sender address
-        to: to,
-        subject: subject,
-        html: html,
+        to: options.to,
+        cc: options.cc,
+        subject: options.subject,
+        html: options.html,
+        attachments: options.attachments
     });
 }
 
