@@ -773,15 +773,15 @@ export async function logDispatch(dispatchData: any): Promise<void> {
     });
 }
 
-export async function getDispatchLogs(dateRange: DateRange): Promise<DispatchLog[]> {
+export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLog[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const params: any[] = [];
     let query = 'SELECT * FROM dispatch_logs';
 
     if (dateRange && dateRange.from) {
-        const toDate = dateRange.to || dateRange.from;
+        const toDate = dateRange.to || new Date(); // If no 'to' date, use today
         const endDate = new Date(toDate);
-        endDate.setHours(23, 59, 59, 999);
+        endDate.setHours(23, 59, 59, 999); // Set to end of the day
 
         query += ' WHERE verifiedAt BETWEEN ? AND ?';
         params.push(dateRange.from.toISOString(), endDate.toISOString());
