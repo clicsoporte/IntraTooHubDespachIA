@@ -12,7 +12,7 @@ import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 
 // Import all template generators
 import { getDispatchCompletedTemplate } from './templates/dispatch-completed';
-import { getReceivingCompletedTemplate } from './templates/warehouse-templates';
+import { getReceivingCompletedTemplate, getRackCreatedTemplate } from './templates/warehouse-templates';
 import { getPlannerOrderCreatedTemplate, getPlannerOrderApprovedTemplate, getPlannerOrderCompletedTemplate } from './templates/planner-templates';
 import { getRequestCreatedTemplate, getRequestApprovedTemplate, getRequestOrderedTemplate } from './templates/requests-templates';
 
@@ -87,35 +87,39 @@ async function generateContent(rule: NotificationRule, payload: any): Promise<{ 
       subject = subject.replace('[DOCUMENT_ID]', payload.documentId);
       break;
     case 'onReceivingCompleted':
-        body = getReceivingCompletedTemplate(payload);
+        body = await getReceivingCompletedTemplate(payload);
         subject = subject.replace('[PRODUCT_ID]', payload.productId);
+        break;
+    case 'onRackCreated':
+        body = await getRackCreatedTemplate(payload);
+        subject = subject.replace('[RACK_NAME]', payload.rack.name);
         break;
     
     // Planner
     case 'onPlannerOrderCreated':
-        body = getPlannerOrderCreatedTemplate(payload);
+        body = await getPlannerOrderCreatedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
         break;
     case 'onPlannerOrderApproved':
-        body = getPlannerOrderApprovedTemplate(payload);
+        body = await getPlannerOrderApprovedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
         break;
     case 'onPlannerOrderCompleted':
-        body = getPlannerOrderCompletedTemplate(payload);
+        body = await getPlannerOrderCompletedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
         break;
 
     // Requests
     case 'onRequestCreated':
-        body = getRequestCreatedTemplate(payload);
+        body = await getRequestCreatedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
         break;
     case 'onRequestApproved':
-        body = getRequestApprovedTemplate(payload);
+        body = await getRequestApprovedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
         break;
     case 'onRequestOrdered':
-        body = getRequestOrderedTemplate(payload);
+        body = await getRequestOrderedTemplate(payload);
         subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
         break;
   }

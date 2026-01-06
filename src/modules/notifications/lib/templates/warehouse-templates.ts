@@ -3,7 +3,7 @@
  */
 'use server';
 
-import type { InventoryUnit } from '@/modules/core/types';
+import type { InventoryUnit, WarehouseLocation } from '@/modules/core/types';
 import { format } from 'date-fns';
 import { getPublicUrl } from '@/modules/core/lib/db';
 
@@ -16,6 +16,11 @@ const getWarehouseSearchUrl = async (searchTerm: string) => {
     const baseUrl = await getBaseUrl();
     return `${baseUrl}/dashboard/warehouse/search?q=${encodeURIComponent(searchTerm)}`;
 };
+
+const getWarehouseLocationsUrl = async () => {
+    const baseUrl = await getBaseUrl();
+    return `${baseUrl}/dashboard/warehouse/locations`;
+}
 
 const generateBaseWarehouseTemplate = (title: string, content: string, url: string, urlLabel: string) => `
     <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px;">
@@ -47,4 +52,19 @@ export const getReceivingCompletedTemplate = async (unit: InventoryUnit): Promis
     `;
     const url = await getWarehouseSearchUrl(unit.productId);
     return generateBaseWarehouseTemplate('Nueva Recepción de Mercadería', content, url, 'Ver en Almacén');
+};
+
+export const getRackCreatedTemplate = async (payload: { rack: WarehouseLocation, parentPath: string, createdBy: string }): Promise<string> => {
+    const { rack, parentPath, createdBy } = payload;
+    const content = `
+        <p>Se ha creado una nueva estructura de rack en el sistema de almacenes.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;">
+        <p><strong>Nombre del Rack:</strong> ${rack.name}</p>
+        <p><strong>Código del Rack:</strong> ${rack.code}</p>
+        <p><strong>Ubicación Padre:</strong> ${parentPath || 'Raíz del almacén'}</p>
+        <p><strong>Creado por:</strong> ${createdBy}</p>
+        <p><strong>Fecha y Hora:</strong> ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+    `;
+    const url = await getWarehouseLocationsUrl();
+    return generateBaseWarehouseTemplate('Nuevo Rack Creado', content, url, 'Ir a Gestión de Ubicaciones');
 };

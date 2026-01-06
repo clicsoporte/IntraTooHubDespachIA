@@ -1,7 +1,6 @@
 /**
  * @fileoverview HTML templates for Purchase Request module notification events.
  */
-'use server';
 
 import type { PurchaseRequest } from '@/modules/core/types';
 import { format } from 'date-fns';

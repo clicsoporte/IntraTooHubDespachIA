@@ -1,7 +1,6 @@
 /**
  * @fileoverview HTML templates for Planner module notification events.
  */
-'use server';
 
 import type { ProductionOrder } from '@/modules/core/types';
 import { format, parseISO } from 'date-fns';

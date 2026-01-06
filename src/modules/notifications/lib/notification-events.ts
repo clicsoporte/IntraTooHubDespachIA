@@ -22,6 +22,12 @@ export const NOTIFICATION_EVENTS: NotificationEvent[] = [
     name: 'Al registrar una Recepción de Mercadería',
     description: 'Se activa cada vez que se crea una nueva unidad de inventario desde el asistente de recepción.',
   },
+  {
+    id: 'onRackCreated',
+    module: 'Almacén',
+    name: 'Al crear un nuevo Rack',
+    description: 'Se activa cuando se crea una nueva estructura de rack, ya sea manual o con el asistente.',
+  },
   // --- Planner Module ---
   {
     id: 'onPlannerOrderCreated',

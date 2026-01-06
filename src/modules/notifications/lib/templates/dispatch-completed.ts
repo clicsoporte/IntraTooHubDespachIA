@@ -1,7 +1,6 @@
 /**
  * @fileoverview HTML template for the 'onDispatchCompleted' notification event.
  */
-'use server';
 
 import type { DispatchLog } from '@/modules/core/types';
 import { format, parseISO } from 'date-fns';

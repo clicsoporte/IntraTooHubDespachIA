@@ -6,6 +6,7 @@
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
+import { triggerNotificationEvent } from '@/modules/notifications/lib/notifications-engine';
 import path from 'path';
 
 const WAREHOUSE_DB_FILE = 'warehouse.db';
@@ -310,6 +311,17 @@ export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Prom
     return newLocation;
 }
 
+const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
+    if (!locationId) return "N/A";
+    const path: any[] = [];
+    let current = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
 export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params: any; }): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { type, params } = payload;
@@ -328,6 +340,18 @@ export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params
             const rackType = settings.locationLevels.find(l => l.name.toLowerCase().includes('rack'))?.type || 'rack';
             const info = db.prepare('INSERT INTO locations (name, code, type, parentId) VALUES (?, ?, ?, ?)').run(name, prefix, rackType, parentId || null);
             const rackId = info.lastInsertRowid as number;
+
+            // --- Trigger Notification ---
+            const allLocs = db.prepare('SELECT * FROM locations').all() as WarehouseLocation[];
+            const parentPath = parentId ? renderLocationPathAsString(parentId, allLocs) : null;
+            const createdRack = db.prepare('SELECT * FROM locations WHERE id = ?').get(rackId) as WarehouseLocation;
+
+            triggerNotificationEvent('onRackCreated', { 
+                rack: createdRack,
+                parentPath,
+                createdBy: 'Asistente de Creación'
+            }).catch(e => console.error("Failed to trigger rack creation notification:", e));
+            // --- End Notification ---
 
             for (let i = 0; i < levels; i++) {
                 const levelName = String.fromCharCode(65 + i);
@@ -369,6 +393,17 @@ export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params
             const newRackInfo = db.prepare('INSERT INTO locations (name, code, type, parentId) VALUES (?, ?, ?, ?)').run(newName, newPrefix, sourceRack.type, sourceRack.parentId);
             const newRackId = newRackInfo.lastInsertRowid as number;
             mapping.set(sourceRack.id, newRackId);
+
+            // --- Trigger Notification ---
+            const allLocs = db.prepare('SELECT * FROM locations').all() as WarehouseLocation[];
+            const parentPath = sourceRack.parentId ? renderLocationPathAsString(sourceRack.parentId, allLocs) : null;
+            const createdRack = db.prepare('SELECT * FROM locations WHERE id = ?').get(newRackId) as WarehouseLocation;
+            triggerNotificationEvent('onRackCreated', { 
+                rack: createdRack,
+                parentPath,
+                createdBy: 'Asistente de Clonación'
+            }).catch(e => console.error("Failed to trigger rack cloning notification:", e));
+            // --- End Notification ---
 
             function cloneChildren(oldParentId: number, newParentId: number, originalRackCode: string) {
                 const children = allLocations.filter(l => l.parentId === oldParentId);
@@ -565,7 +600,12 @@ export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'created
         return db.prepare('SELECT * FROM inventory_units WHERE id = ?').get(newId) as InventoryUnit;
     });
 
-    return transaction();
+    const newUnit = transaction();
+    
+    // Trigger notification
+    triggerNotificationEvent('onReceivingCompleted', newUnit).catch(e => console.error("Failed to trigger receiving notification:", e));
+    
+    return newUnit;
 }
 
 
