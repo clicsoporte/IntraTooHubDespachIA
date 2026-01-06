@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview The main Quoter page.
  * This component provides the user interface for creating, managing, and generating quotes.
@@ -54,6 +53,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogDescription,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -462,6 +462,9 @@ export default function QuoterPage() {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Seleccionar Columnas Visibles</DialogTitle>
+                            <DialogDescription>
+                                Elige qué columnas quieres ver en la tabla de cotización.
+                            </DialogDescription>
                         </DialogHeader>
                         <ScrollArea className="max-h-80">
                             <div className="space-y-2 p-1">

@@ -470,7 +470,7 @@ export default function ManageLocationsPage() {
                         <DialogHeader>
                             <DialogTitle>{isEditingLocation ? "Editar" : "Añadir"} Ubicación</DialogTitle>
                             <DialogDescription>
-                                {isEditingLocation ? "Modifica los detalles de esta ubicación." : "Crea una nueva ubicación en tu almacén."}
+                                {isEditingLocation ? "Modifica los detalles de esta ubicación." : "Crea una nueva ubicación física en tu almacén, como 'Bodega Principal' o 'Rack 01'."}
                             </DialogDescription>
                         </DialogHeader>
                          <LocationForm 
@@ -488,7 +488,7 @@ export default function ManageLocationsPage() {
                     <DialogContent className="sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>Asistente de Creación de Racks</DialogTitle>
-                            <DialogDescription>Genera o clona rápidamente la estructura completa de un rack.</DialogDescription>
+                            <DialogDescription>Genera o clona rápidamente la estructura completa de un rack (niveles, posiciones, fondos).</DialogDescription>
                         </DialogHeader>
                         <Accordion type="single" collapsible className="w-full">
                             <AccordionItem value="item-1">

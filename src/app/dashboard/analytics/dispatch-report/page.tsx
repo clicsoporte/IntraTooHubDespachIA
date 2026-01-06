@@ -10,7 +10,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { getDispatchLogs } from '@/modules/warehouse/lib/actions';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, Columns3, Printer, AlertTriangle } from 'lucide-react';
@@ -53,7 +53,7 @@ export default function DispatchReportPage() {
 
     const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
-    const fetchData = React.useCallback(async () => {
+    const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             const data = await getDispatchLogs();
@@ -66,7 +66,7 @@ export default function DispatchReportPage() {
         }
     }, [toast, isInitialLoading]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         setTitle('Reporte de Despachos');
         if (isAuthorized) {
             fetchData();
@@ -75,7 +75,7 @@ export default function DispatchReportPage() {
         }
     }, [setTitle, isAuthorized, fetchData]);
 
-    const filteredData = React.useMemo(() => {
+    const filteredData = useMemo(() => {
         return logs.filter(log => {
             if (dateRange?.from && parseISO(log.verifiedAt) < dateRange.from) return false;
             if (dateRange?.to) {
@@ -158,7 +158,7 @@ export default function DispatchReportPage() {
             fileName: 'reporte_despachos',
             sheetName: 'Despachos',
             headers: ['Documento', 'Tipo', 'Fecha', 'Usuario', 'Código Artículo', 'Descripción', 'Cant. Requerida', 'Cant. Verificada', 'Diferencia'],
-            data: dataToExport.map(item => Object.values(item as any)),
+            data: dataToExport.map(item => Object.values(item)),
         });
     };
 
@@ -235,7 +235,9 @@ export default function DispatchReportPage() {
                                                         <DialogContent className="max-w-3xl">
                                                             <DialogHeader>
                                                                 <DialogTitle>Detalles del Despacho: {log.documentId}</DialogTitle>
-                                                                <DialogDescription>Verificado por {log.verifiedByUserName} el {format(parseISO(log.verifiedAt), 'dd/MM/yyyy HH:mm')}</DialogDescription>
+                                                                <DialogDescription>
+                                                                    Verificado por {log.verifiedByUserName} el {format(parseISO(log.verifiedAt), 'dd/MM/yyyy HH:mm')}. Esta es una auditoría de la verificación de despacho.
+                                                                </DialogDescription>
                                                             </DialogHeader>
                                                             <ScrollArea className="h-96">
                                                                 <Table>
