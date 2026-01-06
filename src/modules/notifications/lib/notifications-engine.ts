@@ -9,7 +9,12 @@ import { getAllNotificationRules } from './db';
 import { getEmailSettings, sendEmail } from '@/modules/core/lib/email-service';
 import { sendTelegramMessage } from './telegram-service';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
+
+// Import all template generators
 import { getDispatchCompletedTemplate } from './templates/dispatch-completed';
+import { getReceivingCompletedTemplate } from './templates/warehouse-templates';
+import { getPlannerOrderCreatedTemplate, getPlannerOrderApprovedTemplate, getPlannerOrderCompletedTemplate } from './templates/planner-templates';
+import { getRequestCreatedTemplate, getRequestApprovedTemplate, getRequestOrderedTemplate } from './templates/requests-templates';
 
 /**
  * Triggers a notification event, finds matching rules, and executes the actions.
@@ -71,19 +76,48 @@ async function executeRuleAction(rule: NotificationRule, payload: any) {
  */
 async function generateContent(rule: NotificationRule, payload: any): Promise<{ subject: string; body: string }> {
   const defaultSubject = `Notificación del Sistema: ${rule.name}`;
-  const subject = rule.subject || defaultSubject;
+  let subject = rule.subject || defaultSubject;
   let body = `<p>Se ha activado el evento: ${rule.event}</p><pre>${JSON.stringify(payload, null, 2)}</pre>`;
 
   // --- Template Dispatcher ---
-  // More templates will be added here as we integrate more events.
   switch (rule.event) {
+    // Warehouse
     case 'onDispatchCompleted':
       body = getDispatchCompletedTemplate(payload);
+      subject = subject.replace('[DOCUMENT_ID]', payload.documentId);
       break;
-    // case 'onReceivingCompleted':
-    //   body = getReceivingCompletedTemplate(payload);
-    //   break;
-    // ... other events
+    case 'onReceivingCompleted':
+        body = getReceivingCompletedTemplate(payload);
+        subject = subject.replace('[PRODUCT_ID]', payload.productId);
+        break;
+    
+    // Planner
+    case 'onPlannerOrderCreated':
+        body = getPlannerOrderCreatedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
+        break;
+    case 'onPlannerOrderApproved':
+        body = getPlannerOrderApprovedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
+        break;
+    case 'onPlannerOrderCompleted':
+        body = getPlannerOrderCompletedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[CLIENT_NAME]', payload.customerName);
+        break;
+
+    // Requests
+    case 'onRequestCreated':
+        body = getRequestCreatedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
+        break;
+    case 'onRequestApproved':
+        body = getRequestApprovedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
+        break;
+    case 'onRequestOrdered':
+        body = getRequestOrderedTemplate(payload);
+        subject = subject.replace('[CONSECUTIVE]', payload.consecutive).replace('[ITEM_DESCRIPTION]', payload.itemDescription);
+        break;
   }
 
   return { subject, body };
