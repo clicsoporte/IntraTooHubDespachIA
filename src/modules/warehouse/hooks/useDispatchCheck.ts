@@ -9,7 +9,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail } from '../lib/actions';
-import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem, DispatchLog } from '@/modules/core/types';
+import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
@@ -207,7 +207,7 @@ export function useDispatchCheck() {
     
     const clearError = useCallback(() => {
         updateState({ errorState: null });
-        setTimeout(() => state.scannerInputRef.current?.focus(), 50);
+        setTimeout(() => { if(state.scannerInputRef.current) state.scannerInputRef.current.focus() }, 50);
     }, [updateState, state.scannerInputRef]);
 
     const handleConfirmation = useCallback((lineId: number, confirm: boolean) => {
@@ -341,7 +341,61 @@ export function useDispatchCheck() {
             emailBody: '',
         });
     }, [updateState]);
+
+    const handleGoBack = () => {
+        if (state.step === 'verifying') {
+            reset();
+        }
+    };
     
+    const handlePrintPdf = (docData: {
+        document: CurrentDocument;
+        items: VerificationItem[];
+        verifiedBy: string;
+        companyData: Company;
+    }) => {
+        const { document, items, verifiedBy, companyData } = docData;
+    
+        const styledRows: RowInput[] = items.map((item: VerificationItem) => {
+            let textColor: [number, number, number] = [0, 0, 0];
+            let fontStyle: FontStyle = 'normal';
+            if (item.verifiedQuantity > item.requiredQuantity) {
+                textColor = [220, 53, 69]; // Red
+                fontStyle = 'bold';
+            } else if (item.verifiedQuantity === item.requiredQuantity) {
+                textColor = [25, 135, 84]; // Green
+            } else if (item.verifiedQuantity < item.requiredQuantity && item.verifiedQuantity > 0) {
+                textColor = [255, 193, 7]; // Amber
+                fontStyle = 'bold';
+            } else if (item.verifiedQuantity === 0) {
+                textColor = [220, 53, 69]; // Red for zero
+                fontStyle = 'bold';
+            }
+    
+            return [
+                item.itemCode,
+                item.description,
+                { content: item.requiredQuantity.toString(), styles: { halign: 'right' as HAlignType } },
+                { content: item.verifiedQuantity.toString(), styles: { halign: 'right' as HAlignType, textColor, fontStyle } }
+            ];
+        });
+    
+        const doc = generateDocument({
+            docTitle: 'Comprobante de Despacho',
+            docId: document.id,
+            companyData,
+            meta: [{ label: 'Verificado por', value: verifiedBy }, { label: 'Fecha', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
+            blocks: [],
+            table: {
+                columns: ['Código', 'Descripción', { content: 'Req.', styles: { halign: 'right' as HAlignType } }, { content: 'Verif.', styles: { halign: 'right' as HAlignType } }],
+                rows: styledRows,
+                columnStyles: {},
+            },
+            totals: []
+        });
+        doc.save(`Comprobante-${document.id}.pdf`);
+    };
+
     const proceedWithFinalize = useCallback(async (action: 'finish' | 'email' | 'pdf') => {
         if (!user || !state.currentDocument || !companyData) return;
         updateState({ isLoading: true });
@@ -362,8 +416,8 @@ export function useDispatchCheck() {
                     cc: state.externalEmail,
                     body: state.emailBody,
                     document: state.currentDocument,
-                    items: state.verificationItems,
                     verifiedBy: user.name,
+                    items: state.verificationItems,
                 });
             }
     
@@ -403,56 +457,6 @@ export function useDispatchCheck() {
             proceedWithFinalize(action);
         }
     }, [state.verificationItems, updateState, proceedWithFinalize]);
-
-
-    const handlePrintPdf = (docData: {
-        document: CurrentDocument;
-        items: VerificationItem[];
-        verifiedBy: string;
-        companyData: Company;
-    }) => {
-        const { document, items, verifiedBy, companyData } = docData;
-
-        const styledRows: RowInput[] = items.map((item: VerificationItem) => {
-            let textColor: [number, number, number] = [0, 0, 0];
-            let fontStyle: FontStyle = 'normal';
-            if (item.verifiedQuantity > item.requiredQuantity) {
-                textColor = [220, 53, 69]; // Red
-                fontStyle = 'bold';
-            } else if (item.verifiedQuantity === item.requiredQuantity) {
-                textColor = [25, 135, 84]; // Green
-            } else if (item.verifiedQuantity < item.requiredQuantity && item.verifiedQuantity > 0) {
-                textColor = [255, 193, 7]; // Amber
-                fontStyle = 'bold';
-            } else if (item.verifiedQuantity === 0) {
-                textColor = [220, 53, 69]; // Red for zero
-                fontStyle = 'bold';
-            }
-
-            return [
-                item.itemCode,
-                item.description,
-                { content: item.requiredQuantity.toString(), styles: { halign: 'right' as HAlignType } },
-                { content: item.verifiedQuantity.toString(), styles: { halign: 'right' as HAlignType, textColor, fontStyle } }
-            ];
-        });
-
-        const doc = generateDocument({
-            docTitle: 'Comprobante de Despacho',
-            docId: document.id,
-            companyData,
-            meta: [{ label: 'Verificado por', value: verifiedBy }, { label: 'Fecha', value: format(new Date(), 'dd/MM/yyyy HH:mm') }],
-            blocks: [],
-            table: {
-                columns: ['Código', 'Descripción', { content: 'Req.', styles: { halign: 'right' as HAlignType } }, { content: 'Verif.', styles: { halign: 'right' as HAlignType } }],
-                rows: styledRows,
-                columnStyles: {},
-            },
-            totals: []
-        });
-        doc.save(`Comprobante-${document.id}.pdf`);
-    };
-
 
     const [debouncedUserSearch] = useDebounce(state.userSearchTerm, 300);
     const userOptions = useMemo(() => {
@@ -509,7 +513,7 @@ export function useDispatchCheck() {
         setIsUserSearchOpen: (isOpen: boolean) => updateState({ isUserSearchOpen: isOpen }),
         setExternalEmail: (email: string) => updateState({ externalEmail: email }),
         setEmailBody: (body: string) => updateState({ emailBody: body }),
-        handleGoBack
+        handleGoBack,
     };
 
     return {
