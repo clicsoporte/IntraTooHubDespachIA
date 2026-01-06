@@ -247,6 +247,8 @@ export type ProductionOrder = {
   purchaseOrder?: string;
   requestDate: string;
   deliveryDate: string;
+  scheduledStartDate?: string;
+  scheduledEndDate?: string;
   customerId: string;
   customerName: string;
   customerTaxId: string;
