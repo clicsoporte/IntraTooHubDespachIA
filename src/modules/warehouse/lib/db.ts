@@ -1,10 +1,9 @@
 /**
  * @fileoverview Server-side functions for the warehouse database.
  */
-"use server";
+'use server';
 
 import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
-import { sendEmail } from '@/modules/core/lib/email-service';
 import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
 import path from 'path';
@@ -407,11 +406,11 @@ export async function deleteLocation(id: number, userName: string): Promise<void
     const childrenCount = db.prepare('SELECT COUNT(*) as count FROM locations WHERE parentId = ?').get(id) as { count: number };
 
     if (inventoryCount.count > 0 || itemLocationCount.count > 0) {
-        throw new Error("No se puede eliminar la ubicación porque contiene inventario o asignaciones de productos. Por favor, mueva o elimine el contenido primero.");
+        throw new Error('No se puede eliminar la ubicación porque contiene inventario o asignaciones de productos. Por favor, mueva o elimine el contenido primero.');
     }
     
     if (childrenCount.count > 0) {
-        throw new Error("No se puede eliminar la ubicación porque tiene ubicaciones hijas. Por favor, elimine las ubicaciones anidadas primero.");
+        throw new Error('No se puede eliminar la ubicación porque tiene ubicaciones hijas. Por favor, elimine las ubicaciones anidadas primero.');
     }
 
     db.prepare('DELETE FROM locations WHERE id = ?').run(id);
@@ -737,86 +736,8 @@ export async function logDispatch(dispatchData: any): Promise<void> {
 export async function getDispatchLogs(): Promise<DispatchLog[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const logs = db.prepare('SELECT * FROM dispatch_logs ORDER BY verifiedAt DESC').all() as DispatchLog[];
-    return JSON.parse(JSON.stringify(logs));
-}
-
-export async function sendDispatchEmail(payload: { 
-    to: string[]; 
-    cc: string; 
-    body: string; 
-    pdfBuffer: string; // Base64 encoded string
-    fileName: string; 
-    documentId: string;
-    document: any; // The full currentDocument object
-    items: { itemCode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[]
-}): Promise<void> {
-    const { to, cc, body, pdfBuffer, fileName, documentId, items, document } = payload;
-    
-    if (!to || to.length === 0) {
-        logWarn('sendDispatchEmail called without recipients.', { documentId });
-        return;
-    }
-
-    const tableRows = items.map(item => {
-        let statusColor = '#000000'; // Black
-        if (item.verifiedQuantity > item.requiredQuantity) statusColor = '#dc2626'; // Red
-        else if (item.verifiedQuantity === item.requiredQuantity) statusColor = '#16a34a'; // Green
-        else if (item.verifiedQuantity > 0) statusColor = '#f59e0b'; // Amber
-        return `
-            <tr style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 8px;">${item.itemCode}</td>
-                <td style="padding: 8px;">${item.description}</td>
-                <td style="padding: 8px; text-align: right;">${item.requiredQuantity}</td>
-                <td style="padding: 8px; text-align: right; color: ${statusColor}; font-weight: bold;">${item.verifiedQuantity}</td>
-            </tr>
-        `;
-    }).join('');
-
-    const htmlBody = `
-        <p>Se adjunta el comprobante de despacho para el documento ${documentId}.</p>
-        <hr>
-        <h3>Datos del Cliente:</h3>
-        <p>
-            <strong>Nombre:</strong> ${document.clientName}<br>
-            <strong>Cédula:</strong> ${document.clientId}<br>
-            <strong>Dirección de Envío:</strong> ${document.shippingAddress}
-        </p>
-        <hr>
-        ${body ? `<p><strong>Mensaje Adicional:</strong></p><p>${body.replace(/\n/g, '<br>')}</p><hr>` : ''}
-        <h3>Resumen del Despacho:</h3>
-        <table style="width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 14px;">
-            <thead>
-                <tr style="background-color: #f2f2f2; text-align: left;">
-                    <th style="padding: 8px;">Código</th>
-                    <th style="padding: 8px;">Descripción</th>
-                    <th style="padding: 8px; text-align: right;">Requerido</th>
-                    <th style="padding: 8px; text-align: right;">Verificado</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${tableRows}
-            </tbody>
-        </table>
-    `;
-
-    try {
-        await sendEmail({
-            to: to,
-            cc: cc,
-            subject: `Comprobante de Despacho - ${documentId}`,
-            html: htmlBody,
-            attachments: [
-                {
-                    filename: fileName,
-                    content: pdfBuffer,
-                    encoding: 'base64',
-                    contentType: 'application/pdf',
-                },
-            ],
-        });
-        logInfo(`Dispatch email sent for document ${documentId}`, { to, cc });
-    } catch (error: any) {
-        logError("Failed to send dispatch email", { error: error.message, documentId });
-        throw new Error("No se pudo enviar el correo de despacho. Verifica la configuración de SMTP.");
-    }
+    return logs.map(log => ({
+        ...log,
+        items: typeof log.items === 'string' ? JSON.parse(log.items) : log.items,
+    }));
 }

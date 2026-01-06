@@ -272,14 +272,14 @@ export type ProductionOrder = {
   defectiveQuantity?: number;
   erpPackageNumber?: string;
   erpTicketNumber?: string;
-  erpOrderNumber?: string;
   reopened?: boolean;
   machineId?: string | null;
   shiftId?: string | null;
   previousStatus?: ProductionOrderStatus | null;
+  erpOrderNumber?: string;
 };
 
-export type UpdateProductionOrderPayload = Partial<Omit<ProductionOrder, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'machineId' | 'previousStatus' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes' | 'approvedBy' | 'lastModifiedBy' | 'lastModifiedAt' | 'hasBeenModified' | 'pendingAction'>> & {
+export type UpdateProductionOrderPayload = Partial<Omit<ProductionOrder, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'erpPackageNumber' | 'erpTicketNumber' | 'machineId' | 'previousStatus' | 'scheduledStartDate' | 'scheduledEndDate' | 'requestedBy' | 'hasBeenModified' | 'lastModifiedBy' | 'lastModifiedAt' | 'shiftId'>> & {
     orderId: number;
     updatedBy: string;
 };
@@ -847,6 +847,29 @@ export interface PhysicalInventoryComparisonItem {
 export interface UserPreferences {
     [key: string]: any;
 }
+
+// --- Dispatch Check Types ---
+export type VerificationItem = {
+    lineId: number;
+    itemCode: string;
+    description: string;
+    barcode: string;
+    requiredQuantity: number;
+    verifiedQuantity: number;
+    displayVerifiedQuantity: string;
+    isManualOverride?: boolean;
+};
+
+export type DispatchLog = {
+    id: number;
+    documentId: string;
+    documentType: string;
+    verifiedAt: string;
+    verifiedByUserId: number;
+    verifiedByUserName: string;
+    items: VerificationItem[] | string;
+    notes: string | null;
+};
 
 
 // --- Cost Assistant Types ---

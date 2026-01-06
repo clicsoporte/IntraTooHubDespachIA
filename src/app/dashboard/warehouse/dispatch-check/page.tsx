@@ -161,13 +161,17 @@ export default function DispatchCheckPage() {
                                 <div className="h-[45vh] overflow-y-auto pr-2 space-y-2">
                                     {state.verificationItems.map(item => {
                                         const inputRef = (el: HTMLInputElement) => {
-                                            if (el) state.quantityInputRefs.current.set(item.lineId, el);
-                                            else state.quantityInputRefs.current.delete(item.lineId);
+                                            if (el && state.quantityInputRefs.current) state.quantityInputRefs.current.set(item.lineId, el);
+                                            else if(state.quantityInputRefs.current) state.quantityInputRefs.current.delete(item.lineId);
                                         };
+                                        const isPartial = item.verifiedQuantity > 0 && item.verifiedQuantity < item.requiredQuantity;
+                                        const isOver = item.verifiedQuantity > item.requiredQuantity;
+                                        const isComplete = item.verifiedQuantity === item.requiredQuantity;
+                                        
                                         return (
                                             <div key={item.lineId} className="flex items-center gap-4 p-2 border rounded-md">
                                                 <Button variant={'ghost'} size="icon" className="h-10 w-10 shrink-0" onClick={() => actions.handleIndicatorClick(item.lineId)}>
-                                                    {item.verifiedQuantity > item.requiredQuantity ? <AlertTriangle className="h-6 w-6 text-orange-500"/> : item.verifiedQuantity === item.requiredQuantity ? <CheckCircle className="h-6 w-6 text-green-500"/> : item.verifiedQuantity > 0 ? <AlertTriangle className="h-6 w-6 text-yellow-500"/> : <Circle className="h-6 w-6 text-muted-foreground"/>}
+                                                    {isOver ? <AlertTriangle className="h-6 w-6 text-orange-500"/> : isComplete ? <CheckCircle className="h-6 w-6 text-green-500"/> : isPartial ? <AlertTriangle className="h-6 w-6 text-yellow-500"/> : <Circle className="h-6 w-6 text-muted-foreground"/>}
                                                 </Button>
                                                 <div className="flex-1">
                                                     <p className="font-medium">
@@ -203,10 +207,7 @@ export default function DispatchCheckPage() {
                             <Button variant="destructive" onClick={actions.reset}>Cancelar Verificación</Button>
                             {selectors.isVerificationComplete && (
                                 <div className="flex gap-2">
-                                     <Button variant="secondary" onClick={() => actions.handleFinalizeAndAction('pdf')} disabled={state.isLoading}>
-                                        <Printer className="mr-2 h-4 w-4" /> Finalizar y Exportar PDF
-                                    </Button>
-                                     <Dialog>
+                                    <Dialog>
                                         <DialogTrigger asChild>
                                             <Button variant="outline" disabled={state.isLoading}>
                                                 <Mail className="mr-2 h-4 w-4" /> Finalizar y Enviar
@@ -269,45 +270,35 @@ export default function DispatchCheckPage() {
                             )}
                         </CardFooter>
                     </Card>
-                    <AlertDialog open={!!state.errorState}>
+                    <AlertDialog open={!!state.errorState || !!state.confirmationState}>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle className="flex items-center gap-2">
-                                    <XCircle className="h-6 w-6 text-destructive"/>
-                                    {state.errorState?.title}
+                                    {state.errorState && <XCircle className="h-6 w-6 text-destructive"/>}
+                                    {state.confirmationState && <Info className="h-6 w-6 text-blue-500"/>}
+                                    {state.errorState?.title || state.confirmationState?.title}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    {state.errorState?.message}
+                                    {state.errorState?.message || state.confirmationState?.message}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <Button onClick={actions.clearError}>Entendido</Button>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-
-                    <AlertDialog open={!!state.confirmationState}>
-                        <AlertDialogContent>
-                             <AlertDialogHeader>
-                                <AlertDialogTitle className="flex items-center gap-2">
-                                    <Info className="h-6 w-6 text-blue-500"/>
-                                    {state.confirmationState?.title}
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    {state.confirmationState?.message}
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={state.confirmationState?.onCancel}>
-                                    {state.confirmationState?.cancelText || 'Cancelar'}
-                                </AlertDialogCancel>
-                                <AlertDialogAction 
-                                    onClick={state.confirmationState?.onConfirm}
-                                    className={state.confirmationState?.isDestructive ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
-                                >
-                                    {state.confirmationState?.isDestructive && <AlertTriangle className="mr-2 h-4 w-4" />}
-                                    {state.confirmationState?.confirmText || 'Confirmar'}
-                                </AlertDialogAction>
+                                {state.errorState ? (
+                                    <Button onClick={actions.clearError}>Entendido</Button>
+                                ) : state.confirmationState ? (
+                                    <>
+                                        <AlertDialogCancel onClick={state.confirmationState.onCancel}>
+                                            {state.confirmationState.cancelText || 'Cancelar'}
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction 
+                                            onClick={state.confirmationState.onConfirm}
+                                            className={state.confirmationState.isDestructive ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+                                        >
+                                            {state.confirmationState.isDestructive && <AlertTriangle className="mr-2 h-4 w-4" />}
+                                            {state.confirmationState.confirmText || 'Confirmar'}
+                                        </AlertDialogAction>
+                                    </>
+                                ) : null}
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>

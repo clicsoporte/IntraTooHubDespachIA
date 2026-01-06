@@ -12,7 +12,7 @@ import { getDispatchLogs } from '@/modules/warehouse/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, CalendarIcon, Search, FileDown, FileSpreadsheet, FilterX, Columns3, Printer, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -25,7 +25,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { DialogColumnSelector } from '@/components/ui/dialog-column-selector';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
-import type { DateRange, DispatchLog } from '@/modules/core/types';
+import type { DateRange, DispatchLog, VerificationItem } from '@/modules/core/types';
 import { useDebounce } from 'use-debounce';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 
@@ -58,7 +58,7 @@ export default function DispatchReportPage() {
             const data = await getDispatchLogs();
             setLogs(data);
         } catch (error: any) {
-            toast({ title: "Error", description: "No se pudieron cargar los registros de despacho.", variant: "destructive" });
+            toast({ title: 'Error', description: 'No se pudieron cargar los registros de despacho.', variant: 'destructive' });
         } finally {
             setIsLoading(false);
             if (isInitialLoading) setIsInitialLoading(false);
@@ -66,10 +66,10 @@ export default function DispatchReportPage() {
     }, [toast, isInitialLoading]);
 
     React.useEffect(() => {
-        setTitle("Reporte de Despachos");
+        setTitle('Reporte de Despachos');
         if (isAuthorized) {
             fetchData();
-        } else {
+        } else if (isAuthorized === false) {
             setIsInitialLoading(false);
         }
     }, [setTitle, isAuthorized, fetchData]);
@@ -87,7 +87,7 @@ export default function DispatchReportPage() {
                 return (
                     log.documentId.toLowerCase().includes(search) ||
                     log.verifiedByUserName.toLowerCase().includes(search) ||
-                    JSON.stringify(log.items).toLowerCase().includes(search)
+                    (Array.isArray(log.items) && JSON.stringify(log.items).toLowerCase().includes(search))
                 );
             }
             return true;
@@ -95,8 +95,9 @@ export default function DispatchReportPage() {
     }, [logs, dateRange, debouncedSearchTerm]);
     
     const handlePrintPdf = (log: DispatchLog) => {
-        if (!companyData) return;
-        const styledRows = log.items.map(item => {
+        if (!companyData || !Array.isArray(log.items)) return;
+        
+        const styledRows = log.items.map((item: VerificationItem) => {
             let textColor: [number, number, number] = [0, 0, 0];
             if (item.verifiedQuantity > item.requiredQuantity) textColor = [220, 53, 69];
             else if (item.verifiedQuantity === item.requiredQuantity) textColor = [25, 135, 84];
@@ -110,13 +111,13 @@ export default function DispatchReportPage() {
         });
 
         const doc = generateDocument({
-            docTitle: "Comprobante de Despacho",
+            docTitle: 'Comprobante de Despacho',
             docId: log.documentId,
             companyData,
             meta: [{ label: 'Verificado por', value: log.verifiedByUserName }, { label: 'Fecha', value: format(parseISO(log.verifiedAt), 'dd/MM/yyyy HH:mm') }],
             blocks: [],
             table: {
-                columns: ["Código", "Descripción", { content: "Req.", styles: { halign: 'right' } }, { content: "Verif.", styles: { halign: 'right' } }],
+                columns: ['Código', 'Descripción', { content: 'Req.', styles: { halign: 'right' } }, { content: 'Verif.', styles: { halign: 'right' } }],
                 rows: styledRows,
                 columnStyles: {},
             },
@@ -126,8 +127,9 @@ export default function DispatchReportPage() {
     };
 
     const handleExportExcel = () => {
-        const dataToExport = filteredData.flatMap(log => 
-            log.items.map(item => ({
+        const dataToExport = filteredData.flatMap(log => {
+            if (!Array.isArray(log.items)) return [];
+            return log.items.map((item: VerificationItem) => ({
                 'Documento': log.documentId,
                 'Tipo': log.documentType,
                 'Fecha': format(parseISO(log.verifiedAt), 'dd/MM/yyyy HH:mm'),
@@ -137,13 +139,13 @@ export default function DispatchReportPage() {
                 'Cant. Requerida': item.requiredQuantity,
                 'Cant. Verificada': item.verifiedQuantity,
                 'Diferencia': item.verifiedQuantity - item.requiredQuantity,
-            }))
-        );
+            }));
+        });
         exportToExcel({
             fileName: 'reporte_despachos',
             sheetName: 'Despachos',
             headers: ['Documento', 'Tipo', 'Fecha', 'Usuario', 'Código Artículo', 'Descripción', 'Cant. Requerida', 'Cant. Verificada', 'Diferencia'],
-            data: dataToExport.map(Object.values),
+            data: dataToExport.map(item => Object.values(item as any)),
         });
     };
 
@@ -169,9 +171,9 @@ export default function DispatchReportPage() {
                 <CardContent className="flex flex-wrap items-center gap-4">
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button id="date" variant={"outline"} className={cn("w-full sm:w-auto sm:min-w-[260px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                            <Button id="date" variant={'outline'} className={cn('w-full sm:w-auto sm:min-w-[260px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (dateRange.to ? (`${format(dateRange.from, "LLL dd, y", { locale: es })} - ${format(dateRange.to, "LLL dd, y", { locale: es })}`) : format(dateRange.from, "LLL dd, y", { locale: es })) : (<span>Rango de Fechas</span>)}
+                                {dateRange?.from ? (dateRange.to ? (`${format(dateRange.from, 'LLL dd, y', { locale: es })} - ${format(dateRange.to, 'LLL dd, y', { locale: es })}`) : format(dateRange.from, 'LLL dd, y', { locale: es })) : (<span>Rango de Fechas</span>)}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={2} locale={es} /></PopoverContent>
@@ -224,7 +226,7 @@ export default function DispatchReportPage() {
                                                                 <Table>
                                                                     <TableHeader><TableRow><TableHead>Artículo</TableHead><TableHead>Descripción</TableHead><TableHead>Requerido</TableHead><TableHead>Verificado</TableHead></TableRow></TableHeader>
                                                                     <TableBody>
-                                                                        {log.items.map(item => (
+                                                                        {Array.isArray(log.items) && log.items.map((item: VerificationItem) => (
                                                                             <TableRow key={item.lineId} className={item.verifiedQuantity !== item.requiredQuantity ? 'bg-destructive/10' : ''}>
                                                                                 <TableCell>{item.itemCode}</TableCell>
                                                                                 <TableCell>{item.description}</TableCell>

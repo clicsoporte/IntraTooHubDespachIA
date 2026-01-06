@@ -9,7 +9,7 @@ import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail } from '../lib/actions';
-import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company } from '@/modules/core/types';
+import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem, DispatchLog } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
@@ -19,17 +19,6 @@ import { es } from 'date-fns/locale';
 import type { HAlignType, FontStyle } from 'jspdf-autotable';
 
 type WizardStep = 'initial' | 'verifying' | 'finished';
-
-type VerificationItem = {
-    lineId: number;
-    itemCode: string;
-    description: string;
-    barcode: string;
-    requiredQuantity: number;
-    verifiedQuantity: number;
-    displayVerifiedQuantity: string;
-    isManualOverride?: boolean;
-};
 
 type CurrentDocument = {
     id: string;
@@ -269,10 +258,10 @@ export function useDispatchCheck() {
                 item.lineId === targetItem.lineId ? { ...item, verifiedQuantity: newQty, displayVerifiedQuantity: String(newQty), isManualOverride: true } : item
             );
             updateState({ verificationItems: newItems, confirmationState: null });
-            setTimeout(() => state.scannerInputRef.current?.focus(), 50);
+            setTimeout(() => { if (state.scannerInputRef.current) state.scannerInputRef.current.focus() }, 50);
         } else {
             updateState({ confirmationState: null });
-            const inputRef = state.quantityInputRefs.current.get(lineId);
+            const inputRef = state.quantityInputRefs.current?.get(lineId);
             if (inputRef) {
                 setTimeout(() => {
                     inputRef.focus();
@@ -361,7 +350,7 @@ export function useDispatchCheck() {
     }) => {
         const { document, items, verifiedBy, companyData } = docData;
 
-        const styledRows = items.map(item => {
+        const styledRows = items.map((item: VerificationItem) => {
             let textColor: [number, number, number] = [0, 0, 0];
             let fontStyle: FontStyle = 'normal';
             if (item.verifiedQuantity > item.requiredQuantity) {

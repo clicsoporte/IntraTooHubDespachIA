@@ -37,7 +37,7 @@ import {
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem } from '@/modules/core/types';
 import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format } from 'date-fns';
@@ -130,12 +130,11 @@ export async function sendDispatchEmail(payload: {
     cc: string; 
     body: string; 
     document: any; // The full currentDocument object
-    items: { itemCode: string, barcode: string, description: string, requiredQuantity: number, verifiedQuantity: number }[],
+    items: VerificationItem[],
     verifiedBy: string,
 }): Promise<void> {
     const { to, cc, body, items, document, verifiedBy } = payload;
     
-    // Fetch automatic emails from settings
     const warehouseSettings = await getWarehouseSettingsServer();
     const autoEmails = warehouseSettings.dispatchNotificationEmails
         ? warehouseSettings.dispatchNotificationEmails.split(',').map(e => e.trim()).filter(Boolean)
