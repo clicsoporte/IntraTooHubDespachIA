@@ -614,8 +614,10 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
             h.NOMBRE_CLIENTE as clientName,
             h.EMBARCAR_A as shippingAddress
         FROM dispatch_logs dl
-        LEFT JOIN erp_invoice_headers h ON dl.documentId = h.FACTURA
+        LEFT JOIN main.erp_invoice_headers h ON dl.documentId = h.FACTURA
     `;
+    warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main`);
+
 
     if (dateRange?.from) {
         const startDate = new Date(dateRange.from);
@@ -630,6 +632,7 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
     query += ' ORDER BY dl.verifiedAt DESC';
 
     const logs = warehouseDb.prepare(query).all(...params) as any[];
+    warehouseDb.exec(`DETACH DATABASE main`);
     return logs.map(log => ({
         ...log,
         items: JSON.parse(log.items),
@@ -837,4 +840,22 @@ export async function finalizeDispatch(containerId: number, vehiclePlate: string
     logInfo(`Finalized dispatch for container ${containerId}`, { vehiclePlate, driverName });
 }
 
-export { unassignDocumentFromContainer } from './actions';
+export async function getEmployees(): Promise<Empleado[]> {
+    const db = await connectDb();
+    try {
+        return db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
+    } catch (error) {
+        console.error("Failed to get all employees:", error);
+        return [];
+    }
+}
+
+export async function getVehicles(): Promise<Vehiculo[]> {
+    const db = await connectDb();
+    try {
+        return db.prepare('SELECT * FROM vehiculos ORDER BY placa').all() as Vehiculo[];
+    } catch (error) {
+        console.error("Failed to get all vehicles:", error);
+        return [];
+    }
+}

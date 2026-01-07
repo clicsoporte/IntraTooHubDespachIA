@@ -17,7 +17,9 @@ import {
     resetContainerAssignments,
     unassignAllFromContainer,
     unassignDocumentFromContainer,
-    finalizeDispatch,
+    getEmployees,
+    getVehicles,
+    finalizeDispatch
 } from '@/modules/warehouse/lib/actions';
 import type { DispatchContainer, DispatchAssignment, ErpInvoiceHeader, Vehiculo, Empleado } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -145,7 +147,14 @@ export default function DispatchCenterPage() {
         }
         
         try {
-            const fetchedAssignments = await getAssignmentsForContainer(container.id!);
+            const [fetchedAssignments, fetchedVehicles, fetchedEmployees] = await Promise.all([
+                getAssignmentsForContainer(container.id!),
+                getVehicles(),
+                getEmployees()
+            ]);
+
+            setVehicles(fetchedVehicles);
+            setEmployees(fetchedEmployees);
             
             if (fetchedAssignments.length > 0) {
                 const documentIds = fetchedAssignments.map(a => a.documentId);

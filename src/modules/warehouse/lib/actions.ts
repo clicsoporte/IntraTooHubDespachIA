@@ -46,11 +46,14 @@ import {
     getNextDocumentInContainer as getNextDocumentInContainerServer,
     moveAssignmentToContainer as moveAssignmentToContainerServer,
     updateAssignmentStatus as updateAssignmentStatusServer,
-    resetContainerAssignments as resetContainerAssignmentsServer
+    resetContainerAssignments as resetContainerAssignmentsServer,
+    finalizeDispatch as finalizeDispatchServer,
+    getVehicles as getVehiclesServer,
+    getEmployees as getEmployeesServer
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado } from '@/modules/core/types';
 import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format } from 'date-fns';
@@ -229,3 +232,6 @@ export const updateAssignmentStatus = async (documentId: string, status: 'pendin
 export const resetContainerAssignments = async (containerId: number): Promise<void> => resetContainerAssignmentsServer(containerId);
 export const unassignDocumentFromContainer = async (assignmentId: number): Promise<void> => unassignItemFromLocationServer(assignmentId);
 export const unassignAllFromContainer = async (containerId: number): Promise<void> => unassignAllFromContainerServer(containerId);
+export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName);
+export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
+export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
