@@ -596,7 +596,6 @@ export function useDispatchCheck() {
         setDocumentSearchTerm: (term: string) => updateState({ documentSearchTerm: term }),
         setIsDocumentSearchOpen: (isOpen: boolean) => updateState({ isDocumentSearchOpen: isOpen }),
         handleDocumentSelect,
-        handleDocumentSearchKeyDown,
         setScannedCode: (code: string) => updateState({ scannedCode: code }),
         handleScan,
         clearError,
@@ -618,11 +617,13 @@ export function useDispatchCheck() {
         setTargetContainerId: (id: number | null) => updateState({ targetContainerId: id }),
         proceedToNextStep: () => {
             if (state.nextDocumentInContainer) {
+                reset(); // Reset state before navigating
                 router.replace(`/dashboard/warehouse/dispatch-check?docId=${state.nextDocumentInContainer}&containerId=${state.currentDocument?.containerId}`);
             } else {
-                 router.replace('/dashboard/warehouse/dispatch-center');
+                 handleGoBack();
             }
         },
+        handleDocumentSearchKeyDown,
     };
 
     return {

@@ -23,6 +23,7 @@ import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import type { VerificationItem } from '@/modules/core/types';
+import { cn } from '@/lib/utils';
 
 const HighlightedText = ({ text, highlight }: { text: string; highlight: string }) => {
     if (!highlight) return <span>{text}</span>;
@@ -67,7 +68,7 @@ export default function DispatchCheckPage() {
             </main>
         );
     }
-
+    
     if (state.step === 'initial') {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
@@ -315,27 +316,30 @@ export default function DispatchCheckPage() {
         );
     }
     
-    if (state.step === 'finished') {
+     if (state.step === 'finished') {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
-                <Card className="w-full max-w-md text-center">
+                <Card className="w-full max-w-lg text-center">
                     <CardHeader>
                         <CheckCircle className="mx-auto h-16 w-16 text-green-500"/>
-                        <CardTitle className="mt-4 text-2xl">¡Despacho Verificado!</CardTitle>
+                        <CardTitle className="mt-4 text-2xl">¡Verificación Finalizada!</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">La verificación para el documento <strong>{state.currentDocument?.id}</strong> se ha completado y registrado.</p>
+                        <p className="text-muted-foreground">El despacho para el documento <strong>{state.currentDocument?.id}</strong> se ha registrado correctamente.</p>
                     </CardContent>
-                    <CardFooter className="flex-col gap-2">
+                    <CardFooter className="flex-col sm:flex-row justify-center gap-2">
+                        <Button onClick={actions.reset} variant="outline" className="w-full sm:w-auto">
+                            Verificar Otro Documento
+                        </Button>
                         {state.nextDocumentInContainer ? (
-                            <Button onClick={actions.proceedToNextStep} className="w-full">
-                                <ArrowRight className="mr-2 h-4 w-4" />
-                                Siguiente Documento
+                            <Button onClick={actions.proceedToNextStep} className="w-full sm:w-auto">
+                                Siguiente Documento <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         ) : state.currentDocument?.containerId ? (
-                            <Button onClick={actions.handleGoBack} className="w-full">Volver al Contenedor</Button>
+                            <Button onClick={actions.handleGoBack} className="w-full sm:w-auto">
+                                Volver al Contenedor
+                            </Button>
                         ) : null}
-                        <Button onClick={actions.reset} variant="outline" className="w-full">Verificar Otro Documento</Button>
                     </CardFooter>
                 </Card>
             </main>
