@@ -182,6 +182,13 @@ export default function DispatchClassifierPage() {
 
     const handleSingleAssign = useCallback(async (documentId: string, containerId: string | null) => {
         if (!user) return;
+
+        const doc = unassignedDocs.find(d => d.FACTURA === documentId);
+        if (doc?.ANULADA === 'S') {
+            toast({ title: "Acción no permitida", description: "No se puede asignar una factura anulada.", variant: "destructive" });
+            return;
+        }
+
         if (containerId === null) { // Unassigning
             const currentAssignment = Object.values(assignments).flat().find(a => a.documentId === documentId);
             if (currentAssignment) {
@@ -191,7 +198,7 @@ export default function DispatchClassifierPage() {
                     newAssignments[currentAssignment.containerId] = newAssignments[currentAssignment.containerId].filter(a => a.id !== currentAssignment.id);
                     return newAssignments;
                 });
-                handleFetchDocuments(); // Refresh unassigned list
+                await handleFetchDocuments(); // Refresh unassigned list
             }
         } else { // Assigning
             await assignDocumentsToContainer([documentId], Number(containerId), user.name);
@@ -199,7 +206,7 @@ export default function DispatchClassifierPage() {
             if (docToMove) {
                 setUnassignedDocs(prev => prev.filter(d => d.FACTURA !== documentId));
                 const newAssignment: DispatchAssignment = {
-                    id: -1, // Temporary
+                    id: -1, // Temporary, will be updated on next full load
                     containerId: Number(containerId),
                     documentId: docToMove.FACTURA, documentType: docToMove.TIPO_DOCUMENTO,
                     documentDate: typeof docToMove.FECHA === 'string' ? docToMove.FECHA : (docToMove.FECHA as Date).toISOString(),
@@ -210,16 +217,38 @@ export default function DispatchClassifierPage() {
                 setAssignments(prev => ({ ...prev, [containerId]: [...(prev[containerId] || []), newAssignment] }));
             }
         }
-    }, [user, assignments, unassignedDocs, handleFetchDocuments]);
+    }, [user, assignments, unassignedDocs, handleFetchDocuments, toast]);
     
     const handleBulkAssign = useCallback(async () => {
         if (!user || selectedDocumentIds.size === 0 || !bulkAssignContainerId) {
             toast({ title: 'Selección requerida', description: 'Selecciona al menos un documento y un contenedor de destino.', variant: 'destructive'});
             return;
         }
-        await assignDocumentsToContainer(Array.from(selectedDocumentIds), Number(bulkAssignContainerId), user.name);
+
+        const validDocsToAssign: string[] = [];
+        let cancelledCount = 0;
+
+        for (const docId of selectedDocumentIds) {
+            const doc = unassignedDocs.find(d => d.FACTURA === docId);
+            if (doc && doc.ANULADA !== 'S') {
+                validDocsToAssign.push(docId);
+            } else if (doc) {
+                cancelledCount++;
+            }
+        }
         
-        const docsToMove = unassignedDocs.filter(d => selectedDocumentIds.has(d.FACTURA));
+        if (cancelledCount > 0) {
+            toast({ title: 'Facturas Omitidas', description: `${cancelledCount} factura(s) estaban anuladas y no se asignaron.`, variant: 'destructive'});
+        }
+
+        if (validDocsToAssign.length === 0) {
+            toast({ title: 'Sin Documentos Válidos', description: 'No hay documentos válidos para asignar.', variant: 'destructive'});
+            return;
+        }
+
+        await assignDocumentsToContainer(validDocsToAssign, Number(bulkAssignContainerId), user.name);
+        
+        const docsToMove = unassignedDocs.filter(d => validDocsToAssign.includes(d.FACTURA));
         const newAssignments: DispatchAssignment[] = docsToMove.map(doc => ({
             id: -1, containerId: Number(bulkAssignContainerId),
             documentId: doc.FACTURA, documentType: doc.TIPO_DOCUMENTO,
@@ -229,11 +258,11 @@ export default function DispatchClassifierPage() {
             sortOrder: 0, status: 'pending',
         }));
 
-        setUnassignedDocs(prev => prev.filter(d => !selectedDocumentIds.has(d.FACTURA)));
+        setUnassignedDocs(prev => prev.filter(d => !validDocsToAssign.includes(d.FACTURA)));
         setAssignments(prev => ({...prev, [bulkAssignContainerId]: [...(prev[bulkAssignContainerId] || []), ...newAssignments] }));
         setSelectedDocumentIds(new Set());
         setBulkAssignContainerId('');
-        toast({ title: 'Asignación Masiva Completa', description: `${selectedDocumentIds.size} documentos asignados.`});
+        toast({ title: 'Asignación Masiva Completa', description: `${validDocsToAssign.length} documentos asignados.`});
     }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast]);
 
     const handleUnassign = async (assignment: DispatchAssignment) => {
@@ -251,23 +280,14 @@ export default function DispatchClassifierPage() {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    const allAssignedDocs = Object.values(assignments).flat();
-
-    const getDocRow = (docId: string) => {
-        const unassignedVersion = unassignedDocs.find(d => d.FACTURA === docId);
-        if (unassignedVersion) return unassignedVersion;
-        
-        const assignedVersion = allAssignedDocs.find(a => a.documentId === docId);
-        if (assignedVersion) {
-            return { FACTURA: assignedVersion.documentId, NOMBRE_CLIENTE: assignedVersion.clientName, RUTA: 'Asignado' };
+    const getAssignedContainerId = (docId: string): string | null => {
+        for (const containerId in assignments) {
+            if (assignments[containerId].some(a => a.documentId === docId)) {
+                return containerId;
+            }
         }
-        return { FACTURA: docId, NOMBRE_CLIENTE: 'N/A', RUTA: 'N/A' };
+        return null;
     };
-    
-    const combinedDocs = Array.from(new Set([...unassignedDocs.map(d => d.FACTURA), ...allAssignedDocs.map(a => a.documentId)]))
-        .map(getDocRow)
-        .sort((a,b) => a.FACTURA.localeCompare(b.FACTURA));
-
 
     return (
         <div className="flex flex-col h-screen bg-muted/30">
@@ -330,39 +350,41 @@ export default function DispatchClassifierPage() {
                                             <TableHead className="w-12"></TableHead>
                                             <TableHead>Documento</TableHead>
                                             <TableHead>Cliente</TableHead>
+                                            <TableHead>Vendedor</TableHead>
                                             <TableHead>Ruta (ERP)</TableHead>
+                                            <TableHead>Embarcar A</TableHead>
                                             <TableHead className="w-[250px]">Asignar a Contenedor</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {combinedDocs.map(doc => {
-                                            const isAssigned = 'containerId' in doc;
-                                            const docId = isAssigned ? doc.documentId : doc.FACTURA;
-                                            const clientName = isAssigned ? doc.clientName : doc.NOMBRE_CLIENTE;
-                                            const erpRoute = isAssigned ? 'Asignado' : doc.RUTA;
-                                            
+                                        {unassignedDocs.map(doc => {
+                                            const assignedContainerId = getAssignedContainerId(doc.FACTURA);
+                                            const isCancelled = doc.ANULADA === 'S';
                                             return (
-                                                <TableRow key={docId} className={isAssigned ? 'bg-green-50' : ''}>
+                                                <TableRow key={doc.FACTURA} className={isCancelled ? 'bg-destructive/10' : ''}>
                                                     <TableCell>
-                                                        {!isAssigned && <Checkbox checked={selectedDocumentIds.has(docId)} onCheckedChange={(checked) => {
+                                                        {!assignedContainerId && !isCancelled && <Checkbox checked={selectedDocumentIds.has(doc.FACTURA)} onCheckedChange={(checked) => {
                                                             const newSet = new Set(selectedDocumentIds);
-                                                            if (checked) newSet.add(docId); else newSet.delete(docId);
+                                                            if (checked) newSet.add(doc.FACTURA); else newSet.delete(doc.FACTURA);
                                                             setSelectedDocumentIds(newSet);
                                                         }} />}
                                                     </TableCell>
-                                                    <TableCell className="font-mono">{docId}</TableCell>
-                                                    <TableCell>{clientName}</TableCell>
-                                                    <TableCell><Badge variant="outline">{erpRoute || 'Sin Ruta'}</Badge></TableCell>
+                                                    <TableCell className="font-mono">{doc.FACTURA}{isCancelled && <Badge variant="destructive" className="ml-2">ANULADA</Badge>}</TableCell>
+                                                    <TableCell>{doc.NOMBRE_CLIENTE}</TableCell>
+                                                    <TableCell>{doc.VENDEDOR}</TableCell>
+                                                    <TableCell><Badge variant="outline">{doc.RUTA || 'Sin Ruta'}</Badge></TableCell>
+                                                    <TableCell className="text-xs">{doc.EMBARCAR_A}</TableCell>
                                                     <TableCell>
                                                         <Select
-                                                            value={isAssigned ? String(doc.containerId) : (doc as EnrichedErpHeader).suggestedContainerId || ''}
-                                                            onValueChange={(value) => handleSingleAssign(docId, value === 'unassign' ? null : value)}
+                                                            value={assignedContainerId || doc.suggestedContainerId || ''}
+                                                            onValueChange={(value) => handleSingleAssign(doc.FACTURA, value === 'unassign' ? null : value)}
+                                                            disabled={isCancelled}
                                                         >
                                                             <SelectTrigger>
                                                                 <SelectValue placeholder="Seleccionar..." />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {isAssigned && <SelectItem value="unassign" className="text-destructive">Quitar Asignación</SelectItem>}
+                                                                {assignedContainerId && <SelectItem value="unassign" className="text-destructive">Quitar Asignación</SelectItem>}
                                                                 {containers.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>

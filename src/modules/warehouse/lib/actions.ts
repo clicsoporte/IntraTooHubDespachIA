@@ -98,7 +98,7 @@ export const getAllItemLocations = async (): Promise<ItemLocation[]> => getAllIt
 export const assignItemToLocation = async (itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> => assignItemToLocationServer(itemId, locationId, clientId, updatedBy);
 
 export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
-    await logInfo(`Item location mapping with ID ${assignmentId} was removed.`);
+    await logInfo(`Assignment with ID ${assignmentId} was unassigned.`);
     return unassignDocumentFromContainerServer(assignmentId);
 }
 
