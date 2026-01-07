@@ -116,7 +116,7 @@ export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Prom
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { name, code, type, parentId } = location;
 
-    // Validate for duplicate code before trying to insert.
+    // Validate for duplicate code before trying to insert
     const existing = db.prepare('SELECT id FROM locations WHERE code = ?').get(code);
     if (existing) {
         throw new Error(`El código de ubicación '${code}' ya está en uso. Por favor, elige otro.`);
@@ -381,9 +381,9 @@ export async function assignItemToLocation(itemId: string, locationId: number, c
     return newItemLocation;
 }
 
-export async function unassignItemFromLocation(itemLocationId: number): Promise<void> {
+export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM item_locations WHERE id = ?').run(itemLocationId);
+    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
 }
 
 export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {

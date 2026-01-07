@@ -17,7 +17,7 @@ import {
     getItemLocations as getItemLocationsServer,
     getAllItemLocations as getAllItemLocationsServer,
     assignItemToLocation as assignItemToLocationServer,
-    unassignItemFromLocation as unassignItemFromLocationServer,
+    unassignDocumentFromContainer as unassignDocumentFromContainerServer,
     getWarehouseData as getWarehouseDataServer,
     getMovements as getMovementsServer,
     addInventoryUnit as addInventoryUnitServer,
@@ -97,9 +97,9 @@ export const getItemLocations = async (itemId: string): Promise<ItemLocation[]> 
 export const getAllItemLocations = async (): Promise<ItemLocation[]> => getAllItemLocationsServer();
 export const assignItemToLocation = async (itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> => assignItemToLocationServer(itemId, locationId, clientId, updatedBy);
 
-export async function unassignItemFromLocation(itemLocationId: number): Promise<void> {
-    await logInfo(`Item location mapping with ID ${itemLocationId} was removed.`);
-    return unassignItemFromLocationServer(itemLocationId);
+export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
+    await logInfo(`Item location mapping with ID ${assignmentId} was removed.`);
+    return unassignDocumentFromContainerServer(assignmentId);
 }
 
 // --- Page-specific data loaders ---
@@ -114,7 +114,7 @@ export const getInventoryUnitById = async (id: string | number): Promise<Invento
 
 // --- Wizard Lock Actions ---
 export const getActiveLocks = async (): Promise<any[]> => getActiveLocksServer();
-export const lockEntity = async (payload: { entityIds: number[]; entityType: 'location' | 'container', userName: string; userId: number; }): Promise<{ locked: boolean, error?: string }> => lockEntityServer(payload);
+export const lockEntity = async (payload: { entityIds: number[]; entityType: 'location' | 'container', userName: string; userId: number; }): Promise<{ locked: boolean; error?: string }> => lockEntityServer(payload);
 export const releaseLock = async (entityIds: number[], entityType: 'location' | 'container', userId: number): Promise<void> => releaseLockServer(entityIds, entityType, userId);
 export const forceReleaseLock = async (entityId: number, entityType: 'location' | 'container'): Promise<void> => forceReleaseLockServer(entityId, entityType);
 export const getChildLocations = async (parentIds: number[]): Promise<WarehouseLocation[]> => getChildLocationsServer(parentIds);
