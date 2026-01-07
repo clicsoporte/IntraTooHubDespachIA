@@ -94,6 +94,7 @@ export default function DispatchClassifierPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingDocs, setIsLoadingDocs] = useState(false);
     
+    const [activeTab, setActiveTab] = useState('assign');
     const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(subDays(new Date(), 7)), to: new Date() });
     const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
     const [bulkAssignContainerId, setBulkAssignContainerId] = useState<string>('');
@@ -201,6 +202,15 @@ export default function DispatchClassifierPage() {
         }
     };
 
+    const getAssignedContainerId = (docId: string): string | null => {
+        for (const containerId in assignments) {
+            if (assignments[containerId].some(a => a.documentId === docId)) {
+                return containerId;
+            }
+        }
+        return null;
+    };
+
     const handleSingleAssign = useCallback(async (documentId: string, containerId: string | null) => {
         if (!user) return;
         
@@ -210,15 +220,6 @@ export default function DispatchClassifierPage() {
             return;
         }
         
-        const getAssignedContainerId = (docId: string): string | null => {
-            for (const containerId in assignments) {
-                if (assignments[containerId].some(a => a.documentId === docId)) {
-                    return containerId;
-                }
-            }
-            return null;
-        };
-
         const currentContainerId = getAssignedContainerId(documentId);
         
         try {
@@ -232,18 +233,15 @@ export default function DispatchClassifierPage() {
                 await assignDocumentsToContainer([documentId], Number(containerId), user.name);
             }
 
-            // Always re-fetch assignments for all containers to ensure UI consistency
             const freshAssignments: Record<string, DispatchAssignment[]> = {};
             for (const container of containers) {
                 freshAssignments[container.id!] = await getAssignmentsForContainer(container.id!);
             }
             setAssignments(freshAssignments);
             
-            // Optionally, remove the document from the unassigned list if it was assigned
             if (containerId !== null) {
                 setUnassignedDocs(prev => prev.filter(d => d.FACTURA !== documentId));
             }
-
 
         } catch(error: any) {
             toast({ title: 'Error', description: `Ocurrió un error: ${error.message}`, variant: 'destructive' });
@@ -284,14 +282,13 @@ export default function DispatchClassifierPage() {
             await assignDocumentsToContainer(validDocsToAssign, Number(bulkAssignContainerId), user.name);
             toast({ title: "Asignación Completa", description: `Se asignaron ${validDocsToAssign.length} documentos.` });
             
-            // Re-fetch data to reflect changes
-            await handleFetchDocuments();
             const freshAssignments: Record<string, DispatchAssignment[]> = {};
             for (const container of containers) {
                 freshAssignments[container.id!] = await getAssignmentsForContainer(container.id!);
             }
             setAssignments(freshAssignments);
     
+            setUnassignedDocs(prev => prev.filter(d => !validDocsToAssign.includes(d.FACTURA)));
             setSelectedDocumentIds(new Set());
             setBulkAssignContainerId('');
         } catch (error: any) {
@@ -299,7 +296,7 @@ export default function DispatchClassifierPage() {
         } finally {
             setIsLoadingDocs(false);
         }
-    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast, handleFetchDocuments, containers]);
+    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast, containers]);
 
     const handleUnassign = async (assignment: DispatchAssignment) => {
         try {
@@ -309,7 +306,7 @@ export default function DispatchClassifierPage() {
                 newAssignments[assignment.containerId] = newAssignments[assignment.containerId].filter(a => a.id !== assignment.id);
                 return newAssignments;
             });
-            handleFetchDocuments();
+            await handleFetchDocuments();
             toast({ title: 'Documento Desasignado', variant: 'destructive'});
         } catch (error: any) {
             toast({ title: 'Error al desasignar', description: error.message, variant: 'destructive' });
@@ -358,22 +355,13 @@ export default function DispatchClassifierPage() {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    const getAssignedContainerId = (docId: string): string | null => {
-        for (const containerId in assignments) {
-            if (assignments[containerId].some(a => a.documentId === docId)) {
-                return containerId;
-            }
-        }
-        return null;
-    };
-
     return (
         <div className="flex flex-col h-screen bg-muted/30">
             <header className="p-4 border-b bg-background">
                 <h1 className="text-2xl font-bold">Clasificador de Despachos</h1>
                 <p className="text-muted-foreground">Asigna facturas a contenedores y luego ordénalas según la ruta de entrega.</p>
             </header>
-            <Tabs defaultValue="assign" className="flex-1 flex flex-col p-4 gap-4">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value)} className="flex-1 flex flex-col p-4 gap-4">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="assign">Asignar Documentos</TabsTrigger>
                     <TabsTrigger value="order">Ordenar Contenedores</TabsTrigger>
@@ -497,7 +485,7 @@ export default function DispatchClassifierPage() {
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Limpiar Contenedor "{container.name}"?</AlertDialogTitle>
+                                                                    <AlertDialogTitle>¿Limpiar Contenedor &quot;{container.name}&quot;?</AlertDialogTitle>
                                                                     <AlertDialogDescription>
                                                                         Esta acción desasignará **TODOS** los documentos del contenedor. Es útil para reiniciar la ruta para el día siguiente. No se borra ningún registro de verificación.
                                                                     </AlertDialogDescription>
@@ -527,9 +515,9 @@ export default function DispatchClassifierPage() {
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
                                                             <AlertDialogHeader>
-                                                                <AlertDialogTitle>¿Reiniciar la ruta "{container.name}"?</AlertDialogTitle>
+                                                                <AlertDialogTitle>¿Reiniciar la ruta &quot;{container.name}&quot;?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Todos los documentos en este contenedor volverán al estado "pendiente", permitiendo que sean verificados de nuevo.
+                                                                    Todos los documentos en este contenedor volverán al estado &quot;pendiente&quot;, permitiendo que sean verificados de nuevo.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
