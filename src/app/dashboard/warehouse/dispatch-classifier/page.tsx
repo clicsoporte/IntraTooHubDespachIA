@@ -10,12 +10,13 @@ import { useAuth } from '@/modules/core/hooks/useAuth';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { getContainers, getUnassignedDocuments, getAssignmentsForContainer, assignDocumentsToContainer, updateAssignmentOrder, moveAssignmentToContainer } from '@/modules/warehouse/lib/actions';
+import { getInvoicesByIds } from '@/modules/core/lib/db';
 import type { DispatchContainer, ErpInvoiceHeader, DispatchAssignment } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, CalendarIcon, Package, Truck, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -24,7 +25,6 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useDebounce } from 'use-debounce';
 import { Badge } from '@/components/ui/badge';
-import { getInvoicesByIds } from '@/modules/core/lib/db';
 
 const DraggableItem = ({ item, erpHeaders, index }: { item: DispatchAssignment, erpHeaders: Map<string, ErpInvoiceHeader>, index: number }) => {
     const erpHeader = erpHeaders.get(item.documentId);
@@ -119,7 +119,7 @@ export default function DispatchClassifierPage() {
         }
     }, [dateRange, toast]);
 
-    const onDragEnd = async (result: any) => {
+    const onDragEnd = async (result: DropResult) => {
         const { source, destination } = result;
         if (!destination) return;
         if (!user) return;
@@ -131,6 +131,13 @@ export default function DispatchClassifierPage() {
             // Reordering within the same container
             const items = Array.from(assignments[sourceId] || []);
             const [reorderedItem] = items.splice(source.index, 1);
+            
+            // Safety check to prevent crash on undefined item
+            if (!reorderedItem) {
+                console.error("Drag-and-drop error: reorderedItem is undefined.");
+                return;
+            }
+
             items.splice(destination.index, 0, reorderedItem);
             
             setAssignments(prev => ({ ...prev, [sourceId]: items }));
@@ -168,7 +175,12 @@ export default function DispatchClassifierPage() {
                 const sourceItems = Array.from(assignments[sourceId] || []);
                 const [movedItem] = sourceItems.splice(source.index, 1);
                 
-                await moveAssignmentToContainer(movedItem.id, Number(destId));
+                if (!movedItem) {
+                    console.error("Drag-and-drop error: movedItem is undefined.");
+                    return;
+                }
+
+                await moveAssignmentToContainer(movedItem.id, Number(destId), movedItem.documentId);
                 
                 const destItems = Array.from(assignments[destId] || []);
                 destItems.splice(destination.index, 0, movedItem);
