@@ -43,7 +43,8 @@ import {
     getAssignmentsForContainer as getAssignmentsForContainerServer,
     getAssignmentsByIds as getAssignmentsByIdsServer,
     getNextDocumentInContainer as getNextDocumentInContainerServer,
-    moveAssignmentToContainer as moveAssignmentToContainerServer
+    moveAssignmentToContainer as moveAssignmentToContainerServer,
+    updateAssignmentStatus as updateAssignmentStatusServer
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
@@ -215,18 +216,8 @@ export async function sendDispatchEmail(payload: {
 
 // --- Dispatch Container Actions ---
 export const getContainers = async (): Promise<DispatchContainer[]> => getContainersServer();
-export const saveContainer = async (container: Omit<DispatchContainer, 'id' | 'createdAt'>, updatedBy: string): Promise<DispatchContainer> => {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    const info = db.prepare('INSERT INTO dispatch_containers (name, createdBy, createdAt) VALUES (?, ?, ?)').run(container.name, updatedBy, new Date().toISOString());
-    const newContainer = db.prepare('SELECT * FROM dispatch_containers WHERE id = ?').get(info.lastInsertRowid) as DispatchContainer;
-    return newContainer;
-};
-
-export const deleteContainer = async (id: number): Promise<void> => {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM dispatch_containers WHERE id = ?').run(id);
-};
-
+export const saveContainer = async (container: Omit<DispatchContainer, 'id' | 'createdAt'>, updatedBy: string): Promise<DispatchContainer> => saveContainerServer(container, updatedBy);
+export const deleteContainer = async (id: number): Promise<void> => deleteContainerServer(id);
 export const getUnassignedDocuments = async (dateRange: DateRange): Promise<ErpInvoiceHeader[]> => getUnassignedDocumentsServer(dateRange);
 export const assignDocumentsToContainer = async (documentIds: string[], containerId: number, updatedBy: string): Promise<void> => assignDocumentsToContainerServer(documentIds, containerId, updatedBy);
 export const updateAssignmentOrder = async (containerId: number, orderedDocumentIds: string[]): Promise<void> => updateAssignmentOrderServer(containerId, orderedDocumentIds);
@@ -234,3 +225,4 @@ export const getAssignmentsForContainer = async (containerId: number): Promise<D
 export const getAssignmentsByIds = async (documentIds: string[]): Promise<DispatchAssignment[]> => getAssignmentsByIdsServer(documentIds);
 export const getNextDocumentInContainer = async (containerId: number, currentDocumentId: string): Promise<string | null> => getNextDocumentInContainerServer(containerId, currentDocumentId);
 export const moveAssignmentToContainer = async (assignmentId: number, targetContainerId: number, documentId?: string): Promise<void> => moveAssignmentToContainerServer(assignmentId, targetContainerId, documentId);
+export const updateAssignmentStatus = async (documentId: string, status: 'pending' | 'in-progress' | 'completed' | 'discrepancy' | 'partial'): Promise<void> => updateAssignmentStatusServer(documentId, status);

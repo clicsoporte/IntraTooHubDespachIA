@@ -15,7 +15,7 @@ import bcrypt from 'bcryptjs';
 import Papa from 'papaparse';
 import { executeQuery } from './sql-service';
 import { logInfo, logWarn, logError } from './logger';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { getExchangeRate, getEmailSettings } from './api-actions';
 import { NewUserSchema, UserSchema } from './auth-schemas';
 import { confirmModification as confirmPlannerModificationServer } from '../../planner/lib/db';
@@ -1744,4 +1744,3 @@ export async function getInvoicesByIds(documentIds: string[]): Promise<ErpInvoic
     const headers = db.prepare(query).all(...documentIds) as ErpInvoiceHeader[];
     return JSON.parse(JSON.stringify(headers));
 }
-```

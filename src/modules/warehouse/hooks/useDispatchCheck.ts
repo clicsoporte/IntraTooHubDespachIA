@@ -8,8 +8,8 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail, getNextDocumentInContainer, getContainers as getContainersAction, moveAssignmentToContainer } from '../lib/actions';
-import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem, DispatchLog, DispatchContainer } from '@/modules/core/types';
+import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail, getNextDocumentInContainer, getContainers as getContainersAction, moveAssignmentToContainer, updateAssignmentStatus } from '../lib/actions';
+import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem, DispatchLog, DispatchContainer, DispatchAssignment } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
@@ -82,7 +82,6 @@ type State = {
     availableContainers: DispatchContainer[];
     isMoveDocOpen: boolean;
     targetContainerId: number | null;
-    warehouseFilter: string;
 };
 
 export function useDispatchCheck() {
@@ -119,7 +118,6 @@ export function useDispatchCheck() {
         availableContainers: [],
         isMoveDocOpen: false,
         targetContainerId: null,
-        warehouseFilter: '', // Default to all warehouses
     });
 
     const [debouncedDocSearch] = useDebounce(state.documentSearchTerm, 300);
@@ -145,15 +143,11 @@ export function useDispatchCheck() {
                     requiredQuantity: line.CANTIDAD,
                     verifiedQuantity: 0,
                     displayVerifiedQuantity: '0',
-                    warehouseId: line.BODEGA, // Add warehouse ID here
+                    warehouseId: line.BODEGA, // Keep warehouse ID for context
                 };
             });
 
             const customer = customers.find(c => c.id === data.header.CLIENTE);
-            
-            // Auto-select warehouse filter if all items are from the same one.
-            const uniqueWarehouses = new Set(verificationItems.map(item => item.warehouseId));
-            const initialWarehouseFilter = uniqueWarehouses.size === 1 ? verificationItems[0].warehouseId : '';
 
             updateState({
                 currentDocument: {
@@ -170,7 +164,6 @@ export function useDispatchCheck() {
                 verificationItems,
                 step: 'verifying',
                 availableContainers: containers,
-                warehouseFilter: initialWarehouseFilter,
             });
              setTimeout(() => scannerInputRef.current?.focus(), 100);
         } catch (error: any) {
@@ -201,9 +194,9 @@ export function useDispatchCheck() {
             }
         };
 
-        if (isAuthorized) {
+        if (isAuthorized && user) {
             loadInitial();
-        } else {
+        } else if (!isAuthorized) {
              updateState({ isLoading: false });
         }
     }, [setTitle, isAuthorized, user, updateState, searchParams, handleDocumentSelect]);
@@ -459,16 +452,28 @@ export function useDispatchCheck() {
     const handleMoveAssignment = async (targetContainerId: number) => {
         if (!state.currentDocument || !state.currentDocument.containerId) return;
         
-        const assignment = {
-            id: -1, // We don't know the assignment ID here, but we have the doc ID
-            documentId: state.currentDocument.id,
-            containerId: state.currentDocument.containerId
-        };
-        
         updateState({isLoading: true});
         try {
             await moveAssignmentToContainer(-1, targetContainerId, state.currentDocument.id);
+            // After moving, update its status to 'partial' so it's clear it was worked on.
+            await updateAssignmentStatus(state.currentDocument.id, 'partial');
+            
             toast({ title: "Documento Movido", description: `Se ha movido ${state.currentDocument.id} a la nueva ruta.`});
+            
+            // Log what was done before moving
+             if (user) {
+                await logDispatch({
+                    id: 0,
+                    documentId: state.currentDocument.id,
+                    documentType: state.currentDocument.type,
+                    verifiedAt: new Date().toISOString(),
+                    verifiedByUserId: user.id,
+                    verifiedByUserName: user.name,
+                    items: state.verificationItems.filter(item => item.verifiedQuantity > 0), // Log only what was verified
+                    notes: `Movido al contenedor ${targetContainerId}.`
+                });
+            }
+
             await proceedToNextStep();
         } catch (error: any) {
             toast({ title: "Error al Mover", description: error.message, variant: "destructive" });
@@ -478,21 +483,10 @@ export function useDispatchCheck() {
     };
 
 
-    const proceedWithFinalize = useCallback(async (action: 'finish' | 'email' | 'pdf' | 'move') => {
+    const proceedWithFinalize = useCallback(async (action: 'finish' | 'email' | 'pdf') => {
         if (!user || !state.currentDocument || !companyData) return;
         
-        // Finalize logic, even if it's a move action
         updateState({ isLoading: true });
-
-        const hasPendingItemsFromOtherWarehouses = state.verificationItems.some(
-            item => item.warehouseId !== state.warehouseFilter && item.verifiedQuantity === 0
-        );
-
-        if (action === 'move' && hasPendingItemsFromOtherWarehouses) {
-            // Special handling for move
-            await handleMoveAssignment(state.targetContainerId!);
-            return; // Stop here, handleMoveAssignment will proceed
-        }
 
         try {
             const dispatchLogData: DispatchLog = {
@@ -507,6 +501,10 @@ export function useDispatchCheck() {
             };
 
             await logDispatch(dispatchLogData);
+            
+            const hasDiscrepancy = dispatchLogData.items.some(i => i.requiredQuantity !== i.verifiedQuantity);
+            await updateAssignmentStatus(dispatchLogData.documentId, hasDiscrepancy ? 'discrepancy' : 'completed');
+
             await triggerNotificationEvent('onDispatchCompleted', dispatchLogData);
     
             if (action === 'pdf') {
@@ -533,36 +531,33 @@ export function useDispatchCheck() {
         } finally {
             updateState({ isLoading: false });
         }
-    }, [user, state.currentDocument, state.verificationItems, companyData, toast, updateState, handlePrintPdf, state.selectedUsers, state.externalEmail, state.emailBody, proceedToNextStep, handleMoveAssignment, state.targetContainerId, state.warehouseFilter]);
+    }, [user, state.currentDocument, state.verificationItems, companyData, toast, updateState, handlePrintPdf, state.selectedUsers, state.externalEmail, state.emailBody]);
     
     const handleFinalizeAndAction = useCallback(async (action: 'finish' | 'email' | 'pdf') => {
-        const hasUnverifiedItems = state.verificationItems.some(item => item.verifiedQuantity < item.requiredQuantity);
+        const hasUnverifiedItems = state.verificationItems.some(item => item.verifiedQuantity === 0 && item.requiredQuantity > 0);
         
         if (hasUnverifiedItems) {
-            const hasPendingItemsFromOtherWarehouses = state.verificationItems.some(item => 
-                item.warehouseId !== state.warehouseFilter && item.verifiedQuantity === 0
-            );
-
-            if (hasPendingItemsFromOtherWarehouses) {
-                // Scenario: Items from other warehouses exist and are un-touched. Ask to move.
+            updateState({
+                confirmationState: {
+                    title: 'Finalizar con Líneas en Cero',
+                    message: 'Algunos artículos no fueron verificados (cantidad 0). ¿Deseas mover esta factura a otra ruta para completar el chequeo o finalizarla con estas discrepancias?',
+                    onConfirm: () => { // "Mover" is confirm
+                        updateState({ confirmationState: null, isMoveDocOpen: true });
+                    },
+                    onCancel: () => { // "Finalizar" is cancel in this context
+                        updateState({ confirmationState: null });
+                        proceedWithFinalize(action);
+                    },
+                    confirmText: 'Mover a Contenedor',
+                    cancelText: 'Finalizar con Discrepancias',
+                    isDestructive: true,
+                }
+            });
+        } else {
+            // If all items have some quantity > 0, just confirm if there are discrepancies
+            const hasDiscrepancy = state.verificationItems.some(item => item.verifiedQuantity !== item.requiredQuantity);
+            if (hasDiscrepancy) {
                 updateState({
-                    confirmationState: {
-                        title: 'Items de otra Bodega',
-                        message: 'Esta factura contiene artículos de otra bodega. ¿Deseas moverla a otro contenedor para completar el chequeo o finalizarla con discrepancias?',
-                        onConfirm: () => { // "Mover" is confirm
-                            updateState({ confirmationState: null, isMoveDocOpen: true });
-                        },
-                        onCancel: () => { // "Finalizar" is cancel in this context
-                            updateState({ confirmationState: null });
-                            proceedWithFinalize('finish');
-                        },
-                        confirmText: 'Mover a Contenedor',
-                        cancelText: 'Finalizar con Discrepancias',
-                    }
-                });
-            } else {
-                 // Scenario: Normal discrepancies, just confirm.
-                 updateState({
                     confirmationState: {
                         title: 'Finalizar con Discrepancias',
                         message: 'Existen diferencias entre las cantidades requeridas y las verificadas. ¿Estás seguro de que deseas finalizar y registrar este despacho?',
@@ -576,11 +571,11 @@ export function useDispatchCheck() {
                         isDestructive: true,
                     }
                 });
+            } else {
+                 proceedWithFinalize(action);
             }
-        } else {
-            proceedWithFinalize(action);
         }
-    }, [state.verificationItems, updateState, proceedWithFinalize, state.warehouseFilter]);
+    }, [state.verificationItems, updateState, proceedWithFinalize]);
 
     const [debouncedUserSearch] = useDebounce(state.userSearchTerm, 300);
     const userOptions = useMemo(() => {
@@ -614,17 +609,6 @@ export function useDispatchCheck() {
         progressText: `${state.verificationItems.filter(item => item.verifiedQuantity >= item.requiredQuantity).length} de ${state.verificationItems.length} líneas completadas`,
         documentOptions: state.documentOptions,
         userOptions,
-        warehousesForFilter: useMemo(() => {
-            const uniqueIds = new Set(state.verificationItems.map(item => item.warehouseId));
-            return Array.from(uniqueIds).map(id => ({
-                id,
-                name: `Bodega ${id}` // Simple naming for now
-            }));
-        }, [state.verificationItems]),
-        filteredVerificationItems: useMemo(() => {
-            if (!state.warehouseFilter) return state.verificationItems;
-            return state.verificationItems.filter(item => item.warehouseId === state.warehouseFilter);
-        }, [state.verificationItems, state.warehouseFilter]),
     };
     
     const actions = {
@@ -649,7 +633,6 @@ export function useDispatchCheck() {
         setExternalEmail: (email: string) => updateState({ externalEmail: email }),
         setEmailBody: (body: string) => updateState({ emailBody: body }),
         handleGoBack,
-        setWarehouseFilter: (whId: string) => updateState({ warehouseFilter: whId }),
         handleMoveAssignment,
         setTargetContainerId: (id: number | null) => updateState({ targetContainerId: id }),
     };
@@ -661,4 +644,3 @@ export function useDispatchCheck() {
         isAuthorized,
     };
 }
-```
