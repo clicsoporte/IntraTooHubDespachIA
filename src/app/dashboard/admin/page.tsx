@@ -24,7 +24,37 @@ export default function AdminDashboardPage() {
     
     const visibleTools = useMemo(() => {
         if (isAuthorized === false) return [];
-        return adminTools.filter(tool => hasPermission(tool.id));
+        // The logic now checks if the user has *any* permission related to the tool group,
+        // making it more flexible and correctly showing cards.
+        return adminTools.filter(tool => {
+            switch (tool.id) {
+                case 'users:read':
+                    return hasPermission('users:read') || hasPermission('users:create') || hasPermission('users:update') || hasPermission('users:delete');
+                case 'roles:read':
+                    return hasPermission('roles:read') || hasPermission('roles:create') || hasPermission('roles:update') || hasPermission('roles:delete');
+                case 'admin:settings:general':
+                    return hasPermission('admin:settings:general') || hasPermission('admin:settings:api') || hasPermission('admin:settings:email') || hasPermission('admin:settings:notifications');
+                case 'admin:settings:planner':
+                    return hasPermission('admin:settings:planner');
+                case 'admin:settings:requests':
+                    return hasPermission('admin:settings:requests');
+                case 'admin:settings:warehouse':
+                     return hasPermission('admin:settings:warehouse');
+                case 'admin:settings:cost-assistant':
+                    return hasPermission('admin:settings:cost-assistant');
+                case 'admin:settings:quoter':
+                    return hasPermission('admin:settings:quoter');
+                case 'admin:import:run':
+                    return hasPermission('admin:import:run') || hasPermission('admin:import:files') || hasPermission('admin:import:sql') || hasPermission('admin:import:sql-config');
+                case 'admin:logs:read':
+                    return hasPermission('admin:logs:read') || hasPermission('admin:logs:clear');
+                case 'admin:maintenance:backup':
+                    return hasPermission('admin:maintenance:backup') || hasPermission('admin:maintenance:restore') || hasPermission('admin:maintenance:reset');
+                // For other tools that have a single, clear permission:
+                default:
+                    return hasPermission(tool.id);
+            }
+        });
     }, [hasPermission, isAuthorized]);
 
     if (isAuthorized === false) {
