@@ -12,7 +12,7 @@ import {
     lockEntity, 
     releaseLock, 
     getAssignmentsForContainer, 
-    moveAssignmentToContainer,
+    moveAssignmentToContainer, 
     updateAssignmentStatus, 
     resetContainerAssignments,
     unassignAllFromContainer,
@@ -259,8 +259,12 @@ export default function DispatchCenterPage() {
         if (!containerToModify) return;
         try {
             await resetContainerAssignments(containerToModify.id!);
+            const freshAssignments = await getAssignmentsForContainer(containerToModify.id!);
+            setAssignments(prev => ({
+                ...prev,
+                [containerToModify.id!]: freshAssignments,
+            }));
             toast({ title: 'Ruta Reiniciada', description: `Todos los documentos en "${containerToModify.name}" están pendientes de nuevo.` });
-            await fetchAllAssignments();
         } catch (error: any) {
              toast({ title: "Error al Reiniciar", description: `No se pudo reiniciar la ruta. ${error.message}`, variant: "destructive" });
         } finally {
@@ -272,7 +276,7 @@ export default function DispatchCenterPage() {
         if (!containerToModify) return;
         try {
             await unassignAllFromContainer(containerToModify.id!);
-            setAssignments(prev => ({ ...prev, [containerToModify.id!]: [] }));
+            setAssignments(prev => ({ ...prev, [containerToModify!.id!]: [] }));
             toast({ title: 'Contenedor Limpiado', description: `Se desasignaron todos los documentos de "${containerToModify.name}".`, variant: 'destructive'});
         } catch (error: any) {
             toast({ title: 'Error al Limpiar', description: `No se pudieron limpiar las asignaciones. ${error.message}`, variant: 'destructive'});
@@ -393,19 +397,17 @@ export default function DispatchCenterPage() {
             await unassignDocumentFromContainer(assignment.id);
             setAssignments(prev => {
                 const newAssignments = {...prev};
-                newAssignments[assignment.containerId] = newAssignments[assignment.containerId].filter(a => a.id !== assignment.id);
+                if (newAssignments[assignment.containerId]) {
+                    newAssignments[assignment.containerId] = newAssignments[assignment.containerId].filter(a => a.id !== assignment.id);
+                }
                 return newAssignments;
             });
             await handleFetchDocuments();
             toast({ title: 'Documento Desasignado', variant: 'destructive'});
-        } catch (error: any) => {
+        } catch (error: any) {
             toast({ title: 'Error al desasignar', description: error.message, variant: 'destructive' });
         }
     };
-    
-    if (isLoading) {
-        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-    }
     
     if (!isAuthorized) {
         return (
@@ -417,6 +419,10 @@ export default function DispatchCenterPage() {
     }
     
     const isRouteCompleted = (c: DispatchContainer) => (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === c.assignmentCount;
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
 
     if (selectedContainer) {
         const containerAssignments = assignments[selectedContainer.id!] || [];
@@ -520,7 +526,9 @@ export default function DispatchCenterPage() {
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto">
                 {containers.map(c => {
                     const isLocked = c.isLocked && c.lockedByUserId !== user?.id;
-                    const isCompleted = isRouteCompleted(c);
+                    const assignmentCount = c.assignmentCount ?? 0;
+                    const completedCount = c.completedAssignmentCount ?? 0;
+                    const isCompleted = assignmentCount > 0 && completedCount === assignmentCount;
                     
                     return (
                         <Card 
@@ -534,12 +542,12 @@ export default function DispatchCenterPage() {
                         >
                             <CardHeader>
                                 <div className="flex justify-between items-center">
-                                    <CardTitle className="flex items-center gap-2">{c.name}</CardTitle>
+                                    <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5"/>{c.name}</CardTitle>
                                     {isLocked && <Badge variant="destructive"><Lock className="mr-1 h-3 w-3"/> En Uso</Badge>}
                                     {isCompleted && <Badge variant="default" className="bg-green-600"><CheckCircle className="mr-1 h-3 w-3"/> Completada</Badge>}
                                 </div>
                                 <CardDescription>
-                                    {c.assignmentCount ?? 0} documentos asignados.
+                                    {assignmentCount} documentos asignados.
                                 </CardDescription>
                             </CardHeader>
                              <CardContent className="flex-grow">
@@ -548,7 +556,7 @@ export default function DispatchCenterPage() {
                                 ) : isCompleted ? (
                                      <p className="text-sm text-green-700">Verificado por {c.lastVerifiedBy} el {c.lastVerifiedAt ? format(parseISO(c.lastVerifiedAt), 'dd/MM/yy HH:mm') : ''}</p>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">{c.completedAssignmentCount ?? 0} de {c.assignmentCount ?? 0} verificados.</p>
+                                    <p className="text-sm text-muted-foreground">{completedCount} de {assignmentCount} verificados.</p>
                                 )}
                             </CardContent>
                             <CardFooter>

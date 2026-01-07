@@ -230,3 +230,4 @@ export const resetContainerAssignments = async (containerId: number): Promise<vo
 export const unassignDocumentFromContainer = async (assignmentId: number): Promise<void> => unassignItemFromLocationServer(assignmentId);
 export const unassignAllFromContainer = async (containerId: number): Promise<void> => unassignAllFromContainerServer(containerId);
 
+
