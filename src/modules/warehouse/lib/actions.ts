@@ -2,7 +2,7 @@
  * @fileoverview Client-side functions for interacting with the warehouse module's server-side DB functions.
  * This abstraction layer ensures components only call client-safe functions.
  */
-'use client';
+'use server';
 
 import {
     getLocations as getLocationsServer,
@@ -35,6 +35,11 @@ import {
     logDispatch as logDispatchServer,
     getDispatchLogs as getDispatchLogsServer,
     getContainers as getContainersServer,
+    saveContainer as saveContainerServer,
+    deleteContainer as deleteContainerServer,
+    getUnassignedDocuments as getUnassignedDocumentsServer,
+    assignDocumentsToContainer as assignDocumentsToContainerServer,
+    updateAssignmentOrder as updateAssignmentOrderServer,
     getAssignmentsForContainer as getAssignmentsForContainerServer,
     getAssignmentsByIds as getAssignmentsByIdsServer,
     getNextDocumentInContainer as getNextDocumentInContainerServer,
@@ -59,17 +64,6 @@ export async function saveStockSettings(settings: StockSettings): Promise<void> 
     return saveStockSettingsDb(settings);
 }
 export const getLocations = async (): Promise<WarehouseLocation[]> => getLocationsServer();
-
-/**
- * Filters a list of all locations to return only those that can be selected as final destinations
- * (i.e., they are not parents of other locations).
- * @param allLocations - An array of all warehouse locations.
- * @returns An array of selectable, "leaf" warehouse locations.
- */
-export function getSelectableLocations(allLocations: WarehouseLocation[]): WarehouseLocation[] {
-    const parentIds = new Set(allLocations.map(l => l.parentId).filter(Boolean));
-    return allLocations.filter(l => !parentIds.has(l.id));
-}
 
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {
     const newLocation = await addLocationServer(location);
@@ -113,15 +107,15 @@ export const getMovements = async (itemId?: string): Promise<MovementLog[]> => g
 
 // --- Inventory Unit Actions ---
 export const addInventoryUnit = async (unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> => addInventoryUnitServer(unit);
-export const getInventoryUnits = async (): Promise<InventoryUnit[]> => getInventoryUnitsServer();
+export const getInventoryUnits = async (dateRange?: DateRange): Promise<InventoryUnit[]> => getInventoryUnitsServer(dateRange);
 export const deleteInventoryUnit = async (id: number): Promise<void> => deleteInventoryUnitServer(id);
 export const getInventoryUnitById = async (id: string | number): Promise<InventoryUnit | null> => getInventoryUnitByIdServer(id);
 
 // --- Wizard Lock Actions ---
-export const getActiveLocks = async (): Promise<WarehouseLocation[]> => getActiveLocksServer();
-export const lockEntity = async (payload: { entityIds: number[]; userName: string; userId: number; }): Promise<{ locked: boolean }> => lockEntityServer(payload);
-export const releaseLock = async (entityIds: number[], userId: number): Promise<void> => releaseLockServer(entityIds, userId);
-export const forceReleaseLock = async (locationId: number): Promise<void> => forceReleaseLockServer(locationId);
+export const getActiveLocks = async (): Promise<any[]> => getActiveLocksServer();
+export const lockEntity = async (payload: { entityIds: number[]; entityType: 'location' | 'container', userName: string; userId: number; }): Promise<{ locked: boolean, error?: string }> => lockEntityServer(payload);
+export const releaseLock = async (entityIds: number[], entityType: 'location' | 'container', userId: number): Promise<void> => releaseLockServer(entityIds, entityType, userId);
+export const forceReleaseLock = async (entityId: number, entityType: 'location' | 'container'): Promise<void> => forceReleaseLockServer(entityId, entityType);
 export const getChildLocations = async (parentIds: number[]): Promise<WarehouseLocation[]> => getChildLocationsServer(parentIds);
 
 // --- Dispatch Check Actions ---
@@ -221,7 +215,22 @@ export async function sendDispatchEmail(payload: {
 
 // --- Dispatch Container Actions ---
 export const getContainers = async (): Promise<DispatchContainer[]> => getContainersServer();
+export const saveContainer = async (container: Omit<DispatchContainer, 'id' | 'createdAt'>, updatedBy: string): Promise<DispatchContainer> => {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const info = db.prepare('INSERT INTO dispatch_containers (name, createdBy, createdAt) VALUES (?, ?, ?)').run(container.name, updatedBy, new Date().toISOString());
+    const newContainer = db.prepare('SELECT * FROM dispatch_containers WHERE id = ?').get(info.lastInsertRowid) as DispatchContainer;
+    return newContainer;
+};
+
+export const deleteContainer = async (id: number): Promise<void> => {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    db.prepare('DELETE FROM dispatch_containers WHERE id = ?').run(id);
+};
+
+export const getUnassignedDocuments = async (dateRange: DateRange): Promise<ErpInvoiceHeader[]> => getUnassignedDocumentsServer(dateRange);
+export const assignDocumentsToContainer = async (documentIds: string[], containerId: number, updatedBy: string): Promise<void> => assignDocumentsToContainerServer(documentIds, containerId, updatedBy);
+export const updateAssignmentOrder = async (containerId: number, orderedDocumentIds: string[]): Promise<void> => updateAssignmentOrderServer(containerId, orderedDocumentIds);
 export const getAssignmentsForContainer = async (containerId: number): Promise<DispatchAssignment[]> => getAssignmentsForContainerServer(containerId);
 export const getAssignmentsByIds = async (documentIds: string[]): Promise<DispatchAssignment[]> => getAssignmentsByIdsServer(documentIds);
 export const getNextDocumentInContainer = async (containerId: number, currentDocumentId: string): Promise<string | null> => getNextDocumentInContainerServer(containerId, currentDocumentId);
-export const moveAssignmentToContainer = async (assignmentId: number, targetContainerId: number): Promise<void> => moveAssignmentToContainerServer(assignmentId, targetContainerId);
+export const moveAssignmentToContainer = async (assignmentId: number, targetContainerId: number, documentId?: string): Promise<void> => moveAssignmentToContainerServer(assignmentId, targetContainerId, documentId);

@@ -8,7 +8,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getLocations, getAllItemLocations, addInventoryUnit, getSelectableLocations, assignItemToLocation } from '../lib/actions';
+import { getLocations, getAllItemLocations, addInventoryUnit, assignItemToLocation } from '../lib/actions';
 import type { Product, WarehouseLocation, ItemLocation, InventoryUnit } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
@@ -31,6 +31,16 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
     }
     return path.map(l => l.name).join(' > ');
 };
+
+/**
+ * Filters a list of all locations to return only those that can be selected as final destinations
+ * (i.e., they are not parents of other locations).
+ * This is now a local helper function within the hook.
+ */
+const getSelectableLocations = (allLocations: WarehouseLocation[]): WarehouseLocation[] => {
+    const parentIds = new Set(allLocations.map(l => l.parentId).filter(Boolean));
+    return allLocations.filter(l => !parentIds.has(l.id));
+}
 
 export const useReceivingWizard = () => {
     useAuthorization(['warehouse:receiving-wizard:use']);

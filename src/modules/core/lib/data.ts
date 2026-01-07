@@ -209,14 +209,6 @@ export const warehouseTools: Tool[] = [
         icon: Map,
         bgColor: 'bg-purple-600',
     },
-     {
-        id: "warehouse-containers-config",
-        name: "Config. Contenedores Despacho",
-        description: "Crear y administrar los contenedores de rutas de entrega.",
-        href: "/dashboard/admin/warehouse/dispatch-containers",
-        icon: Box,
-        bgColor: 'bg-slate-500',
-    },
     {
         id: 'lock-management',
         name: 'Gestionar Bloqueos',

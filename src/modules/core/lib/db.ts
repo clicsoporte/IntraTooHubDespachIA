@@ -1735,3 +1735,13 @@ export async function getActiveWizardSession(userId: number): Promise<WizardSess
     const row = db.prepare(`SELECT activeWizardSession FROM users WHERE id = ?`).get(userId) as { activeWizardSession: string | null } | undefined;
     return row?.activeWizardSession ? JSON.parse(row.activeWizardSession) : null;
 }
+
+export async function getInvoicesByIds(documentIds: string[]): Promise<ErpInvoiceHeader[]> {
+    const db = await connectDb();
+    if (documentIds.length === 0) return [];
+    const placeholders = documentIds.map(() => '?').join(',');
+    const query = `SELECT * FROM erp_invoice_headers WHERE FACTURA IN (${placeholders})`;
+    const headers = db.prepare(query).all(...documentIds) as ErpInvoiceHeader[];
+    return JSON.parse(JSON.stringify(headers));
+}
+```

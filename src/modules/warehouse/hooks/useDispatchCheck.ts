@@ -8,7 +8,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail, getNextDocumentInContainer, moveAssignmentToContainer } from '../lib/actions';
+import { getInvoiceData, searchDocuments, logDispatch, sendDispatchEmail, getNextDocumentInContainer, getContainers as getContainersAction, moveAssignmentToContainer } from '../lib/actions';
 import type { User, Product, ErpInvoiceHeader, ErpInvoiceLine, UserPreferences, Company, VerificationItem, DispatchLog, DispatchContainer } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
@@ -82,6 +82,7 @@ type State = {
     availableContainers: DispatchContainer[];
     isMoveDocOpen: boolean;
     targetContainerId: number | null;
+    warehouseFilter: string;
 };
 
 export function useDispatchCheck() {
@@ -118,6 +119,7 @@ export function useDispatchCheck() {
         availableContainers: [],
         isMoveDocOpen: false,
         targetContainerId: null,
+        warehouseFilter: '', // Default to all warehouses
     });
 
     const [debouncedDocSearch] = useDebounce(state.documentSearchTerm, 300);
@@ -131,6 +133,7 @@ export function useDispatchCheck() {
         try {
             const data = await getInvoiceData(documentId);
             if (!data) throw new Error('No se encontraron datos para este documento.');
+            const containers = await getContainersAction();
 
             const verificationItems: VerificationItem[] = data.lines.map(line => {
                 const product = products.find(p => p.id === line.ARTICULO);
@@ -142,10 +145,15 @@ export function useDispatchCheck() {
                     requiredQuantity: line.CANTIDAD,
                     verifiedQuantity: 0,
                     displayVerifiedQuantity: '0',
+                    warehouseId: line.BODEGA, // Add warehouse ID here
                 };
             });
 
             const customer = customers.find(c => c.id === data.header.CLIENTE);
+            
+            // Auto-select warehouse filter if all items are from the same one.
+            const uniqueWarehouses = new Set(verificationItems.map(item => item.warehouseId));
+            const initialWarehouseFilter = uniqueWarehouses.size === 1 ? verificationItems[0].warehouseId : '';
 
             updateState({
                 currentDocument: {
@@ -160,7 +168,9 @@ export function useDispatchCheck() {
                     containerId: containerId,
                 },
                 verificationItems,
-                step: 'verifying'
+                step: 'verifying',
+                availableContainers: containers,
+                warehouseFilter: initialWarehouseFilter,
             });
              setTimeout(() => scannerInputRef.current?.focus(), 100);
         } catch (error: any) {
@@ -446,11 +456,44 @@ export function useDispatchCheck() {
         }
     };
 
+    const handleMoveAssignment = async (targetContainerId: number) => {
+        if (!state.currentDocument || !state.currentDocument.containerId) return;
+        
+        const assignment = {
+            id: -1, // We don't know the assignment ID here, but we have the doc ID
+            documentId: state.currentDocument.id,
+            containerId: state.currentDocument.containerId
+        };
+        
+        updateState({isLoading: true});
+        try {
+            await moveAssignmentToContainer(-1, targetContainerId, state.currentDocument.id);
+            toast({ title: "Documento Movido", description: `Se ha movido ${state.currentDocument.id} a la nueva ruta.`});
+            await proceedToNextStep();
+        } catch (error: any) {
+            toast({ title: "Error al Mover", description: error.message, variant: "destructive" });
+        } finally {
+            updateState({isLoading: false, isMoveDocOpen: false});
+        }
+    };
 
-    const proceedWithFinalize = useCallback(async (action: 'finish' | 'email' | 'pdf') => {
+
+    const proceedWithFinalize = useCallback(async (action: 'finish' | 'email' | 'pdf' | 'move') => {
         if (!user || !state.currentDocument || !companyData) return;
+        
+        // Finalize logic, even if it's a move action
         updateState({ isLoading: true });
-    
+
+        const hasPendingItemsFromOtherWarehouses = state.verificationItems.some(
+            item => item.warehouseId !== state.warehouseFilter && item.verifiedQuantity === 0
+        );
+
+        if (action === 'move' && hasPendingItemsFromOtherWarehouses) {
+            // Special handling for move
+            await handleMoveAssignment(state.targetContainerId!);
+            return; // Stop here, handleMoveAssignment will proceed
+        }
+
         try {
             const dispatchLogData: DispatchLog = {
                 id: 0, // DB will assign it
@@ -490,29 +533,54 @@ export function useDispatchCheck() {
         } finally {
             updateState({ isLoading: false });
         }
-    }, [user, state.currentDocument, state.verificationItems, companyData, toast, updateState, handlePrintPdf, state.selectedUsers, state.externalEmail, state.emailBody, proceedToNextStep]);
+    }, [user, state.currentDocument, state.verificationItems, companyData, toast, updateState, handlePrintPdf, state.selectedUsers, state.externalEmail, state.emailBody, proceedToNextStep, handleMoveAssignment, state.targetContainerId, state.warehouseFilter]);
     
     const handleFinalizeAndAction = useCallback(async (action: 'finish' | 'email' | 'pdf') => {
-        const hasDiscrepancy = state.verificationItems.some(item => item.requiredQuantity !== item.verifiedQuantity);
-        if (hasDiscrepancy) {
-            updateState({
-                confirmationState: {
-                    title: 'Finalizar con Discrepancias',
-                    message: 'Existen diferencias entre las cantidades requeridas y las verificadas. ¿Estás seguro de que deseas finalizar y registrar este despacho?',
-                    confirmText: 'Sí, Completar',
-                    cancelText: 'Cancelar',
-                    onConfirm: () => {
-                        updateState({ confirmationState: null });
-                        proceedWithFinalize(action);
-                    },
-                    onCancel: () => updateState({ confirmationState: null }),
-                    isDestructive: true,
-                }
-            });
+        const hasUnverifiedItems = state.verificationItems.some(item => item.verifiedQuantity < item.requiredQuantity);
+        
+        if (hasUnverifiedItems) {
+            const hasPendingItemsFromOtherWarehouses = state.verificationItems.some(item => 
+                item.warehouseId !== state.warehouseFilter && item.verifiedQuantity === 0
+            );
+
+            if (hasPendingItemsFromOtherWarehouses) {
+                // Scenario: Items from other warehouses exist and are un-touched. Ask to move.
+                updateState({
+                    confirmationState: {
+                        title: 'Items de otra Bodega',
+                        message: 'Esta factura contiene artículos de otra bodega. ¿Deseas moverla a otro contenedor para completar el chequeo o finalizarla con discrepancias?',
+                        onConfirm: () => { // "Mover" is confirm
+                            updateState({ confirmationState: null, isMoveDocOpen: true });
+                        },
+                        onCancel: () => { // "Finalizar" is cancel in this context
+                            updateState({ confirmationState: null });
+                            proceedWithFinalize('finish');
+                        },
+                        confirmText: 'Mover a Contenedor',
+                        cancelText: 'Finalizar con Discrepancias',
+                    }
+                });
+            } else {
+                 // Scenario: Normal discrepancies, just confirm.
+                 updateState({
+                    confirmationState: {
+                        title: 'Finalizar con Discrepancias',
+                        message: 'Existen diferencias entre las cantidades requeridas y las verificadas. ¿Estás seguro de que deseas finalizar y registrar este despacho?',
+                        confirmText: 'Sí, Completar',
+                        cancelText: 'Cancelar',
+                        onConfirm: () => {
+                            updateState({ confirmationState: null });
+                            proceedWithFinalize(action);
+                        },
+                        onCancel: () => updateState({ confirmationState: null }),
+                        isDestructive: true,
+                    }
+                });
+            }
         } else {
             proceedWithFinalize(action);
         }
-    }, [state.verificationItems, updateState, proceedWithFinalize]);
+    }, [state.verificationItems, updateState, proceedWithFinalize, state.warehouseFilter]);
 
     const [debouncedUserSearch] = useDebounce(state.userSearchTerm, 300);
     const userOptions = useMemo(() => {
@@ -546,6 +614,17 @@ export function useDispatchCheck() {
         progressText: `${state.verificationItems.filter(item => item.verifiedQuantity >= item.requiredQuantity).length} de ${state.verificationItems.length} líneas completadas`,
         documentOptions: state.documentOptions,
         userOptions,
+        warehousesForFilter: useMemo(() => {
+            const uniqueIds = new Set(state.verificationItems.map(item => item.warehouseId));
+            return Array.from(uniqueIds).map(id => ({
+                id,
+                name: `Bodega ${id}` // Simple naming for now
+            }));
+        }, [state.verificationItems]),
+        filteredVerificationItems: useMemo(() => {
+            if (!state.warehouseFilter) return state.verificationItems;
+            return state.verificationItems.filter(item => item.warehouseId === state.warehouseFilter);
+        }, [state.verificationItems, state.warehouseFilter]),
     };
     
     const actions = {
@@ -570,6 +649,9 @@ export function useDispatchCheck() {
         setExternalEmail: (email: string) => updateState({ externalEmail: email }),
         setEmailBody: (body: string) => updateState({ emailBody: body }),
         handleGoBack,
+        setWarehouseFilter: (whId: string) => updateState({ warehouseFilter: whId }),
+        handleMoveAssignment,
+        setTargetContainerId: (id: number | null) => updateState({ targetContainerId: id }),
     };
 
     return {
@@ -579,3 +661,4 @@ export function useDispatchCheck() {
         isAuthorized,
     };
 }
+```

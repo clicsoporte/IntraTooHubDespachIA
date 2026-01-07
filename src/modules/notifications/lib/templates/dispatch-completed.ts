@@ -73,3 +73,4 @@ export function getDispatchCompletedTemplate(payload: DispatchLog): string {
         </div>
     `;
 }
+```

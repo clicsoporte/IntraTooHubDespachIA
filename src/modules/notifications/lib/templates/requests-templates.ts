@@ -63,3 +63,4 @@ export const getRequestOrderedTemplate = async (request: PurchaseRequest): Promi
     const url = await getRequestUrl(request);
     return generateBaseRequestTemplate('Solicitud de Compra Ordenada', request, content, url);
 };
+```

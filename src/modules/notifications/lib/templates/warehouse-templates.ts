@@ -1,7 +1,6 @@
 /**
  * @fileoverview HTML templates for Warehouse module notification events.
  */
-'use server';
 
 import type { InventoryUnit, WarehouseLocation } from '@/modules/core/types';
 import { format } from 'date-fns';
@@ -68,3 +67,4 @@ export const getRackCreatedTemplate = async (payload: { rack: WarehouseLocation,
     const url = await getWarehouseLocationsUrl();
     return generateBaseWarehouseTemplate('Nuevo Rack Creado', content, url, 'Ir a Gestión de Ubicaciones');
 };
+```

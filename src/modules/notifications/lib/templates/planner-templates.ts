@@ -63,3 +63,4 @@ export const getPlannerOrderCompletedTemplate = async (order: ProductionOrder): 
     const url = await getPlannerOrderUrl(order);
     return generateBasePlannerTemplate('Orden de Producción Completada', order, content, url);
 };
+```

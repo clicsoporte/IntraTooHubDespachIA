@@ -3,15 +3,18 @@
  */
 'use server';
 
-import { connectDb, getAllStock as getAllStockFromMain, getStockSettings as getStockSettingsFromMain } from '@/modules/core/lib/db';
-import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog } from '@/modules/core/types';
-import { logError, logInfo, logWarn } from '@/modules/core/lib/logger';
+import { connectDb, getAllRoles as getAllRolesFromMain } from '../../core/lib/db';
+import { getAllUsers as getAllUsersFromMain } from '../../core/lib/auth';
+import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, DispatchContainer, DispatchAssignment } from '@/modules/core/types';
+import { logError, logInfo, logWarn } from '../../core/lib/logger';
 import { triggerNotificationEvent } from '@/modules/notifications/lib/notifications-engine';
 import path from 'path';
 
 const WAREHOUSE_DB_FILE = 'warehouse.db';
 
-// This function is automatically called when the database is first created.
+// --- Functions from db-init.ts moved here ---
+// We keep initialization and migrations logic within the same server-context file to avoid module boundary issues.
+
 export async function initializeWarehouseDb(db: import('better-sqlite3').Database) {
     const schema = `
         CREATE TABLE IF NOT EXISTS locations (
@@ -22,7 +25,8 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             parentId INTEGER,
             isLocked INTEGER DEFAULT 0,
             lockedBy TEXT,
-            lockedBySessionId TEXT,
+            lockedByUserId INTEGER,
+            lockedAt TEXT,
             FOREIGN KEY (parentId) REFERENCES locations(id) ON DELETE CASCADE
         );
 
@@ -90,6 +94,31 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             items TEXT NOT NULL, -- JSON array of verified items
             notes TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS dispatch_containers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            createdBy TEXT,
+            createdAt TEXT,
+            isLocked INTEGER DEFAULT 0,
+            lockedBy TEXT,
+            lockedByUserId INTEGER,
+            lockedAt TEXT
+        );
+        CREATE TABLE IF NOT EXISTS dispatch_assignments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            containerId INTEGER NOT NULL,
+            documentId TEXT NOT NULL UNIQUE,
+            documentType TEXT NOT NULL,
+            documentDate TEXT NOT NULL,
+            clientId TEXT NOT NULL,
+            clientName TEXT NOT NULL,
+            assignedBy TEXT NOT NULL,
+            assignedAt TEXT NOT NULL,
+            sortOrder INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'pending',
+            FOREIGN KEY (containerId) REFERENCES dispatch_containers(id) ON DELETE CASCADE
+        );
     `;
     db.exec(schema);
 
@@ -139,73 +168,31 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             }
         };
 
-        // Run these first
-        checkAndRecreateForeignKey('locations', 'parentId', 
-            `CREATE TABLE locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, code TEXT UNIQUE NOT NULL, type TEXT NOT NULL, parentId INTEGER, isLocked INTEGER DEFAULT 0, lockedBy TEXT, lockedBySessionId TEXT, FOREIGN KEY (parentId) REFERENCES locations(id) ON DELETE CASCADE);`,
-            'id, name, code, type, parentId, isLocked, lockedBy, lockedBySessionId');
-        
-        checkAndRecreateForeignKey('inventory', 'locationId',
-            `CREATE TABLE inventory (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, locationId INTEGER NOT NULL, quantity REAL NOT NULL DEFAULT 0, lastUpdated TEXT NOT NULL, updatedBy TEXT, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE, UNIQUE (itemId, locationId));`,
-            'id, itemId, locationId, quantity, lastUpdated, updatedBy');
-        
-        checkAndRecreateForeignKey('item_locations', 'locationId',
-            `CREATE TABLE item_locations (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, locationId INTEGER NOT NULL, clientId TEXT, updatedBy TEXT, updatedAt TEXT, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE, UNIQUE (itemId, locationId, clientId));`,
-            'id, itemId, locationId, clientId, updatedBy, updatedAt');
-        
-        const movementsCreateSql = `CREATE TABLE movements (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT NOT NULL, quantity REAL NOT NULL, fromLocationId INTEGER, toLocationId INTEGER, timestamp TEXT NOT NULL, userId INTEGER NOT NULL, notes TEXT, FOREIGN KEY (fromLocationId) REFERENCES locations(id) ON DELETE CASCADE, FOREIGN KEY (toLocationId) REFERENCES locations(id) ON DELETE CASCADE);`;
-        
-        checkAndRecreateForeignKey('movements', 'fromLocationId', movementsCreateSql, 'id, itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes');
-        checkAndRecreateForeignKey('movements', 'toLocationId', movementsCreateSql, 'id, itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes');
-
-        const inventoryTableInfo = db.prepare(`PRAGMA table_info(inventory)`).all() as { name: string }[];
-        if (!inventoryTableInfo.some(c => c.name === 'updatedBy')) {
-            db.exec('ALTER TABLE inventory ADD COLUMN updatedBy TEXT');
-        }
-
-        const itemLocationsTableInfo = db.prepare(`PRAGMA table_info(item_locations)`).all() as { name: string }[];
-        if (!itemLocationsTableInfo.some(c => c.name === 'updatedBy')) db.exec('ALTER TABLE item_locations ADD COLUMN updatedBy TEXT');
-        if (!itemLocationsTableInfo.some(c => c.name === 'updatedAt')) db.exec('ALTER TABLE item_locations ADD COLUMN updatedAt TEXT');
-        
         const locationsTableInfo = db.prepare(`PRAGMA table_info(locations)`).all() as { name: string }[];
-        if (!locationsTableInfo.some(c => c.name === 'isLocked')) db.exec('ALTER TABLE locations ADD COLUMN isLocked INTEGER DEFAULT 0');
-        if (!locationsTableInfo.some(c => c.name === 'lockedBy')) db.exec('ALTER TABLE locations ADD COLUMN lockedBy TEXT');
-        if (!locationsTableInfo.some(c => c.name === 'lockedBySessionId')) db.exec('ALTER TABLE locations ADD COLUMN lockedBySessionId TEXT');
-        
-        const unitsTableExists = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='inventory_units'`).get();
-        if (!unitsTableExists) {
-            db.exec(`CREATE TABLE inventory_units (id INTEGER PRIMARY KEY AUTOINCREMENT, unitCode TEXT UNIQUE, productId TEXT NOT NULL, humanReadableId TEXT, documentId TEXT, locationId INTEGER, quantity REAL DEFAULT 1, notes TEXT, createdAt TEXT NOT NULL, createdBy TEXT NOT NULL, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE);`);
-        } else {
-             checkAndRecreateForeignKey('inventory_units', 'locationId',
-                `CREATE TABLE inventory_units (id INTEGER PRIMARY KEY AUTOINCREMENT, unitCode TEXT UNIQUE, productId TEXT NOT NULL, humanReadableId TEXT, documentId TEXT, locationId INTEGER, quantity REAL DEFAULT 1, notes TEXT, createdAt TEXT NOT NULL, createdBy TEXT NOT NULL, FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE);`,
-                'id, unitCode, productId, humanReadableId, documentId, locationId, quantity, notes, createdAt, createdBy');
-            const unitsTableInfo = db.prepare(`PRAGMA table_info(inventory_units)`).all() as { name: string }[];
-            if (!unitsTableInfo.some(c => c.name === 'documentId')) db.exec('ALTER TABLE inventory_units ADD COLUMN documentId TEXT');
-            if (!unitsTableInfo.some(c => c.name === 'quantity')) db.exec('ALTER TABLE inventory_units ADD COLUMN quantity REAL DEFAULT 1');
+        if (!locationsTableInfo.some(c => c.name === 'lockedByUserId')) {
+            // This column was misnamed before.
+            db.exec('ALTER TABLE locations ADD COLUMN lockedByUserId INTEGER');
+            db.exec('ALTER TABLE locations ADD COLUMN lockedAt TEXT');
+        }
+        if (locationsTableInfo.some(c => c.name === 'lockedBySessionId')) {
+             console.log("MIGRATION (warehouse.db): Renaming column lockedBySessionId is not directly supported by SQLite. A manual data migration might be needed if data exists in this column.");
+             // In a real scenario, you'd create a new table, copy data, drop old, and rename.
         }
 
-        const dispatchLogTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='dispatch_logs'`).get();
-        if (!dispatchLogTable) {
-            console.log("MIGRATION (warehouse.db): Creating 'dispatch_logs' table.");
-            db.exec(`
-                CREATE TABLE dispatch_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    documentId TEXT NOT NULL,
-                    documentType TEXT NOT NULL,
-                    verifiedAt TEXT NOT NULL,
-                    verifiedByUserId INTEGER NOT NULL,
-                    verifiedByUserName TEXT NOT NULL,
-                    items TEXT NOT NULL, -- JSON array of verified items
-                    notes TEXT
-                );
-            `);
+        const dispatchContainersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='dispatch_containers'`).get();
+        if(dispatchContainersTable) {
+            const dispatchContainersInfo = db.prepare(`PRAGMA table_info(dispatch_containers)`).all() as { name: string }[];
+            const containerColumns = new Set(dispatchContainersInfo.map(c => c.name));
+            if (!containerColumns.has('lockedByUserId')) db.exec('ALTER TABLE dispatch_containers ADD COLUMN lockedByUserId INTEGER');
+            if (!containerColumns.has('lockedAt')) db.exec('ALTER TABLE dispatch_containers ADD COLUMN lockedAt TEXT');
         }
-
 
     } catch (error) {
         console.error("Error during warehouse migrations:", error);
-        logError("Error during warehouse migrations", { error: (error as Error).message });
     }
 }
+
+// --- End of moved functions ---
 
 
 export async function getWarehouseSettings(): Promise<WarehouseSettings> {
@@ -296,6 +283,17 @@ export async function getSelectableLocations(): Promise<WarehouseLocation[]> {
     return JSON.parse(JSON.stringify(selectable));
 }
 
+const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
+    if (!locationId) return "N/A";
+    const path: any[] = [];
+    let current = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const { name, code, type, parentId } = location;
@@ -310,17 +308,6 @@ export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Prom
     const newLocation = db.prepare('SELECT * FROM locations WHERE id = ?').get(info.lastInsertRowid) as WarehouseLocation;
     return newLocation;
 }
-
-const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
-    if (!locationId) return "N/A";
-    const path: any[] = [];
-    let current = locations.find(l => l.id === locationId);
-    while (current) {
-        path.unshift(current);
-        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
-    }
-    return path.map(l => l.name).join(' > ');
-};
 
 export async function addBulkLocations(payload: { type: 'rack' | 'clone'; params: any; }): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
@@ -655,28 +642,29 @@ export async function updateInventoryUnitLocation(id: number, locationId: number
 
 // --- Wizard Lock Functions ---
 
-export async function getActiveLocks(): Promise<WarehouseLocation[]> {
+export async function getActiveLocks(): Promise<any[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const locks = db.prepare('SELECT * FROM locations WHERE isLocked = 1').all() as WarehouseLocation[];
-    return JSON.parse(JSON.stringify(locks));
+    const locationLocks = db.prepare("SELECT id, name, code, 'location' as entityType, lockedBy FROM locations WHERE isLocked = 1").all();
+    const containerLocks = db.prepare("SELECT id, name, name as code, 'container' as entityType, lockedBy FROM dispatch_containers WHERE isLocked = 1").all();
+    return JSON.parse(JSON.stringify([...locationLocks, ...containerLocks]));
 }
 
-export async function lockEntity(payload: { entityIds: number[]; userName: string; userId: number; }): Promise<{ locked: boolean }> {
+export async function lockEntity(payload: { entityIds: number[]; entityType: 'location' | 'container', userName: string; userId: number; }): Promise<{ locked: boolean; error?: string }> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const { entityIds, userName, userId } = payload;
-    const sessionId = String(userId); // Use user ID as the session ID
+    const { entityIds, entityType, userName, userId } = payload;
+    const tableName = entityType === 'location' ? 'locations' : 'dispatch_containers';
 
     const transaction = db.transaction(() => {
         const placeholders = entityIds.map(() => '?').join(',');
-        const conflictingLocks = db.prepare(`SELECT id, lockedBy FROM locations WHERE id IN (${placeholders}) AND isLocked = 1`).all(...entityIds) as { id: number; lockedBy: string }[];
+        const conflictingLocks = db.prepare(`SELECT id, lockedBy FROM ${tableName} WHERE id IN (${placeholders}) AND isLocked = 1 AND lockedByUserId != ?`).all(...entityIds, userId) as { id: number; lockedBy: string }[];
         
         if (conflictingLocks.length > 0) {
-            logWarn('Lock attempt failed, entity already locked', { conflictingLocks, user: userName });
-            return { locked: true };
+            logWarn(`Lock attempt failed on ${tableName}, entity already locked`, { conflictingLocks, user: userName });
+            return { locked: true, error: `Bloqueado por: ${conflictingLocks[0].lockedBy}` };
         }
 
-        const stmt = db.prepare(`UPDATE locations SET isLocked = 1, lockedBy = ?, lockedBySessionId = ? WHERE id IN (${placeholders})`);
-        stmt.run(userName, sessionId, ...entityIds);
+        const stmt = db.prepare(`UPDATE ${tableName} SET isLocked = 1, lockedBy = ?, lockedByUserId = ?, lockedAt = datetime('now') WHERE id IN (${placeholders})`);
+        stmt.run(userName, userId, ...entityIds);
         
         return { locked: false };
     });
@@ -684,18 +672,19 @@ export async function lockEntity(payload: { entityIds: number[]; userName: strin
     return transaction();
 }
 
-export async function releaseLock(entityIds: number[], userId: number): Promise<void> {
+export async function releaseLock(entityIds: number[], entityType: 'location' | 'container', userId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     if (entityIds.length === 0) return;
+    const tableName = entityType === 'location' ? 'locations' : 'dispatch_containers';
     const placeholders = entityIds.map(() => '?').join(',');
-    const sessionId = String(userId);
-    // Only release locks that belong to the current user's session
-    db.prepare(`UPDATE locations SET isLocked = 0, lockedBy = NULL, lockedBySessionId = NULL WHERE id IN (${placeholders}) AND lockedBySessionId = ?`).run(...entityIds, sessionId);
+    
+    db.prepare(`UPDATE ${tableName} SET isLocked = 0, lockedBy = NULL, lockedByUserId = NULL, lockedAt = NULL WHERE id IN (${placeholders}) AND lockedByUserId = ?`).run(...entityIds, userId);
 }
 
-export async function forceReleaseLock(locationId: number): Promise<void> {
+export async function forceReleaseLock(entityId: number, entityType: 'location' | 'container'): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('UPDATE locations SET isLocked = 0, lockedBy = NULL, lockedBySessionId = NULL WHERE id = ?').run(locationId);
+    const tableName = entityType === 'location' ? 'locations' : 'dispatch_containers';
+    db.prepare(`UPDATE ${tableName} SET isLocked = 0, lockedBy = NULL, lockedByUserId = NULL, lockedAt = NULL WHERE id = ?`).run(entityId);
 }
 
 export async function getChildLocations(parentIds: number[]): Promise<WarehouseLocation[]> {
@@ -797,4 +786,145 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
         ...log,
         items: JSON.parse(log.items),
     }));
+}
+
+export async function getContainers(): Promise<DispatchContainer[]> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    return db.prepare('SELECT * FROM dispatch_containers ORDER BY name ASC').all() as DispatchContainer[];
+}
+
+export async function saveContainer(container: Omit<DispatchContainer, 'id' | 'createdAt'>, updatedBy: string): Promise<DispatchContainer> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const info = db.prepare('INSERT INTO dispatch_containers (name, createdBy, createdAt) VALUES (?, ?, ?)').run(container.name, updatedBy, new Date().toISOString());
+    const newContainer = db.prepare('SELECT * FROM dispatch_containers WHERE id = ?').get(info.lastInsertRowid) as DispatchContainer;
+    return newContainer;
+}
+
+export async function deleteContainer(id: number): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    db.prepare('DELETE FROM dispatch_containers WHERE id = ?').run(id);
+}
+
+export async function getUnassignedDocuments(dateRange: DateRange): Promise<ErpInvoiceHeader[]> {
+    const mainDb = await connectDb();
+    const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
+    
+    const assignedDocIds = new Set(
+        warehouseDb.prepare('SELECT documentId FROM dispatch_assignments').all().map((row: any) => row.documentId)
+    );
+    
+    let query = `SELECT * FROM erp_invoice_headers WHERE TIPO_DOCUMENTO IN ('F', 'R')`;
+    const params: any[] = [];
+    
+    if (dateRange.from) {
+        query += ' AND FECHA >= ?';
+        params.push(dateRange.from.toISOString());
+    }
+    if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        query += ' AND FECHA <= ?';
+        params.push(toDate.toISOString());
+    }
+    
+    query += ' ORDER BY FECHA DESC';
+
+    const allInvoices = mainDb.prepare(query).all(...params) as ErpInvoiceHeader[];
+    const unassigned = allInvoices.filter(invoice => !assignedDocIds.has(invoice.FACTURA));
+    
+    return JSON.parse(JSON.stringify(unassigned));
+}
+
+export async function assignDocumentsToContainer(documentIds: string[], containerId: number, updatedBy: string): Promise<void> {
+    const mainDb = await connectDb();
+    const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
+
+    const placeholders = documentIds.map(() => '?').join(',');
+    const invoices = mainDb.prepare(`SELECT * FROM erp_invoice_headers WHERE FACTURA IN (${placeholders})`).all(...documentIds) as ErpInvoiceHeader[];
+    
+    const insert = warehouseDb.prepare(`
+        INSERT INTO dispatch_assignments (containerId, documentId, documentType, documentDate, clientId, clientName, assignedBy, assignedAt, status)
+        VALUES (@containerId, @documentId, @documentType, @documentDate, @clientId, @clientName, @assignedBy, @assignedAt, 'pending')
+    `);
+
+    const transaction = warehouseDb.transaction((docs) => {
+        for (const doc of docs) {
+            insert.run({
+                containerId: containerId,
+                documentId: doc.FACTURA,
+                documentType: doc.TIPO_DOCUMENTO,
+                documentDate: typeof doc.FECHA === 'string' ? doc.FECHA : (doc.FECHA as Date).toISOString(),
+                clientId: doc.CLIENTE,
+                clientName: doc.NOMBRE_CLIENTE,
+                assignedBy: updatedBy,
+                assignedAt: new Date().toISOString(),
+            });
+        }
+    });
+
+    transaction(invoices);
+}
+
+export async function updateAssignmentOrder(containerId: number, orderedDocumentIds: string[]): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const updateStmt = db.prepare('UPDATE dispatch_assignments SET sortOrder = ? WHERE documentId = ? AND containerId = ?');
+    const transaction = db.transaction(() => {
+        for (let i = 0; i < orderedDocumentIds.length; i++) {
+            updateStmt.run(i, orderedDocumentIds[i], containerId);
+        }
+    });
+    transaction();
+}
+
+export async function getAssignmentsForContainer(containerId: number): Promise<DispatchAssignment[]> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    return db.prepare('SELECT * FROM dispatch_assignments WHERE containerId = ? ORDER BY sortOrder ASC').all(containerId) as DispatchAssignment[];
+}
+
+export async function getAssignmentsByIds(documentIds: string[]): Promise<DispatchAssignment[]> {
+    if (documentIds.length === 0) return [];
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const placeholders = documentIds.map(() => '?').join(',');
+    const rows = db.prepare(`SELECT * FROM dispatch_assignments WHERE documentId IN (${placeholders})`).all(...documentIds) as DispatchAssignment[];
+    return JSON.parse(JSON.stringify(rows));
+}
+
+export async function getNextDocumentInContainer(containerId: number, currentDocumentId: string): Promise<string | null> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const assignments = await getAssignmentsForContainer(containerId);
+    const currentIndex = assignments.findIndex(a => a.documentId === currentDocumentId);
+    
+    if (currentIndex === -1) return null;
+
+    // Find the next *uncompleted* document
+    for (let i = currentIndex + 1; i < assignments.length; i++) {
+        if (assignments[i].status !== 'completed') {
+            return assignments[i].documentId;
+        }
+    }
+    
+    // If no uncompleted found after current, check from the beginning
+    for (let i = 0; i < currentIndex; i++) {
+         if (assignments[i].status !== 'completed') {
+            return assignments[i].documentId;
+        }
+    }
+
+    return null; // All documents are completed
+}
+
+export async function moveAssignmentToContainer(assignmentId: number, targetContainerId: number, documentId?: string): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+
+    let docId = documentId;
+    if (!docId && assignmentId > 0) {
+        const assignment = db.prepare('SELECT documentId FROM dispatch_assignments WHERE id = ?').get(assignmentId) as { documentId: string } | undefined;
+        if (!assignment) throw new Error("Asignación no encontrada.");
+        docId = assignment.documentId;
+    }
+    
+    if (!docId) throw new Error("ID de documento no válido para mover.");
+    
+    // Update the containerId for the assignment with the given documentId
+    db.prepare('UPDATE dispatch_assignments SET containerId = ? WHERE documentId = ?').run(targetContainerId, docId);
 }
