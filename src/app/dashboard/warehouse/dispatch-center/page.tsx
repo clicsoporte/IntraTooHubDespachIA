@@ -372,7 +372,7 @@ export default function DispatchCenterPage() {
             }
             await fetchAllAssignments();
             setUnassignedDocs(prev => prev.filter(d => d.FACTURA !== documentId));
-        } catch(error: any) {
+        } catch (error: any) {
             toast({ title: 'Error', description: `Ocurrió un error: ${error.message}`, variant: 'destructive' });
         }
     }, [user, unassignedDocs, toast, assignments, fetchAllAssignments, getAssignedContainerId]);
@@ -442,7 +442,7 @@ export default function DispatchCenterPage() {
     
     const isRouteCompleted = (c: DispatchContainer) => {
         const assignmentCount = c.assignmentCount ?? 0;
-        return assignmentCount > 0 && c.completedAssignmentCount === assignmentCount;
+        return (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === assignmentCount;
     }
 
     if (isLoading) {
@@ -561,7 +561,7 @@ export default function DispatchCenterPage() {
                 {containers.map(c => {
                     const assignmentCount = c.assignmentCount ?? 0;
                     const completedCount = c.completedAssignmentCount ?? 0;
-                    const isCompleted = (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === c.assignmentCount;
+                    const isCompleted = (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === assignmentCount;
                     const isLocked = c.isLocked && c.lockedByUserId !== user?.id;
 
                     return (
@@ -575,10 +575,15 @@ export default function DispatchCenterPage() {
                             )}
                         >
                             <CardHeader>
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-start">
                                     <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5"/>{c.name}</CardTitle>
-                                    {isLocked && <Badge variant="destructive"><Lock className="mr-1 h-3 w-3"/> En Uso</Badge>}
-                                    {isCompleted && <Badge variant="default" className="bg-green-600"><CheckCircle className="mr-1 h-3 w-3"/> Completada</Badge>}
+                                    {isLocked ? (
+                                        <Badge variant="destructive"><Lock className="mr-1 h-3 w-3"/> En Uso</Badge>
+                                    ) : isCompleted ? (
+                                        <Badge variant="default" className="bg-green-600"><CheckCircle className="mr-1 h-3 w-3"/> Completada</Badge>
+                                    ) : assignmentCount > 0 ? (
+                                        <Badge variant="outline">{assignmentCount}</Badge>
+                                    ) : null}
                                 </div>
                                 <CardDescription>
                                     {assignmentCount} documentos asignados.
