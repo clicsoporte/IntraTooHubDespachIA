@@ -875,18 +875,18 @@ export type DispatchLog = {
 };
 
 export interface DispatchContainer {
-  id?: number;
-  name: string;
-  createdBy: string;
-  createdAt: string;
-  isLocked?: boolean;
-  lockedBy?: string | null;
-  lockedByUserId?: number | null;
-  lockedAt?: string | null;
-  assignmentCount?: number;
-  completedAssignmentCount?: number;
-  lastVerifiedBy?: string | null;
-  lastVerifiedAt?: string | null;
+    id?: number;
+    name: string;
+    createdBy: string;
+    createdAt: string;
+    isLocked?: boolean;
+    lockedBy?: string | null;
+    lockedByUserId?: number | null;
+    lockedAt?: string | null;
+    assignmentCount?: number;
+    completedAssignmentCount?: number;
+    lastVerifiedBy?: string | null;
+    lastVerifiedAt?: string | null;
 }
 
 export interface DispatchAssignment {
@@ -1058,6 +1058,4 @@ export type Empleado = {
 };
 
 export type Vehiculo = {
-    placa: string;
-    marca: string;
-};
+    placa: string

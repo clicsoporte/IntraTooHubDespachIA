@@ -651,9 +651,9 @@ export async function getUnassignedDocuments(dateRange: DateRange): Promise<ErpI
     const mainDb = await connectDb();
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
-    // Get IDs of documents that are already completed and dispatched
+    // Get IDs of documents that are already completed and dispatched from the LOGS
     const dispatchedDocIds = new Set(
-        warehouseDb.prepare("SELECT documentId FROM dispatch_assignments WHERE status IN ('completed', 'discrepancy')").all().map((row: any) => row.documentId)
+        warehouseDb.prepare("SELECT DISTINCT documentId FROM dispatch_logs").all().map((row: any) => row.documentId)
     );
     
     let query = `SELECT * FROM erp_invoice_headers WHERE TIPO_DOCUMENTO IN ('F', 'R')`;
@@ -692,7 +692,7 @@ export async function assignDocumentsToContainer(documentIds: string[], containe
         VALUES (@containerId, @documentId, @documentType, @documentDate, @clientId, @clientName, @assignedBy, @assignedAt, 'pending')
     `);
 
-    const transaction = warehouseDb.transaction((docs) => {
+    const transaction = warehouseDb.transaction((docs: ErpInvoiceHeader[]) => {
         // First, unassign these docs from ANY container they might already be in
         if (docs.length > 0) {
             const docIdsToUnassign = docs.map(d => d.FACTURA);
@@ -803,3 +803,5 @@ export async function unassignAllFromContainer(containerId: number): Promise<voi
     db.prepare('DELETE FROM dispatch_assignments WHERE containerId = ?').run(containerId);
     await logInfo(`All assignments cleared from container ${containerId}.`);
 }
+
+    
