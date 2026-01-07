@@ -57,7 +57,7 @@ export default function PopulationWizardPage() {
     const [locationsToPopulate, setLocationsToPopulate] = useState<WarehouseLocation[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [productSearch, setProductSearch] = useState('');
-    const [isProductSearchOpen, setProductSearchOpen] = useState(false);
+    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [lastAssignment, setLastAssignment] = useState<{ location: string; product: string; code: string; } | null>(null);
     
     const [rackSearchTerm, setRackSearchTerm] = useState('');
@@ -156,6 +156,7 @@ export default function PopulationWizardPage() {
         try {
             const { locked } = await lockEntity({
                 entityIds: Array.from(selectedLevelIds),
+                entityType: 'location',
                 userName: user.name,
                 userId: user.id
             });
@@ -235,7 +236,7 @@ export default function PopulationWizardPage() {
     const handleFinishWizard = async () => {
         if (user) {
             await clearWizardSession(user.id);
-            await releaseLock(Array.from(selectedLevelIds), user.id);
+            await releaseLock(Array.from(selectedLevelIds), 'location', user.id);
         }
         setWizardStep('finished');
     };
@@ -255,7 +256,7 @@ export default function PopulationWizardPage() {
     const abandonSession = async () => {
         if(user && existingSession) {
             await clearWizardSession(user.id);
-            await releaseLock(existingSession.levelIds, user.id);
+            await releaseLock(existingSession.levelIds, 'location', user.id);
         }
         resetWizard();
     };
@@ -403,7 +404,7 @@ export default function PopulationWizardPage() {
                                 placeholder="Escanear o buscar producto..."
                                 onKeyDown={handleKeyDown}
                                 open={isProductSearchOpen}
-                                onOpenChange={setProductSearchOpen}
+                                onOpenChange={setIsProductSearchOpen}
                                 className="text-lg h-14"
                             />
                              <div className="flex justify-center gap-2">

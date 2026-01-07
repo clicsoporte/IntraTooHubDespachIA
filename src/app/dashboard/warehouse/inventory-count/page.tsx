@@ -13,7 +13,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getLocations, updateInventory, getSelectableLocations } from '@/modules/warehouse/lib/actions';
+import { getLocations, updateInventory } from '@/modules/warehouse/lib/actions';
 import type { Product, WarehouseLocation, User } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
@@ -34,6 +34,11 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
         current = locations.find(l => l.id === parentId);
     }
     return path.map(l => l.name).join(' > ');
+};
+
+const getSelectableLocations = (allLocations: WarehouseLocation[]): WarehouseLocation[] => {
+    const parentIds = new Set(allLocations.map(l => l.parentId).filter(Boolean));
+    return allLocations.filter(l => !parentIds.has(l.id));
 };
 
 export default function InventoryCountPage() {

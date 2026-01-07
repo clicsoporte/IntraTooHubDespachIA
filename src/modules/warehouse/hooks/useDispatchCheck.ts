@@ -88,7 +88,7 @@ export function useDispatchCheck() {
     const { isAuthorized, hasPermission } = useAuthorization(['warehouse:dispatch-check:use']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user, products, users, customers, companyData } = useAuth();
+    const { user, products, users, customers, companyData, isReady } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     

@@ -19,7 +19,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getInvoicesByIds } from '@/modules/warehouse/lib/db';
+import { getInvoicesByIdsFromMain } from '@/modules/core/lib/db';
 import { Badge } from '@/components/ui/badge';
 
 
@@ -56,7 +56,7 @@ export default function DispatchCenterPage() {
         
         if (!skipLock) {
             try {
-                const lockResult = await lockContainer(container.id!, user.id, user.name);
+                const lockResult = await lockContainer({ entityId: container.id!, entityType: 'container', userId: user.id, userName: user.name });
                 if (lockResult.error) {
                     toast({ title: "Contenedor en Uso", description: lockResult.error, variant: "destructive" });
                     setIsLoading(false);
@@ -74,8 +74,8 @@ export default function DispatchCenterPage() {
             
             if (fetchedAssignments.length > 0) {
                 const documentIds = fetchedAssignments.map(a => a.documentId);
-                const invoiceDetails = await getInvoicesByIds(documentIds);
-                const headersMap = new Map(invoiceDetails.map(h => [h.FACTURA, h]));
+                const invoiceDetails = await getInvoicesByIdsFromMain(documentIds);
+                const headersMap = new Map<string, ErpInvoiceHeader>(invoiceDetails.map((h: ErpInvoiceHeader) => [h.FACTURA, h]));
                 setErpHeaders(headersMap);
             }
 
@@ -116,7 +116,7 @@ export default function DispatchCenterPage() {
     const handleExitContainer = async () => {
         if (!user || !selectedContainer) return;
         try {
-            await releaseContainer(selectedContainer.id!, user.id);
+            await releaseContainer(selectedContainer.id!, 'container', user.id);
             sessionStorage.removeItem('activeDispatchContainer');
             setSelectedContainer(null);
             setAssignments([]);
@@ -135,7 +135,7 @@ export default function DispatchCenterPage() {
     const handleMoveAssignment = async (targetContainerId: number) => {
         if (!assignmentToMove || !selectedContainer) return;
         try {
-            await moveAssignmentToContainer(assignmentToMove.id, targetContainerId);
+            await moveAssignmentToContainer(assignmentToMove.id, targetContainerId, assignmentToMove.documentId);
             setAssignments(prev => prev.filter(a => a.id !== assignmentToMove.id));
             toast({ title: "Documento Movido", description: `Se ha movido ${assignmentToMove.documentId} al nuevo contenedor.`});
             setAssignmentToMove(null);

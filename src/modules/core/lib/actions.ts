@@ -44,8 +44,12 @@ export async function cleanupAllExportFiles(): Promise<number> {
     let deletedCount = 0;
     for (const file of files) {
         if (file.endsWith('.xlsx')) {
-            fs.unlinkSync(path.join(exportDir, file));
-            deletedCount++;
+            try {
+                fs.unlinkSync(path.join(exportDir, file));
+                deletedCount++;
+            } catch (err) {
+                console.error(`Could not delete temp file: ${file}`, err);
+            }
         }
     }
     return deletedCount;

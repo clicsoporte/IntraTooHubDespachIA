@@ -16,7 +16,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getLocations, getAllItemLocations, assignItemToLocation, unassignItemFromLocation, getSelectableLocations } from '@/modules/warehouse/lib/actions';
+import { getLocations, getAllItemLocations, assignItemToLocation, unassignItemFromLocation } from '@/modules/warehouse/lib/actions';
 import type { Product, Customer, WarehouseLocation, ItemLocation, Company } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { SearchInput } from '@/components/ui/search-input';
@@ -84,8 +84,9 @@ export default function AssignItemPage() {
         setIsLoading(true);
         try {
             const [locs, allAssigns] = await Promise.all([getLocations(), getAllItemLocations()]);
+            const parentIds = new Set(locs.map(l => l.parentId).filter(Boolean));
             setAllLocations(locs);
-            setSelectableLocations(getSelectableLocations(locs));
+            setSelectableLocations(locs.filter(l => !parentIds.has(l.id)));
             setAllAssignments(allAssigns.sort((a, b) => (b.id ?? 0) - (a.id ?? 0))); // Sort by most recent
         } catch (error) {
             logError("Failed to load data for assignment page", { error });

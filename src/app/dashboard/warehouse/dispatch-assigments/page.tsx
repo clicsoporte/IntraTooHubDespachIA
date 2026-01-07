@@ -24,7 +24,7 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useDebounce } from 'use-debounce';
 import { Badge } from '@/components/ui/badge';
-import { getInvoicesByIds } from '@/modules/warehouse/lib/db';
+import { getInvoicesByIdsFromMain } from '@/modules/core/lib/db';
 
 const DraggableItem = ({ item, erpHeaders, index }: { item: DispatchAssignment, erpHeaders: Map<string, ErpInvoiceHeader>, index: number }) => {
     const erpHeader = erpHeaders.get(item.documentId);
@@ -69,7 +69,7 @@ export default function DispatchClassifierPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingDocs, setIsLoadingDocs] = useState(false);
     
-    const [dateRange, setDateRange] = useState<DateRange>({ from: startOfDay(subDays(new Date(), 7)), to: new Date() });
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(subDays(new Date(), 7)), to: new Date() });
     
     useEffect(() => {
         setTitle("Clasificador de Despachos");
@@ -88,8 +88,8 @@ export default function DispatchClassifierPage() {
                     allDocumentIds.push(...containerAssignments.map(a => a.documentId));
                 }
                 
-                const invoiceDetails = await getInvoicesByIds(allDocumentIds);
-                const headersMap = new Map(invoiceDetails.map(h => [h.FACTURA, h]));
+                const invoiceDetails = await getInvoicesByIdsFromMain(allDocumentIds);
+                const headersMap = new Map<string, ErpInvoiceHeader>(invoiceDetails.map((h: ErpInvoiceHeader) => [h.FACTURA, h]));
 
                 setAssignments(assignmentsByContainer);
                 setErpHeaders(headersMap);

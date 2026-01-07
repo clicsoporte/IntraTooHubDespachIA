@@ -15,7 +15,7 @@ import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { getActiveLocks, forceReleaseLock } from '@/modules/warehouse/lib/actions';
 import type { WarehouseLocation } from '@/modules/core/types';
-import { Loader2, RefreshCw, Unlock } from 'lucide-react';
+import { Loader2, RefreshCw, Unlock, Package, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 
@@ -25,8 +25,8 @@ export default function LockManagementPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
-    const [isReleasing, setIsReleasing] = useState<number | null>(null);
-    const [locks, setLocks] = useState<WarehouseLocation[]>([]);
+    const [isReleasing, setIsReleasing] = useState<string | null>(null);
+    const [locks, setLocks] = useState<any[]>([]);
 
     const fetchLocks = useCallback(async () => {
         setIsLoading(true);
@@ -45,17 +45,19 @@ export default function LockManagementPage() {
         setTitle("Gestión de Bloqueos de Almacén");
         if (hasPermission('warehouse:locks:manage')) {
             fetchLocks();
+        } else {
+            setIsLoading(false);
         }
     }, [setTitle, fetchLocks, hasPermission]);
 
-    const handleReleaseLock = async (locationId: number) => {
-        setIsReleasing(locationId);
+    const handleReleaseLock = async (entityId: number, entityType: 'location' | 'container') => {
+        setIsReleasing(`${entityType}-${entityId}`);
         try {
-            await forceReleaseLock(locationId);
-            toast({ title: "Bloqueo Liberado", description: "La ubicación está disponible." });
+            await forceReleaseLock(entityId, entityType);
+            toast({ title: "Bloqueo Liberado", description: "La entidad está disponible." });
             await fetchLocks(); // Refresh the list
         } catch (error: any) {
-            logError("Failed to force release lock", { error: error.message, locationId });
+            logError("Failed to force release lock", { error: error.message, entityId, entityType });
             toast({ title: "Error", description: "No se pudo liberar el bloqueo.", variant: "destructive" });
         } finally {
             setIsReleasing(null);
@@ -81,9 +83,9 @@ export default function LockManagementPage() {
                     <CardHeader>
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                             <div>
-                                <CardTitle>Ubicaciones Bloqueadas</CardTitle>
+                                <CardTitle>Entidades Bloqueadas</CardTitle>
                                 <CardDescription>
-                                    Aquí puedes ver qué ubicaciones están siendo pobladas y por quién. Puedes liberar bloqueos si es necesario.
+                                    Aquí puedes ver qué ubicaciones o contenedores están siendo usados y por quién. Puedes liberar bloqueos si es necesario.
                                 </CardDescription>
                             </div>
                             <Button onClick={() => fetchLocks()} disabled={isLoading}>
@@ -96,23 +98,31 @@ export default function LockManagementPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Ubicación</TableHead>
-                                    <TableHead>Código</TableHead>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead>Nombre / ID</TableHead>
                                     <TableHead>Bloqueado por</TableHead>
                                     <TableHead className="text-right">Acción</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {locks.length > 0 ? locks.map(lock => (
-                                    <TableRow key={lock.id}>
-                                        <TableCell className="font-medium">{lock.name}</TableCell>
-                                        <TableCell className="font-mono">{lock.code}</TableCell>
+                                    <TableRow key={`${lock.entityType}-${lock.id}`}>
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-2">
+                                                {lock.entityType === 'location' ? <Package className="h-4 w-4 text-muted-foreground"/> : <Truck className="h-4 w-4 text-muted-foreground"/>}
+                                                {lock.entityType === 'location' ? 'Poblado de Rack' : 'Centro de Despacho'}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="font-semibold">{lock.name}</p>
+                                            <p className="text-xs text-muted-foreground font-mono">{lock.code}</p>
+                                        </TableCell>
                                         <TableCell>{lock.lockedBy || 'Desconocido'}</TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button variant="destructive" size="sm" disabled={isReleasing === lock.id}>
-                                                        {isReleasing === lock.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Unlock className="mr-2 h-4 w-4" />}
+                                                    <Button variant="destructive" size="sm" disabled={isReleasing === `${lock.entityType}-${lock.id}`}>
+                                                        {isReleasing === `${lock.entityType}-${lock.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Unlock className="mr-2 h-4 w-4" />}
                                                         Liberar
                                                     </Button>
                                                 </AlertDialogTrigger>
@@ -120,12 +130,12 @@ export default function LockManagementPage() {
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>¿Forzar Liberación?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            Esta acción finalizará la sesión de <strong>{lock.lockedBy}</strong> en la ubicación <strong>{lock.name}</strong>. El usuario podría perder progreso no guardado.
+                                                            Esta acción finalizará la sesión de <strong>{lock.lockedBy}</strong> en <strong>{lock.name}</strong>. El usuario podría perder progreso no guardado.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleReleaseLock(lock.id)}>Sí, liberar</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleReleaseLock(lock.id, lock.entityType)}>Sí, liberar</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
@@ -134,7 +144,7 @@ export default function LockManagementPage() {
                                 )) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                            No hay ubicaciones bloqueadas en este momento.
+                                            No hay entidades bloqueadas en este momento.
                                         </TableCell>
                                     </TableRow>
                                 )}
