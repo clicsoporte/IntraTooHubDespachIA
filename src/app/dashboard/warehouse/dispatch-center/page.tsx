@@ -13,7 +13,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle, Undo2, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -192,7 +192,7 @@ export default function DispatchCenterPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {containers.map(c => {
-                        const isRouteCompleted = c.assignmentCount > 0 && c.completedAssignmentCount === c.assignmentCount;
+                        const isRouteCompleted = (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === c.assignmentCount;
                         return (
                             <Card key={c.id} className={cn("flex flex-col transition-all", isRouteCompleted && 'border-green-500 bg-green-50')}>
                                 <CardHeader>
@@ -344,4 +344,3 @@ export default function DispatchCenterPage() {
         </div>
     );
 }
-

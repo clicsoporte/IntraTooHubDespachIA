@@ -882,6 +882,10 @@ export interface DispatchContainer {
   lockedBy?: string | null;
   lockedByUserId?: number | null;
   lockedAt?: string | null;
+  assignmentCount?: number;
+  completedAssignmentCount?: number;
+  lastVerifiedBy?: string | null;
+  lastVerifiedAt?: string | null;
 }
 
 export interface DispatchAssignment {
@@ -1053,6 +1057,6 @@ export type Empleado = {
 };
 
 export type Vehiculo = {
-    NUMERO_PLACA: string;
-    ENTIDAD_EMISORA: string;
+    placa: string;
+    marca: string;
 };
