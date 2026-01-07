@@ -53,7 +53,7 @@ export default function DispatchCheckPage() {
         isAuthorized,
     } = useDispatchCheck();
     
-    if (!isReady || isAuthorized === null || state.isLoading) {
+    if (!isReady || isAuthorized === null || (state.isLoading && state.step !== 'verifying')) {
         return (
              <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
                 <Skeleton className="h-96 w-full max-w-4xl" />
@@ -322,10 +322,10 @@ export default function DispatchCheckPage() {
                 <Card className="w-full max-w-lg text-center">
                     <CardHeader>
                         <CheckCircle className="mx-auto h-16 w-16 text-green-500"/>
-                        <CardTitle className="mt-4 text-2xl">¡Verificación Finalizada!</CardTitle>
+                        <CardTitle className="mt-4 text-2xl">¡Despacho Verificado!</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">El despacho para el documento <strong>{state.currentDocument?.id}</strong> se ha registrado correctamente.</p>
+                        <p className="text-muted-foreground">El documento <strong>{state.currentDocument?.id}</strong> se ha registrado correctamente.</p>
                     </CardContent>
                     <CardFooter className="flex-col sm:flex-row justify-center gap-2">
                         <Button onClick={actions.reset} variant="outline" className="w-full sm:w-auto">
@@ -346,5 +346,14 @@ export default function DispatchCheckPage() {
         );
     }
 
-    return null; // Fallback for loading or other states
+    // Fallback for any other unexpected state, effectively resetting.
+    if (!state.isLoading) {
+        return (
+            <main className="flex-1 p-4 md:p-6 lg:p-8 flex items-center justify-center">
+                <p>Estado inesperado. <Button variant="link" onClick={actions.reset}>Reiniciar</Button></p>
+            </main>
+        );
+    }
+
+    return null;
 }
