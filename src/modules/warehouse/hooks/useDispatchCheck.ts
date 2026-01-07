@@ -509,12 +509,13 @@ export function useDispatchCheck() {
     
             toast({ title: 'Verificación Finalizada', description: 'El despacho ha sido registrado.' });
             
-            updateState({ step: 'finished', isLoading: false });
+            updateState({ step: 'finished' }); // Do NOT clear currentDocument here, so the final screen can use it
     
         } catch (error: any) {
             logError('Failed to finalize dispatch', { error: error.message });
             toast({ title: 'Error al Finalizar', description: error.message, variant: 'destructive' });
-            updateState({ isLoading: false }); // Ensure loading state is false on error
+        } finally {
+            updateState({ isLoading: false }); // Always stop loading
         }
     }, [user, state.currentDocument, state.verificationItems, companyData, toast, updateState, handlePrintPdf, state.selectedUsers, state.externalEmail, state.emailBody]);
     
@@ -623,13 +624,8 @@ export function useDispatchCheck() {
             if (state.nextDocumentInContainer && state.currentDocument?.containerId) {
                 const containerId = state.currentDocument.containerId;
                 const nextDocId = state.nextDocumentInContainer;
-                // Reset step but keep other state to avoid re-fetching containers etc.
-                updateState({
-                    step: 'loading',
-                    isLoading: true,
-                    currentDocument: null,
-                    verificationItems: [],
-                });
+                // Full reset to prepare for the next document in the flow
+                reset();
                 router.replace(`/dashboard/warehouse/dispatch-check?docId=${nextDocId}&containerId=${containerId}`);
             } else {
                  handleGoBack();

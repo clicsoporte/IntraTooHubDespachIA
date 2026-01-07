@@ -103,6 +103,7 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
         CREATE TABLE IF NOT EXISTS puestos (PUESTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);
         CREATE TABLE IF NOT EXISTS departamentos (DEPARTAMENTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);
         CREATE TABLE IF NOT EXISTS empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);
+        CREATE TABLE IF NOT EXISTS vehiculos (placa TEXT PRIMARY KEY, marca TEXT);
     `;
     db.exec(schema);
 
@@ -365,7 +366,7 @@ async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
             if (!draftColumns.has('notes')) db.exec(`ALTER TABLE quote_drafts ADD COLUMN notes TEXT;`);
             if (!draftColumns.has('currency')) db.exec(`ALTER TABLE quote_drafts ADD COLUMN currency TEXT;`);
             if (!draftColumns.has('exchangeRate')) db.exec(`ALTER TABLE quote_drafts ADD COLUMN exchangeRate REAL;`);
-            if (!draftColumns.has('purchaseOrderNumber')) db.exec(`ALTER TABLE quote_drafts ADD COLUMN purchaseOrderNumber TEXT;`);
+            if (!draftColumns.has('purchaseOrderNumber')) db.exec(`ALTER TABLE quote_drafts ADD COLUMN purchaseOrderNumber TEXT`);
         }
 
         const usersToUpdate = db.prepare('SELECT id, password FROM users').all() as User[];
@@ -474,6 +475,10 @@ async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='empleados'`).get()) {
             console.log("MIGRATION: Creating empleados table.");
             db.exec(`CREATE TABLE empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vehiculos'`).get()) {
+            console.log("MIGRATION: Creating vehiculos table.");
+            db.exec(`CREATE TABLE vehiculos (placa TEXT PRIMARY KEY, marca TEXT);`);
         }
 
 
@@ -951,6 +956,7 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'puestos': return { 'PUESTO': 'PUESTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'departamentos': return { 'DEPARTAMENTO': 'DEPARTAMENTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'empleados': return { 'EMPLEADO': 'EMPLEADO', 'NOMBRE': 'NOMBRE', 'ACTIVO': 'ACTIVO', 'DEPARTAMENTO': 'DEPARTAMENTO', 'PUESTO': 'PUESTO', 'NOMINA': 'NOMINA' };
+        case 'vehiculos': return { 'PLACA': 'placa', 'MARCA': 'marca' };
         default: return {};
     }
 }
@@ -1100,6 +1106,8 @@ async function importDataFromSql(type: ImportQuery['type']): Promise<{ count: nu
         await saveAllGeneric(mappedData, 'departamentos', ['DEPARTAMENTO', 'DESCRIPCION', 'ACTIVO']);
     } else if (type === 'empleados') {
         await saveAllGeneric(mappedData, 'empleados', ['EMPLEADO', 'NOMBRE', 'ACTIVO', 'DEPARTAMENTO', 'PUESTO', 'NOMINA']);
+    } else if (type === 'vehiculos') {
+        await saveAllGeneric(mappedData, 'vehiculos', ['placa', 'marca']);
     }
     return { count: mappedData.length, source: 'SQL Server' };
 }
@@ -1111,7 +1119,7 @@ export async function importData(type: ImportQuery['type']): Promise<{ count: nu
     if (companySettings.importMode === 'sql') {
         return importDataFromSql(type);
     } else {
-        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados'].includes(type)) {
+        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados', 'vehiculos'].includes(type)) {
             return { count: 0, source: 'file (skipped)' };
         }
         return importDataFromFile(type as 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines');
@@ -1130,7 +1138,7 @@ export async function importAllDataFromFiles(): Promise<{ type: string; count: n
         { type: 'erp_purchase_order_headers' }, { type: 'erp_purchase_order_lines' },
         { type: 'erp_invoice_headers' }, { type: 'erp_invoice_lines' },
         { type: 'vendedores'}, { type: 'direcciones_embarque' }, { type: 'nominas' },
-        { type: 'puestos' }, { type: 'departamentos' }, { type: 'empleados' },
+        { type: 'puestos' }, { type: 'departamentos' }, { type: 'empleados' }, { type: 'vehiculos' },
     ];
     
     const results: { type: string; count: number; }[] = [];
@@ -1141,7 +1149,7 @@ export async function importAllDataFromFiles(): Promise<{ type: string; count: n
                 const filePathKey = `${task.type}FilePath` as keyof Company;
                 const filePath = companySettings[filePathKey] as string | undefined;
 
-                if (!filePath && !['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados'].includes(task.type)) {
+                if (!filePath && !['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados', 'vehiculos'].includes(task.type)) {
                     console.log(`Skipping file import for ${task.type}: no file path configured.`);
                     continue;
                 }
@@ -1803,7 +1811,7 @@ async function saveAllGeneric(data: any[], tableName: string, columns: string[])
     const placeholders = columns.map(() => '?').join(',');
     const insert = db.prepare(`INSERT OR REPLACE INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`);
     
-    const transaction = db.transaction((rows) => {
+    const transaction = db.transaction((rows: any[]) => {
         db.prepare(`DELETE FROM ${tableName}`).run();
         for (const row of rows) {
             const values = columns.map(col => row[col]);

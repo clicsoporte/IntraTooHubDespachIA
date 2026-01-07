@@ -1058,4 +1058,6 @@ export type Empleado = {
 };
 
 export type Vehiculo = {
-    placa: string
+    placa: string;
+    marca: string;
+};
