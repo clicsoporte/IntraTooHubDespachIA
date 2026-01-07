@@ -10,12 +10,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getContainers, getUnassignedDocuments, getAssignmentsForContainer, assignDocumentsToContainer, updateAssignmentOrder, moveAssignmentToContainer, unassignDocumentFromContainer } from '@/modules/warehouse/lib/actions';
+import { getContainers, getUnassignedDocuments, getAssignmentsForContainer, assignDocumentsToContainer, updateAssignmentOrder, unassignDocumentFromContainer } from '@/modules/warehouse/lib/actions';
 import { getInvoicesByIds } from '@/modules/core/lib/db';
 import type { DispatchContainer, ErpInvoiceHeader, DispatchAssignment } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, CalendarIcon, Package, Truck, AlertTriangle, List, Check, ChevronsUpDown, Send, Trash2, GripVertical } from 'lucide-react';
+import { Loader2, Search, CalendarIcon, Truck, AlertTriangle, List, Check, ChevronsUpDown, Send, Trash2, GripVertical } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -30,6 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 
 const DraggableItem = ({ item, erpHeaders, index, onUnassign }: { item: DispatchAssignment, erpHeaders: Map<string, ErpInvoiceHeader>, index: number, onUnassign: (assignment: DispatchAssignment) => void }) => {
     const erpHeader = erpHeaders.get(item.documentId);
@@ -140,19 +141,43 @@ export default function DispatchClassifierPage() {
 
     const handleOnDragEnd = async (result: DropResult) => {
         const { source, destination } = result;
-        if (!destination || source.droppableId !== destination.droppableId) return;
+        if (!destination) return;
+    
+        const sourceId = source.droppableId;
+        const destinationId = destination.droppableId;
+    
+        if (sourceId === destinationId) {
+            // Re-ordering within the same container
+            const containerId = sourceId;
+            const items = Array.from(assignments[containerId] || []);
+            const [reorderedItem] = items.splice(source.index, 1);
+            
+            if (!reorderedItem) return; // Safeguard
 
-        const containerId = source.droppableId;
-        const items = Array.from(assignments[containerId] || []);
-        const [reorderedItem] = items.splice(source.index, 1);
-        
-        if (!reorderedItem) return;
+            items.splice(destination.index, 0, reorderedItem);
+            
+            setAssignments(prev => ({ ...prev, [containerId]: items }));
+            
+            await updateAssignmentOrder(Number(containerId), items.map(item => item.documentId));
 
-        items.splice(destination.index, 0, reorderedItem);
-        
-        setAssignments(prev => ({ ...prev, [containerId]: items }));
-        
-        await updateAssignmentOrder(Number(containerId), items.map(item => item.documentId));
+        } else {
+            // Moving between containers
+            const sourceItems = Array.from(assignments[sourceId] || []);
+            const [movedItem] = sourceItems.splice(source.index, 1);
+            if (!movedItem) return;
+
+            const destinationItems = Array.from(assignments[destinationId] || []);
+            destinationItems.splice(destination.index, 0, movedItem);
+
+            setAssignments(prev => ({
+                ...prev,
+                [sourceId]: sourceItems,
+                [destinationId]: destinationItems
+            }));
+
+            await updateAssignmentOrder(Number(destinationId), destinationItems.map(item => item.documentId));
+            await unassignDocumentFromContainer(movedItem.id).then(() => assignDocumentsToContainer([movedItem.documentId], Number(destinationId), user?.name || ''));
+        }
     };
 
     const handleSingleAssign = useCallback(async (documentId: string, containerId: string | null) => {
@@ -226,8 +251,23 @@ export default function DispatchClassifierPage() {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
-    const assignedDocs = Object.values(assignments).flat();
-    const allSortedDocs = [...unassignedDocs, ...assignedDocs].sort((a,b) => (a as any).FACTURA?.localeCompare((b as any).documentId) || 0);
+    const allAssignedDocs = Object.values(assignments).flat();
+
+    const getDocRow = (docId: string) => {
+        const unassignedVersion = unassignedDocs.find(d => d.FACTURA === docId);
+        if (unassignedVersion) return unassignedVersion;
+        
+        const assignedVersion = allAssignedDocs.find(a => a.documentId === docId);
+        if (assignedVersion) {
+            return { FACTURA: assignedVersion.documentId, NOMBRE_CLIENTE: assignedVersion.clientName, RUTA: 'Asignado' };
+        }
+        return { FACTURA: docId, NOMBRE_CLIENTE: 'N/A', RUTA: 'N/A' };
+    };
+    
+    const combinedDocs = Array.from(new Set([...unassignedDocs.map(d => d.FACTURA), ...allAssignedDocs.map(a => a.documentId)]))
+        .map(getDocRow)
+        .sort((a,b) => a.FACTURA.localeCompare(b.FACTURA));
+
 
     return (
         <div className="flex flex-col h-screen bg-muted/30">
@@ -295,26 +335,28 @@ export default function DispatchClassifierPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {[...unassignedDocs, ...assignedDocs].map(item => {
-                                            const isAssigned = 'containerId' in item;
-                                            const doc = isAssigned ? erpHeaders.get(item.documentId) || { FACTURA: item.documentId, NOMBRE_CLIENTE: item.clientName, RUTA: 'N/A' } : item;
+                                        {combinedDocs.map(doc => {
+                                            const isAssigned = 'containerId' in doc;
+                                            const docId = isAssigned ? doc.documentId : doc.FACTURA;
+                                            const clientName = isAssigned ? doc.clientName : doc.NOMBRE_CLIENTE;
+                                            const erpRoute = isAssigned ? 'Asignado' : doc.RUTA;
                                             
                                             return (
-                                                <TableRow key={isAssigned ? item.id : doc.FACTURA} className={isAssigned ? 'bg-green-50' : ''}>
+                                                <TableRow key={docId} className={isAssigned ? 'bg-green-50' : ''}>
                                                     <TableCell>
-                                                        {!isAssigned && <Checkbox checked={selectedDocumentIds.has(doc.FACTURA)} onCheckedChange={(checked) => {
+                                                        {!isAssigned && <Checkbox checked={selectedDocumentIds.has(docId)} onCheckedChange={(checked) => {
                                                             const newSet = new Set(selectedDocumentIds);
-                                                            if (checked) newSet.add(doc.FACTURA); else newSet.delete(doc.FACTURA);
+                                                            if (checked) newSet.add(docId); else newSet.delete(docId);
                                                             setSelectedDocumentIds(newSet);
                                                         }} />}
                                                     </TableCell>
-                                                    <TableCell className="font-mono">{isAssigned ? item.documentId : doc.FACTURA}</TableCell>
-                                                    <TableCell>{isAssigned ? item.clientName : doc.NOMBRE_CLIENTE}</TableCell>
-                                                    <TableCell><Badge variant="outline">{doc.RUTA || 'Sin Ruta'}</Badge></TableCell>
+                                                    <TableCell className="font-mono">{docId}</TableCell>
+                                                    <TableCell>{clientName}</TableCell>
+                                                    <TableCell><Badge variant="outline">{erpRoute || 'Sin Ruta'}</Badge></TableCell>
                                                     <TableCell>
                                                         <Select
-                                                            value={isAssigned ? String(item.containerId) : (item as EnrichedErpHeader).suggestedContainerId || ''}
-                                                            onValueChange={(value) => handleSingleAssign(isAssigned ? item.documentId : doc.FACTURA, value === 'unassign' ? null : value)}
+                                                            value={isAssigned ? String(doc.containerId) : (doc as EnrichedErpHeader).suggestedContainerId || ''}
+                                                            onValueChange={(value) => handleSingleAssign(docId, value === 'unassign' ? null : value)}
                                                         >
                                                             <SelectTrigger>
                                                                 <SelectValue placeholder="Seleccionar..." />
