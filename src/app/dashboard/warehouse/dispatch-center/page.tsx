@@ -21,7 +21,7 @@ import {
 import type { DispatchContainer, DispatchAssignment, ErpInvoiceHeader } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle, Undo2, RefreshCcw, Trash2, GripVertical, Send, Search, CalendarIcon, List } from 'lucide-react';
+import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle, Undo2, RefreshCcw, Trash2, GripVertical, Send, Search, CalendarIcon, List, Truck } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -521,7 +521,6 @@ export default function DispatchCenterPage() {
                      <Card>
                         <CardHeader>
                             <CardTitle>Paso 1: Cargar Documentos del ERP</CardTitle>
-                            <CardDescription>Busca documentos que aún no hayan sido despachados en el rango de fechas seleccionado.</CardDescription>
                             <div className="flex flex-col sm:flex-row gap-4 items-center pt-2">
                                 <Popover>
                                     <PopoverTrigger asChild>
