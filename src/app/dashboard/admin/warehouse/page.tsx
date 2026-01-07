@@ -6,7 +6,7 @@
  */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -143,9 +143,9 @@ export default function WarehouseSettingsPage() {
         }
         setIsSubmitting(true);
         try {
-            await saveContainer({ name: newContainerName, createdBy: '' }, ''); // User info is handled server-side
+            const newContainer = await saveContainer({ name: newContainerName, createdBy: '' }, ''); // User info is handled server-side
+            setDispatchContainers(prev => [...prev, newContainer]);
             setNewContainerName('');
-            await fetchAllData();
             toast({ title: 'Contenedor Creado'});
         } catch (error: any) {
             logError('Failed to add dispatch container', { error: error.message });
@@ -159,7 +159,7 @@ export default function WarehouseSettingsPage() {
         setIsSubmitting(true);
         try {
             await deleteContainer(id);
-            await fetchAllData();
+            setDispatchContainers(prev => prev.filter(c => c.id !== id));
             toast({ title: 'Contenedor Eliminado', variant: 'destructive'});
         } catch (error: any) {
             logError('Failed to delete dispatch container', { error: error.message });

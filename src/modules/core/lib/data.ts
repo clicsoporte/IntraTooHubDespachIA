@@ -326,14 +326,6 @@ export const adminTools: Tool[] = [
         icon: Wrench,
         bgColor: 'bg-cyan-600',
       },
-       {
-        id: "warehouse:dispatch-containers:manage",
-        name: "Contenedores de Despacho",
-        description: "Crear y administrar las rutas para el despacho de mercadería.",
-        href: "/dashboard/admin/warehouse",
-        icon: Truck,
-        bgColor: "bg-blue-600",
-      },
       {
         id: "admin:import:run",
         name: "Importar Datos",
