@@ -11,9 +11,10 @@ import { getContainers, getAssignmentsForContainer, lockContainer, releaseContai
 import type { DispatchContainer, DispatchAssignment, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Lock, Unlock, ArrowRight, CheckCircle, Package, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 
 
 export default function DispatchCenterPage() {
-    useAuthorization(['warehouse:access']);
+    const { isAuthorized, hasPermission } = useAuthorization(['warehouse:dispatch-check:use']);
     const { setTitle } = usePageTitle();
     const { user, isReady } = useAuth();
     const router = useRouter();
@@ -49,28 +50,7 @@ export default function DispatchCenterPage() {
         }
     }, [toast]);
     
-    useEffect(() => {
-        setTitle("Centro de Despacho");
-        if (isReady) {
-            fetchContainers();
-        }
-    }, [setTitle, isReady, fetchContainers]);
-
-    useEffect(() => {
-        const checkActiveSession = () => {
-            const activeContainerId = sessionStorage.getItem('activeDispatchContainer');
-            if (activeContainerId && containers.length > 0) {
-                const activeContainer = containers.find(c => c.id === Number(activeContainerId));
-                if (activeContainer) {
-                    handleSelectContainer(activeContainer, true); // true to skip re-locking
-                }
-            }
-        };
-        checkActiveSession();
-    }, [containers]);
-
-
-    const handleSelectContainer = async (container: DispatchContainer, skipLock = false) => {
+    const handleSelectContainer = useCallback(async (container: DispatchContainer, skipLock = false) => {
         if (!user) return;
         setIsLoading(true);
         
@@ -92,7 +72,6 @@ export default function DispatchCenterPage() {
         try {
             const fetchedAssignments = await getAssignmentsForContainer(container.id!);
             
-            // Fetch ERP details only for the assignments in this container
             if (fetchedAssignments.length > 0) {
                 const documentIds = fetchedAssignments.map(a => a.documentId);
                 const invoiceDetails = await getInvoicesByIds(documentIds);
@@ -108,8 +87,32 @@ export default function DispatchCenterPage() {
         } finally {
             setIsLoading(false);
         }
-    };
-    
+    }, [user, toast]);
+
+    useEffect(() => {
+        setTitle("Centro de Despacho");
+        if (isReady && isAuthorized) {
+            fetchContainers();
+        } else if (isReady && !isAuthorized) {
+            setIsLoading(false);
+        }
+    }, [setTitle, isReady, isAuthorized, fetchContainers]);
+
+    useEffect(() => {
+        const checkActiveSession = async () => {
+            const activeContainerId = sessionStorage.getItem('activeDispatchContainer');
+            if (activeContainerId && containers.length > 0) {
+                const activeContainer = containers.find(c => c.id === Number(activeContainerId));
+                if (activeContainer) {
+                    await handleSelectContainer(activeContainer, true); // true to skip re-locking
+                }
+            }
+        };
+        if (containers.length > 0) {
+            checkActiveSession();
+        }
+    }, [containers, handleSelectContainer]);
+
     const handleExitContainer = async () => {
         if (!user || !selectedContainer) return;
         try {
@@ -118,7 +121,7 @@ export default function DispatchCenterPage() {
             setSelectedContainer(null);
             setAssignments([]);
             setErpHeaders(new Map());
-            await fetchContainers(); // Refresh container list to show updated lock status
+            await fetchContainers();
         } catch (error: any) {
              toast({ title: "Error al Liberar", description: error.message, variant: "destructive" });
         }
@@ -143,6 +146,15 @@ export default function DispatchCenterPage() {
 
     if (isLoading && !selectedContainer) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+    
+    if (!isAuthorized) {
+        return (
+            <div className="p-8 text-center">
+                <h1 className="text-2xl font-bold text-destructive">Acceso Denegado</h1>
+                <p className="text-muted-foreground">No tienes permiso para usar el centro de despacho.</p>
+            </div>
+        );
     }
 
     if (!selectedContainer) {
@@ -179,7 +191,6 @@ export default function DispatchCenterPage() {
         );
     }
     
-    // --- View inside a container ---
     const allCompleted = assignments.length > 0 && assignments.every(a => a.status === 'completed');
 
     return (
@@ -240,9 +251,11 @@ export default function DispatchCenterPage() {
                                                 </DialogHeader>
                                                 <div className="py-4 space-y-2">
                                                     {containers.filter(c => c.id !== selectedContainer.id).map(c => (
-                                                        <Button key={c.id} variant="secondary" className="w-full justify-start" onClick={() => handleMoveAssignment(c.id!)}>
-                                                            {c.name}
-                                                        </Button>
+                                                        <DialogClose asChild key={c.id}>
+                                                            <Button variant="secondary" className="w-full justify-start" onClick={() => handleMoveAssignment(c.id!)}>
+                                                                {c.name}
+                                                            </Button>
+                                                        </DialogClose>
                                                     ))}
                                                 </div>
                                             </DialogContent>
@@ -260,4 +273,3 @@ export default function DispatchCenterPage() {
         </div>
     );
 }
-```
