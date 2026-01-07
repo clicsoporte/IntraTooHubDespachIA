@@ -313,7 +313,7 @@ export const adminTools: Tool[] = [
       {
         id: "admin:settings:planner",
         name: "Config. Planificador",
-        description: "Gestionar máquinas y otros ajustes del...",
+        description: "Gestionar máquinas y otros ajustes del planificador.",
         href: "/dashboard/admin/planner",
         icon: Factory,
         bgColor: 'bg-slate-600',
@@ -326,10 +326,18 @@ export const adminTools: Tool[] = [
         icon: Wrench,
         bgColor: 'bg-cyan-600',
       },
+       {
+        id: "warehouse:dispatch-containers:manage",
+        name: "Contenedores de Despacho",
+        description: "Crear y administrar las rutas para el despacho de mercadería.",
+        href: "/dashboard/admin/warehouse",
+        icon: Truck,
+        bgColor: "bg-blue-600",
+      },
       {
         id: "admin:import:run",
         name: "Importar Datos",
-        description: "Cargar clientes, productos, exoneraciones y...",
+        description: "Cargar clientes, productos, exoneraciones y más.",
         href: "/dashboard/admin/import",
         icon: FileUp,
         bgColor: 'bg-cyan-700',
@@ -356,7 +364,7 @@ export const adminTools: Tool[] = [
         description: "Revisar los registros y errores del sistema.",
         href: "/dashboard/admin/logs",
         icon: FileTerminal,
-        bgColor: 'bg-gray-500',
+        bgColor: 'bg-slate-500',
       }
 ];
 

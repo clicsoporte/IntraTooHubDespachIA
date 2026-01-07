@@ -15,39 +15,44 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getWarehouseSettings, saveWarehouseSettings, getLocations, addLocation, deleteLocation, updateLocation, addBulkLocations, getStockSettings, saveStockSettings } from '@/modules/warehouse/lib/actions';
-import { Save, PlusCircle, Trash2, Palette, Mail } from 'lucide-react';
+import { getWarehouseSettings, saveWarehouseSettings, getStockSettings, saveStockSettings, getContainers, saveContainer, deleteContainer } from '@/modules/warehouse/lib/actions';
+import { Save, PlusCircle, Trash2, Palette, Mail, Truck } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WarehouseSettings, StockSettings, Warehouse } from '@/modules/core/types';
+import { WarehouseSettings, StockSettings, Warehouse, DispatchContainer } from '@/modules/core/types';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { format, parseISO } from 'date-fns';
 
 const defaultColors = [ '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#F44336', '#9C27B0', '#3F51B5', '#009688' ];
 
 export default function WarehouseSettingsPage() {
-    useAuthorization(['admin:settings:warehouse', 'admin:settings:stock']);
+    const { hasPermission } = useAuthorization(['admin:settings:warehouse', 'admin:settings:stock', 'warehouse:dispatch-containers:manage']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const router = useRouter();
     
     const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings | null>(null);
     const [stockSettings, setStockSettings] = useState<StockSettings | null>(null);
+    const [dispatchContainers, setDispatchContainers] = useState<DispatchContainer[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [newWarehouse, setNewWarehouse] = useState<Warehouse>({ id: "", name: "", isDefault: false, isVisible: true, color: '#CCCCCC' });
+    const [newContainerName, setNewContainerName] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchAllData = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [wSettings, sSettings] = await Promise.all([
+            const [wSettings, sSettings, dContainers] = await Promise.all([
                 getWarehouseSettings(),
-                getStockSettings()
+                getStockSettings(),
+                hasPermission('warehouse:dispatch-containers:manage') ? getContainers() : Promise.resolve([]),
             ]);
 
-            // Ensure dispatchNotificationEmails exists
             if (wSettings && wSettings.dispatchNotificationEmails === undefined) {
                 wSettings.dispatchNotificationEmails = '';
             }
@@ -56,16 +61,16 @@ export default function WarehouseSettingsPage() {
             if (!sSettings.warehouses) {
                 sSettings.warehouses = [];
             }
-            // Ensure every warehouse has a color
             sSettings.warehouses = sSettings.warehouses.map(w => ({...w, color: w.color || '#CCCCCC'}));
             setStockSettings(sSettings);
+            setDispatchContainers(dContainers);
         } catch (error) {
             logError('Failed to fetch warehouse/stock config data', { error });
             toast({ title: "Error", description: "No se pudieron cargar los datos de configuración.", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, [toast, hasPermission]);
     
     useEffect(() => {
         setTitle("Configuración de Almacenes e Inventario");
@@ -74,6 +79,7 @@ export default function WarehouseSettingsPage() {
 
     const handleSaveAllSettings = async () => {
         if (!warehouseSettings || !stockSettings) return;
+        setIsSubmitting(true);
         try {
             await Promise.all([
                 saveWarehouseSettings(warehouseSettings),
@@ -85,6 +91,8 @@ export default function WarehouseSettingsPage() {
         } catch (error: any) {
             logError("Failed to save warehouse/stock settings", { error: error.message });
             toast({ title: "Error", description: "No se pudieron guardar los ajustes.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
     
@@ -127,6 +135,40 @@ export default function WarehouseSettingsPage() {
         if (!stockSettings) return;
         setStockSettings(prev => prev ? { ...prev, warehouses: prev.warehouses.filter(w => w.id !== id) } : null);
     };
+
+    const handleAddContainer = async () => {
+        if (!newContainerName.trim()) {
+            toast({ title: 'Nombre requerido', variant: 'destructive'});
+            return;
+        }
+        setIsSubmitting(true);
+        try {
+            await saveContainer({ name: newContainerName, createdBy: '' }, ''); // User info is handled server-side
+            setNewContainerName('');
+            await fetchAllData();
+            toast({ title: 'Contenedor Creado'});
+        } catch (error: any) {
+            logError('Failed to add dispatch container', { error: error.message });
+            toast({ title: 'Error', description: `No se pudo crear el contenedor. ${error.message}`, variant: 'destructive'});
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteContainer = async (id: number) => {
+        setIsSubmitting(true);
+        try {
+            await deleteContainer(id);
+            await fetchAllData();
+            toast({ title: 'Contenedor Eliminado', variant: 'destructive'});
+        } catch (error: any) {
+            logError('Failed to delete dispatch container', { error: error.message });
+            toast({ title: 'Error', description: `No se pudo eliminar el contenedor. ${error.message}`, variant: 'destructive'});
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
 
     if (isLoading || !warehouseSettings || !stockSettings) {
         return (
@@ -257,9 +299,58 @@ export default function WarehouseSettingsPage() {
                         </div>
                     </CardContent>
                     <CardFooter>
-                         <Button onClick={handleSaveAllSettings}><Save className="mr-2"/> Guardar Configuración</Button>
+                         <Button onClick={handleSaveAllSettings} disabled={isSubmitting}><Save className="mr-2"/> Guardar Configuración</Button>
                     </CardFooter>
                 </Card>
+                {hasPermission('warehouse:dispatch-containers:manage') && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5"/>Gestión de Contenedores de Despacho</CardTitle>
+                            <CardDescription>Crea o elimina los "contenedores" que representan las rutas de despacho.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div className="max-h-60 overflow-y-auto pr-2 space-y-2">
+                                {dispatchContainers.map(container => (
+                                    <div key={container.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                            <p className="font-medium">{container.name}</p>
+                                            <p className="text-xs text-muted-foreground">Creado por {container.createdBy} el {format(parseISO(container.createdAt), 'dd/MM/yyyy')}</p>
+                                        </div>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isSubmitting}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Eliminar Contenedor?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Se eliminará el contenedor &quot;{container.name}&quot; y todas sus asignaciones. Esta acción no se puede deshacer.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteContainer(container.id!)}>Sí, eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                ))}
+                            </div>
+                            <Separator />
+                            <div className="flex items-end gap-2 pt-2">
+                                <div className="grid flex-1 gap-2">
+                                    <Label htmlFor="new-container-name">Nombre del Nuevo Contenedor</Label>
+                                    <Input id="new-container-name" value={newContainerName} onChange={(e) => setNewContainerName(e.target.value)} placeholder="Ej: Ruta San José" onKeyDown={(e) => e.key === 'Enter' && handleAddContainer()} />
+                                </div>
+                                <Button size="icon" onClick={handleAddContainer} disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin"/> : <PlusCircle className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </main>
     );

@@ -6,6 +6,7 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/modules/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   safelist: [
     'bg-emerald-600',
@@ -33,7 +34,8 @@ const config: Config = {
     'bg-gray-500',
     'bg-slate-500',
     'bg-sky-500',
-    'bg-amber-500'
+    'bg-amber-500',
+    'bg-blue-600'
   ],
   theme: {
     extend: {
