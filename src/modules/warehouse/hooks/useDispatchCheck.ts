@@ -132,7 +132,6 @@ export function useDispatchCheck() {
     }, []);
     
     const reset = useCallback(() => {
-        const isStrictMode = state.isStrictMode; // Preserve strict mode setting
         updateState({
             step: 'initial',
             isLoading: false,
@@ -146,11 +145,10 @@ export function useDispatchCheck() {
             userSearchTerm: '',
             externalEmail: '',
             emailBody: '',
-            isStrictMode, // re-apply
             nextDocumentInContainer: null,
         });
         router.replace('/dashboard/warehouse/dispatch-check');
-    }, [updateState, state.isStrictMode, router]);
+    }, [updateState, router]);
 
     const handleDocumentSelect = useCallback(async (documentId: string, containerId?: number) => {
         updateState({ isLoading: true, isDocumentSearchOpen: false, step: 'loading' });

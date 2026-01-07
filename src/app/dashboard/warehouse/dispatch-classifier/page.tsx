@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Page for the Dispatch Classifier.
  * This component allows logistics managers to view unassigned ERP documents (invoices, etc.)
@@ -11,7 +10,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getContainers, getUnassignedDocuments, getAssignmentsForContainer, assignDocumentsToContainer, updateAssignmentOrder, unassignItemFromLocation } from '@/modules/warehouse/lib/actions';
+import { getContainers, getUnassignedDocuments, getAssignmentsForContainer, assignDocumentsToContainer, updateAssignmentOrder, unassignDocumentFromContainer } from '@/modules/warehouse/lib/actions';
 import { getInvoicesByIds } from '@/modules/core/lib/db';
 import type { DispatchContainer, ErpInvoiceHeader, DispatchAssignment } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -177,59 +176,38 @@ export default function DispatchClassifierPage() {
                 [destinationId]: destinationItems
             }));
 
-            await updateAssignmentOrder(Number(destinationId), destinationItems.map(item => item.documentId));
-            await unassignItemFromLocation(movedItem.id); // Soft-delete
+            // Use the correct single-argument unassignment function
+            await unassignDocumentFromContainer(movedItem.id); 
             await assignDocumentsToContainer([movedItem.documentId], Number(destinationId), user?.name || '');
         }
     };
 
     const handleSingleAssign = useCallback(async (documentId: string, containerId: string | null) => {
         if (!user) return;
-    
+
         const doc = unassignedDocs.find(d => d.FACTURA === documentId);
         if (doc?.ANULADA === 'S') {
             toast({ title: "Acción no permitida", description: "No se puede asignar una factura anulada.", variant: "destructive" });
             return;
         }
 
-        const currentAssignment = Object.values(assignments).flat().find(a => a.documentId === documentId);
-    
-        if (containerId === null) { // Unassigning
-            if (currentAssignment) {
-                await unassignItemFromLocation(currentAssignment.id);
-                setAssignments(prev => {
-                    const newAssignments = {...prev};
-                    newAssignments[currentAssignment.containerId] = newAssignments[currentAssignment.containerId].filter(a => a.id !== currentAssignment.id);
-                    return newAssignments;
-                });
-            }
-        } else { // Assigning
-            await assignDocumentsToContainer([documentId], Number(containerId), user.name);
-            const docToMove = unassignedDocs.find(d => d.FACTURA === documentId);
-            if (docToMove) {
-                // Remove from any previous container if it exists
-                let updatedAssignments = {...assignments};
-                if(currentAssignment) {
-                    updatedAssignments[currentAssignment.containerId] = updatedAssignments[currentAssignment.containerId].filter(a => a.id !== currentAssignment.id);
-                }
+        await assignDocumentsToContainer([documentId], containerId ? Number(containerId) : 0, user.name);
 
-                // Add to the new container
-                const newAssignment: DispatchAssignment = {
-                    id: Date.now(), // Temporary ID for UI
-                    containerId: Number(containerId),
-                    documentId: docToMove.FACTURA, documentType: docToMove.TIPO_DOCUMENTO,
-                    documentDate: typeof docToMove.FECHA === 'string' ? docToMove.FECHA : (docToMove.FECHA as Date).toISOString(),
-                    clientId: docToMove.CLIENTE, clientName: docToMove.NOMBRE_CLIENTE,
-                    assignedBy: user.name, assignedAt: new Date().toISOString(),
-                    sortOrder: (updatedAssignments[containerId]?.length || 0) + 1, status: 'pending',
-                };
-                updatedAssignments[containerId] = [...(updatedAssignments[containerId] || []), newAssignment];
-                setAssignments(updatedAssignments);
-            }
+        const docToUpdate = unassignedDocs.find(d => d.FACTURA === documentId);
+        if (docToUpdate) {
+            const newAssignments = await getAssignmentsForContainer(containerId ? Number(containerId) : 0);
+            setAssignments(prev => ({ ...prev, [containerId || '']: newAssignments }));
         }
-    }, [user, assignments, unassignedDocs, toast]);
+
+        // Re-fetch all assignments to get the latest state after assigning/unassigning
+        const freshAssignments: Record<string, DispatchAssignment[]> = {};
+        for (const container of containers) {
+            freshAssignments[container.id!] = await getAssignmentsForContainer(container.id!);
+        }
+        setAssignments(freshAssignments);
+    }, [user, unassignedDocs, containers, toast]);
     
-    const handleBulkAssign = useCallback(async () => {
+    const handleBulkAssign = useCallback(() => {
         if (!user || selectedDocumentIds.size === 0 || !bulkAssignContainerId) {
             toast({ title: 'Selección requerida', description: 'Selecciona al menos un documento y un contenedor de destino.', variant: 'destructive'});
             return;
@@ -255,28 +233,34 @@ export default function DispatchClassifierPage() {
             toast({ title: 'Sin Documentos Válidos', description: 'No hay documentos válidos para asignar.', variant: 'destructive'});
             return;
         }
-
-        await assignDocumentsToContainer(validDocsToAssign, Number(bulkAssignContainerId), user.name);
         
-        const docsToMove = unassignedDocs.filter(d => validDocsToAssign.includes(d.FACTURA));
-        const newAssignments: DispatchAssignment[] = docsToMove.map(doc => ({
-            id: Date.now() + Math.random(), // Temp UI ID
-            containerId: Number(bulkAssignContainerId),
-            documentId: doc.FACTURA, documentType: doc.TIPO_DOCUMENTO,
-            documentDate: typeof doc.FECHA === 'string' ? doc.FECHA : (doc.FECHA as Date).toISOString(),
-            clientId: doc.CLIENTE, clientName: doc.NOMBRE_CLIENTE,
-            assignedBy: user.name, assignedAt: new Date().toISOString(),
-            sortOrder: 0, status: 'pending',
-        }));
+        const assignPromise = assignDocumentsToContainer(validDocsToAssign, Number(bulkAssignContainerId), user.name);
 
-        setAssignments(prev => ({...prev, [bulkAssignContainerId]: [...(prev[bulkAssignContainerId] || []), ...newAssignments] }));
-        setSelectedDocumentIds(new Set());
-        setBulkAssignContainerId('');
-        toast({ title: 'Asignación Masiva Completa', description: `${validDocsToAssign.length} documentos asignados.`});
-    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast, assignments]);
+        toast.promise(assignPromise, {
+            loading: 'Asignando documentos...',
+            success: (result) => {
+                // Refresh the list of unassigned documents and assignments
+                handleFetchDocuments();
+                
+                const fetchAssignments = async () => {
+                    const freshAssignments: Record<string, DispatchAssignment[]> = {};
+                    for (const container of containers) {
+                        freshAssignments[container.id!] = await getAssignmentsForContainer(container.id!);
+                    }
+                    setAssignments(freshAssignments);
+                };
+                fetchAssignments();
+
+                setSelectedDocumentIds(new Set());
+                setBulkAssignContainerId('');
+                return `Se asignaron ${validDocsToAssign.length} documentos.`;
+            },
+            error: 'Error al asignar los documentos.',
+        });
+    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast, handleFetchDocuments, containers]);
 
     const handleUnassign = async (assignment: DispatchAssignment) => {
-        await unassignItemFromLocation(assignment.id);
+        await unassignDocumentFromContainer(assignment.id);
         setAssignments(prev => {
             const newAssignments = {...prev};
             newAssignments[assignment.containerId] = newAssignments[assignment.containerId].filter(a => a.id !== assignment.id);

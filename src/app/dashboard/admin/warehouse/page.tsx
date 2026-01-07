@@ -25,7 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, parseISO } from 'date-fns';
 
 const defaultColors = [ '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#ff7300', '#0088fe', '#00c49f', '#ffbb28', '#F44336', '#9C27B0', '#3F51B5', '#009688' ];
@@ -43,6 +43,7 @@ export default function WarehouseSettingsPage() {
     const [newWarehouse, setNewWarehouse] = useState<Warehouse>({ id: "", name: "", isDefault: false, isVisible: true, color: '#CCCCCC' });
     const [newContainerName, setNewContainerName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [containerToDelete, setContainerToDelete] = useState<DispatchContainer | null>(null);
 
     const fetchAllData = useCallback(async () => {
         setIsLoading(true);
@@ -306,7 +307,7 @@ export default function WarehouseSettingsPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5"/>Gestión de Contenedores de Despacho</CardTitle>
-                            <CardDescription>Crea o elimina los "contenedores" que representan las rutas de despacho.</CardDescription>
+                            <CardDescription>Crea o elimina los &quot;contenedores&quot; que representan las &quot;rutas&quot; de despacho.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                              <div className="max-h-60 overflow-y-auto pr-2 space-y-2">
@@ -331,7 +332,7 @@ export default function WarehouseSettingsPage() {
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteContainer(container.id!)}>Sí, eliminar</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => container.id && handleDeleteContainer(container.id)}>Sí, eliminar</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
