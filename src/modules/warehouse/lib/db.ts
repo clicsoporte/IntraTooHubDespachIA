@@ -381,9 +381,9 @@ export async function assignItemToLocation(itemId: string, locationId: number, c
     return newItemLocation;
 }
 
-export async function unassignItemFromLocation(assignmentId: number): Promise<void> {
+export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM item_locations WHERE id = ?').run(assignmentId);
+    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
 }
 
 export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {
@@ -623,12 +623,16 @@ export async function getContainers(): Promise<DispatchContainer[]> {
     const rows = db.prepare(`
         SELECT 
             c.id, c.name, c.createdBy, c.createdAt, c.isLocked, c.lockedBy, c.lockedByUserId, c.lockedAt,
-            COUNT(a.id) as assignmentCount
+            COUNT(a.id) as assignmentCount,
+            SUM(CASE WHEN a.status IN ('completed', 'discrepancy') THEN 1 ELSE 0 END) as completedAssignmentCount,
+            MAX(dl.verifiedByUserName) as lastVerifiedBy,
+            MAX(dl.verifiedAt) as lastVerifiedAt
         FROM dispatch_containers c
         LEFT JOIN dispatch_assignments a ON c.id = a.containerId
+        LEFT JOIN dispatch_logs dl ON a.documentId = dl.documentId
         GROUP BY c.id
         ORDER BY c.name ASC
-    `).all() as (DispatchContainer & { assignmentCount: number })[];
+    `).all() as (DispatchContainer & { assignmentCount: number, completedAssignmentCount: number, lastVerifiedBy: string | null, lastVerifiedAt: string | null })[];
     return JSON.parse(JSON.stringify(rows));
 }
 
@@ -771,9 +775,4 @@ export async function moveAssignmentToContainer(assignmentId: number, targetCont
 export async function updateAssignmentStatus(documentId: string, status: 'pending' | 'in-progress' | 'completed' | 'discrepancy' | 'partial'): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('UPDATE dispatch_assignments SET status = ? WHERE documentId = ?').run(status, documentId);
-}
-
-export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
 }

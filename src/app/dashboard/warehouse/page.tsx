@@ -49,8 +49,8 @@ export default function WarehouseDashboardPage() {
                     return hasPermission('warehouse:dispatch-check:use');
                 case 'warehouse-dispatch-classifier':
                     return hasPermission('warehouse:dispatch-classifier:use');
-                case 'warehouse-containers-config':
-                    return hasPermission('warehouse:dispatch-containers:manage');
+                case 'warehouse-dispatch-check':
+                    return hasPermission('warehouse:dispatch-check:use');
                 default:
                     // Fallback for general access if specific permission is not defined for a new tool
                     return hasPermission('warehouse:access');

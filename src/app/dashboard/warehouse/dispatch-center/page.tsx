@@ -7,11 +7,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useRouter } from 'next/navigation';
-import { getContainers, getAssignmentsForContainer, lockEntity, releaseLock, moveAssignmentToContainer, getAssignmentsByIds } from '@/modules/warehouse/lib/actions';
+import { getContainers, getAssignmentsForContainer, lockEntity, releaseLock, moveAssignmentToContainer, getAssignmentsByIds, updateAssignmentStatus } from '@/modules/warehouse/lib/actions';
 import type { DispatchContainer, DispatchAssignment, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle } from 'lucide-react';
+import { Loader2, Lock, Unlock, ArrowRight, ArrowLeft, CheckCircle, Package, AlertTriangle, Undo2 } from 'lucide-react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -143,6 +143,19 @@ export default function DispatchCenterPage() {
             toast({ title: "Error al Mover", description: error.message, variant: "destructive" });
         }
     };
+    
+    const handleReopenVerification = async (documentId: string) => {
+        try {
+            await updateAssignmentStatus(documentId, 'pending');
+            toast({ title: "Verificación Reabierta", description: `El documento ${documentId} está listo para ser verificado de nuevo.` });
+            if (selectedContainer) {
+                const fetchedAssignments = await getAssignmentsForContainer(selectedContainer.id!);
+                setAssignments(fetchedAssignments);
+            }
+        } catch (error: any) {
+            toast({ title: "Error al Reabrir", description: error.message, variant: "destructive" });
+        }
+    };
 
     if (isLoading && !selectedContainer) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -165,40 +178,51 @@ export default function DispatchCenterPage() {
                     <p className="text-muted-foreground">Selecciona una ruta para comenzar la verificación de despachos.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {containers.map(c => (
-                        <Card key={c.id} className="flex flex-col">
-                            <CardHeader>
-                                <CardTitle>{c.name}</CardTitle>
-                                <CardDescription>Creado el {format(parseISO(c.createdAt), 'dd/MM/yyyy')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                {c.isLocked ? (
-                                    <div className="flex items-center gap-2 text-destructive">
-                                        <Lock className="h-4 w-4"/>
-                                        <span className="text-sm font-semibold">En uso por: {c.lockedBy}</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                        <Package className="h-4 w-4" />
-                                        <span className="text-sm font-semibold">
-                                            {c.assignmentCount || 0} documento(s)
-                                        </span>
-                                    </div>
-                                )}
-                            </CardContent>
-                            <CardFooter>
-                                <Button className="w-full" onClick={() => handleSelectContainer(c)} disabled={c.isLocked && c.lockedByUserId !== user?.id}>
-                                    {c.isLocked && c.lockedByUserId === user?.id ? 'Reanudar Sesión' : 'Iniciar Verificación'}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                    {containers.map(c => {
+                        const isRouteCompleted = c.assignmentCount > 0 && c.completedAssignmentCount === c.assignmentCount;
+                        return (
+                            <Card key={c.id} className={cn("flex flex-col transition-all", isRouteCompleted && 'border-green-500 bg-green-50')}>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        {isRouteCompleted && <CheckCircle className="h-6 w-6 text-green-600" />}
+                                        {c.name}
+                                    </CardTitle>
+                                    <CardDescription>Creado el {format(parseISO(c.createdAt), 'dd/MM/yyyy')}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    {c.isLocked ? (
+                                        <div className="flex items-center gap-2 text-destructive">
+                                            <Lock className="h-4 w-4"/>
+                                            <span className="text-sm font-semibold">En uso por: {c.lockedBy}</span>
+                                        </div>
+                                    ) : isRouteCompleted ? (
+                                         <div className="text-sm text-green-700 font-semibold space-y-1">
+                                            <p>Ruta Completada</p>
+                                            <p className="text-xs font-normal">por {c.lastVerifiedBy || 'N/A'} el {c.lastVerifiedAt ? format(parseISO(c.lastVerifiedAt), 'dd/MM/yy') : 'N/A'}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <Package className="h-4 w-4" />
+                                            <span className="text-sm font-semibold">
+                                                {c.assignmentCount || 0} documento(s)
+                                            </span>
+                                        </div>
+                                    )}
+                                </CardContent>
+                                <CardFooter>
+                                    <Button className="w-full" onClick={() => handleSelectContainer(c)} disabled={c.isLocked && c.lockedByUserId !== user?.id}>
+                                        {c.isLocked && c.lockedByUserId === user?.id ? 'Reanudar Sesión' : 'Iniciar Verificación'}
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        )
+                    })}
                 </div>
             </div>
         );
     }
     
-    const allCompleted = assignments.length > 0 && assignments.every(a => a.status === 'completed');
+    const allCompleted = assignments.length > 0 && assignments.every(a => a.status === 'completed' || a.status === 'discrepancy');
 
     return (
         <div className="p-4 md:p-8 max-w-4xl mx-auto">
@@ -228,7 +252,7 @@ export default function DispatchCenterPage() {
             ) : (
                 <div className="space-y-3">
                     {assignments.map(a => {
-                        const isCompleted = a.status === 'completed';
+                        const isCompleted = a.status === 'completed' || a.status === 'discrepancy';
                         const erpHeader = erpHeaders.get(a.documentId);
                         const isCancelled = erpHeader?.ANULADA === 'S';
                         
@@ -245,31 +269,37 @@ export default function DispatchCenterPage() {
                                          {isCancelled && <Badge variant="destructive" className="mt-2"><AlertTriangle className="mr-1 h-3 w-3"/> FACTURA ANULADA EN ERP</Badge>}
                                     </div>
                                     <div className="flex items-center gap-2 flex-shrink-0">
-                                         <Dialog>
-                                            <DialogTrigger asChild>
-                                                <Button variant="outline" size="sm" disabled={isCompleted || isCancelled} onClick={() => setAssignmentToMove(a)}>Mover</Button>
-                                            </DialogTrigger>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Mover Documento a Otra Ruta</DialogTitle>
-                                                    <DialogDescription>
-                                                        Selecciona el contenedor de destino para el documento {a.documentId}.
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <div className="py-4 space-y-2">
-                                                    {containers.filter(c => c.id !== selectedContainer.id).map(c => (
-                                                        <DialogClose asChild key={c.id}>
-                                                            <Button variant="secondary" className="w-full justify-start" onClick={() => handleMoveAssignment(c.id!)}>
-                                                                {c.name}
-                                                            </Button>
-                                                        </DialogClose>
-                                                    ))}
-                                                </div>
-                                            </DialogContent>
-                                        </Dialog>
-                                        <Button className="w-40" onClick={() => handleVerifyClick(a)} disabled={isCompleted || isCancelled}>
-                                            {isCompleted ? 'Verificado' : 'Verificar'} <ArrowRight className="ml-2 h-4 w-4"/>
-                                        </Button>
+                                        {isCompleted ? (
+                                             <Button variant="outline" size="sm" onClick={() => handleReopenVerification(a.documentId)}><Undo2 className="mr-2 h-4 w-4"/>Re-Verificar</Button>
+                                        ) : (
+                                            <>
+                                                <Dialog>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="outline" size="sm" disabled={isCancelled} onClick={() => setAssignmentToMove(a)}>Mover</Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Mover Documento a Otra Ruta</DialogTitle>
+                                                            <DialogDescription>
+                                                                Selecciona el contenedor de destino para el documento {a.documentId}.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="py-4 space-y-2">
+                                                            {containers.filter(c => c.id !== selectedContainer.id).map(c => (
+                                                                <DialogClose asChild key={c.id}>
+                                                                    <Button variant="secondary" className="w-full justify-start" onClick={() => handleMoveAssignment(c.id!)}>
+                                                                        {c.name}
+                                                                    </Button>
+                                                                </DialogClose>
+                                                            ))}
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                                <Button className="w-40" onClick={() => handleVerifyClick(a)} disabled={isCancelled}>
+                                                    Verificar <ArrowRight className="ml-2 h-4 w-4"/>
+                                                </Button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </Card>

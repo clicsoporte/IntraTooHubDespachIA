@@ -42,6 +42,7 @@ import {
   Bell,
   Box,
   Split,
+  FileSearch,
 } from "lucide-react";
 import { allAdminPermissions } from "./permissions";
 
@@ -162,6 +163,14 @@ export const warehouseTools: Tool[] = [
         href: "/dashboard/warehouse/dispatch-classifier",
         icon: Split,
         bgColor: 'bg-sky-600',
+    },
+    {
+        id: "warehouse-dispatch-check",
+        name: "Verificación Individual",
+        description: "Verificar una factura o pedido específico de forma manual.",
+        href: "/dashboard/warehouse/dispatch-check",
+        icon: FileSearch,
+        bgColor: 'bg-blue-500',
     },
     {
         id: 'receiving-wizard',
