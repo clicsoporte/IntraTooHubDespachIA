@@ -24,7 +24,7 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from 'react-day-picker';
 import { useDebounce } from 'use-debounce';
 import { Badge } from '@/components/ui/badge';
-import { getInvoicesByIdsFromMain } from '@/modules/core/lib/db';
+import { getInvoicesByIds } from '@/modules/core/lib/db';
 
 const DraggableItem = ({ item, erpHeaders, index }: { item: DispatchAssignment, erpHeaders: Map<string, ErpInvoiceHeader>, index: number }) => {
     const erpHeader = erpHeaders.get(item.documentId);
@@ -88,7 +88,7 @@ export default function DispatchClassifierPage() {
                     allDocumentIds.push(...containerAssignments.map(a => a.documentId));
                 }
                 
-                const invoiceDetails = await getInvoicesByIdsFromMain(allDocumentIds);
+                const invoiceDetails = await getInvoicesByIds(allDocumentIds);
                 const headersMap = new Map<string, ErpInvoiceHeader>(invoiceDetails.map((h: ErpInvoiceHeader) => [h.FACTURA, h]));
 
                 setAssignments(assignmentsByContainer);
@@ -156,7 +156,8 @@ export default function DispatchClassifierPage() {
                     clientName: docToAssign.NOMBRE_CLIENTE,
                     assignedBy: user.name,
                     assignedAt: new Date().toISOString(),
-                    status: 'pending'
+                    status: 'pending',
+                    sortOrder: 0
                 };
                 
                 const destItems = Array.from(assignments[destId] || []);
@@ -167,7 +168,7 @@ export default function DispatchClassifierPage() {
                 const sourceItems = Array.from(assignments[sourceId] || []);
                 const [movedItem] = sourceItems.splice(source.index, 1);
                 
-                await moveAssignmentToContainer(movedItem.id, Number(destId), movedItem.documentId);
+                await moveAssignmentToContainer(movedItem.id, Number(destId));
                 
                 const destItems = Array.from(assignments[destId] || []);
                 destItems.splice(destination.index, 0, movedItem);
