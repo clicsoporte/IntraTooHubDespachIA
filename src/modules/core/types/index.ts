@@ -16,9 +16,9 @@ export type User = {
   password?: string; // Hashed password from DB, or plaintext only when updating.
   phone: string;
   whatsapp: string;
+  erpAlias?: string; // User's username in the external ERP system
   avatar: string;
   role: string; // Corresponds to a Role ID
-  erpAlias?: string; // User's username in the external ERP system
   recentActivity: string;
   securityQuestion?: string;
   securityAnswer?: string;
@@ -627,7 +627,7 @@ export type InventoryItem = {
 
 // --- SQL Import Types ---
 export type ImportQuery = {
-    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines' | 'erp_invoice_headers' | 'erp_invoice_lines';
+    type: 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_order_headers' | 'erp_order_lines' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines' | 'erp_invoice_headers' | 'erp_invoice_lines' | 'vendedores' | 'direcciones_embarque' | 'nominas' | 'puestos' | 'departamentos' | 'empleados';
     query: string;
 }
 
@@ -1008,3 +1008,44 @@ export interface TelegramSettings {
 export interface NotificationServiceConfig {
     telegram: TelegramSettings;
 }
+
+// --- NEW DATA TYPES from SQL.txt ---
+export type Vendedor = {
+    VENDEDOR: string;
+    NOMBRE: string;
+    EMPLEADO: string;
+};
+
+export type DireccionEmbarque = {
+    CLIENTE: string;
+    DIRECCION: string;
+    DETALLE_DIRECCION: string;
+    DESCRIPCION: string;
+};
+
+export type Nomina = {
+    NOMINA: string;
+    DESCRIPCION: string;
+    TIPO_NOMINA: string;
+};
+
+export type Puesto = {
+    PUESTO: string;
+    DESCRIPCION: string;
+    ACTIVO: string;
+};
+
+export type Departamento = {
+    DEPARTAMENTO: string;
+    DESCRIPCION: string;
+    ACTIVO: string;
+};
+
+export type Empleado = {
+    EMPLEADO: string;
+    NOMBRE: string;
+    ACTIVO: string;
+    DEPARTAMENTO: string;
+    PUESTO: string;
+    NOMINA: string;
+};

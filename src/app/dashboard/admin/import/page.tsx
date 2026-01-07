@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type ImportType = ImportQuery['type'];
-const importTypes: ImportType[] = ['customers', 'products', 'exemptions', 'stock', 'locations', 'cabys', 'suppliers', 'erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines'];
+const importTypes: ImportType[] = ['customers', 'products', 'exemptions', 'stock', 'locations', 'cabys', 'suppliers', 'erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados'];
 
 const importTypeTranslations: { [key in ImportType]: string } = {
     customers: 'Clientes',
@@ -40,6 +40,12 @@ const importTypeTranslations: { [key in ImportType]: string } = {
     erp_purchase_order_lines: 'Órdenes de Compra ERP (Líneas)',
     erp_invoice_headers: 'Facturas ERP (Cabeceras)',
     erp_invoice_lines: 'Facturas ERP (Líneas)',
+    vendedores: 'Vendedores',
+    direcciones_embarque: 'Direcciones de Embarque',
+    nominas: 'Nóminas',
+    puestos: 'Puestos',
+    departamentos: 'Departamentos',
+    empleados: 'Empleados',
 };
 
 const defaultQueries: { [key in ImportType]?: string } = {
@@ -55,6 +61,12 @@ const defaultQueries: { [key in ImportType]?: string } = {
     erp_purchase_order_lines: "SELECT [ORDEN_COMPRA], [ARTICULO], [CANTIDAD_ORDENADA] FROM [SOFTLAND].[GAREND].[ORDEN_COMPRA_LINEA]",
     erp_invoice_headers: "SELECT [CLIENTE], [NOMBRE_CLIENTE], [TIPO_DOCUMENTO], [FACTURA], [PEDIDO], [FACTURA_ORIGINAL], [FECHA], [FECHA_ENTREGA], [ANULADA], [EMBARCAR_A], [DIRECCION_FACTURA], [OBSERVACIONES], [RUTA], [USUARIO], [USUARIO_ANULA], [ZONA], [VENDEDOR], [REIMPRESO] FROM [SOFTLAND].[GAREND].[FACTURA]",
     erp_invoice_lines: "SELECT [FACTURA], [TIPO_DOCUMENTO], [LINEA], [BODEGA], [PEDIDO], [ARTICULO], [ANULADA], [FECHA_FACTURA], [CANTIDAD], [PRECIO_UNITARIO], [TOTAL_IMPUESTO1], [PRECIO_TOTAL], [DESCRIPCION], [DOCUMENTO_ORIGEN], [CANT_DESPACHADA], [ES_CANASTA_BASICA] FROM [SOFTLAND].[GAREND].[FACTURA_LINEA]",
+    vendedores: "SELECT [VENDEDOR], [NOMBRE], [EMPLEADO] FROM [SOFTLAND].[GAREND].[VENDEDOR]",
+    direcciones_embarque: "SELECT [CLIENTE], [DIRECCION], [DETALLE_DIRECCION], [DESCRIPCION] FROM [SOFTLAND].[GAREND].[DIRECC_EMBARQUE]",
+    nominas: "SELECT [NOMINA], [DESCRIPCION], [TIPO_NOMINA] FROM [SOFTLAND].[GAREND].[NOMINA]",
+    puestos: "SELECT [PUESTO], [DESCRIPCION], [ACTIVO] FROM [SOFTLAND].[GAREND].[PUESTO]",
+    departamentos: "SELECT [DEPARTAMENTO], [DESCRIPCION], [ACTIVO] FROM [SOFTLAND].[GAREND].[DEPARTAMENTO]",
+    empleados: "SELECT [EMPLEADO], [NOMBRE], [ACTIVO], [DEPARTAMENTO], [PUESTO], [NOMINA] FROM [SOFTLAND].[GAREND].[EMPLEADO]",
 };
 
 

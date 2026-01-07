@@ -97,6 +97,12 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
         CREATE TABLE IF NOT EXISTS erp_invoice_headers (CLIENTE TEXT, NOMBRE_CLIENTE TEXT, TIPO_DOCUMENTO TEXT, FACTURA TEXT PRIMARY KEY, PEDIDO TEXT, FACTURA_ORIGINAL TEXT, FECHA TEXT, FECHA_ENTREGA TEXT, ANULADA TEXT, EMBARCAR_A TEXT, DIRECCION_FACTURA TEXT, OBSERVACIONES TEXT, RUTA TEXT, USUARIO TEXT, USUARIO_ANULA TEXT, ZONA TEXT, VENDEDOR TEXT, REIMPRESO INTEGER);
         CREATE TABLE IF NOT EXISTS erp_invoice_lines (FACTURA TEXT, TIPO_DOCUMENTO TEXT, LINEA INTEGER, BODEGA TEXT, PEDIDO TEXT, ARTICULO TEXT, ANULADA TEXT, FECHA_FACTURA TEXT, CANTIDAD REAL, PRECIO_UNITARIO REAL, TOTAL_IMPUESTO1 REAL, PRECIO_TOTAL REAL, DESCRIPCION TEXT, DOCUMENTO_ORIGEN TEXT, CANT_DESPACHADA REAL, ES_CANASTA_BASICA TEXT, PRIMARY KEY(FACTURA, TIPO_DOCUMENTO, LINEA));
         CREATE TABLE IF NOT EXISTS stock_settings (key TEXT PRIMARY KEY, value TEXT);
+        CREATE TABLE IF NOT EXISTS vendedores (VENDEDOR TEXT PRIMARY KEY, NOMBRE TEXT, EMPLEADO TEXT);
+        CREATE TABLE IF NOT EXISTS direcciones_embarque (CLIENTE TEXT, DIRECCION TEXT, DETALLE_DIRECCION TEXT, DESCRIPCION TEXT, PRIMARY KEY(CLIENTE, DIRECCION));
+        CREATE TABLE IF NOT EXISTS nominas (NOMINA TEXT PRIMARY KEY, DESCRIPCION TEXT, TIPO_NOMINA TEXT);
+        CREATE TABLE IF NOT EXISTS puestos (PUESTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);
+        CREATE TABLE IF NOT EXISTS departamentos (DEPARTAMENTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);
+        CREATE TABLE IF NOT EXISTS empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);
     `;
     db.exec(schema);
 
@@ -443,6 +449,33 @@ async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
             console.log("MIGRATION: Creating erp_invoice_lines table.");
             db.exec(`CREATE TABLE erp_invoice_lines (FACTURA TEXT, TIPO_DOCUMENTO TEXT, LINEA INTEGER, BODEGA TEXT, PEDIDO TEXT, ARTICULO TEXT, ANULADA TEXT, FECHA_FACTURA TEXT, CANTIDAD REAL, PRECIO_UNITARIO REAL, TOTAL_IMPUESTO1 REAL, PRECIO_TOTAL REAL, DESCRIPCION TEXT, DOCUMENTO_ORIGEN TEXT, CANT_DESPACHADA REAL, ES_CANASTA_BASICA TEXT, PRIMARY KEY(FACTURA, TIPO_DOCUMENTO, LINEA));`);
         }
+
+        // New tables from SQL.txt
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vendedores'`).get()) {
+            console.log("MIGRATION: Creating vendedores table.");
+            db.exec(`CREATE TABLE vendedores (VENDEDOR TEXT PRIMARY KEY, NOMBRE TEXT, EMPLEADO TEXT);`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='direcciones_embarque'`).get()) {
+            console.log("MIGRATION: Creating direcciones_embarque table.");
+            db.exec(`CREATE TABLE direcciones_embarque (CLIENTE TEXT, DIRECCION TEXT, DETALLE_DIRECCION TEXT, DESCRIPCION TEXT, PRIMARY KEY(CLIENTE, DIRECCION));`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='nominas'`).get()) {
+            console.log("MIGRATION: Creating nominas table.");
+            db.exec(`CREATE TABLE nominas (NOMINA TEXT PRIMARY KEY, DESCRIPCION TEXT, TIPO_NOMINA TEXT);`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='puestos'`).get()) {
+            console.log("MIGRATION: Creating puestos table.");
+            db.exec(`CREATE TABLE puestos (PUESTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='departamentos'`).get()) {
+            console.log("MIGRATION: Creating departamentos table.");
+            db.exec(`CREATE TABLE departamentos (DEPARTAMENTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);`);
+        }
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='empleados'`).get()) {
+            console.log("MIGRATION: Creating empleados table.");
+            db.exec(`CREATE TABLE empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);`);
+        }
+
 
     } catch (error) {
         console.error("Failed to apply migrations:", error);
@@ -912,6 +945,12 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'erp_purchase_order_lines': return { 'ORDEN_COMPRA': 'ORDEN_COMPRA', 'ARTICULO': 'ARTICULO', 'CANTIDAD_ORDENADA': 'CANTIDAD_ORDENADA' };
         case 'erp_invoice_headers': return { 'CLIENTE': 'CLIENTE', 'NOMBRE_CLIENTE': 'NOMBRE_CLIENTE', 'TIPO_DOCUMENTO': 'TIPO_DOCUMENTO', 'FACTURA': 'FACTURA', 'PEDIDO': 'PEDIDO', 'FACTURA_ORIGINAL': 'FACTURA_ORIGINAL', 'FECHA': 'FECHA', 'FECHA_ENTREGA': 'FECHA_ENTREGA', 'ANULADA': 'ANULADA', 'EMBARCAR_A': 'EMBARCAR_A', 'DIRECCION_FACTURA': 'DIRECCION_FACTURA', 'OBSERVACIONES': 'OBSERVACIONES', 'RUTA': 'RUTA', 'USUARIO': 'USUARIO', 'USUARIO_ANULA': 'USUARIO_ANULA', 'ZONA': 'ZONA', 'VENDEDOR': 'VENDEDOR', 'REIMPRESO': 'REIMPRESO' };
         case 'erp_invoice_lines': return { 'FACTURA': 'FACTURA', 'TIPO_DOCUMENTO': 'TIPO_DOCUMENTO', 'LINEA': 'LINEA', 'BODEGA': 'BODEGA', 'PEDIDO': 'PEDIDO', 'ARTICULO': 'ARTICULO', 'ANULADA': 'ANULADA', 'FECHA_FACTURA': 'FECHA_FACTURA', 'CANTIDAD': 'CANTIDAD', 'PRECIO_UNITARIO': 'PRECIO_UNITARIO', 'TOTAL_IMPUESTO1': 'TOTAL_IMPUESTO1', 'PRECIO_TOTAL': 'PRECIO_TOTAL', 'DESCRIPCION': 'DESCRIPCION', 'DOCUMENTO_ORIGEN': 'DOCUMENTO_ORIGEN', 'CANT_DESPACHADA': 'CANT_DESPACHADA', 'ES_CANASTA_BASICA': 'ES_CANASTA_BASICA' };
+        case 'vendedores': return { 'VENDEDOR': 'VENDEDOR', 'NOMBRE': 'NOMBRE', 'EMPLEADO': 'EMPLEADO' };
+        case 'direcciones_embarque': return { 'CLIENTE': 'CLIENTE', 'DIRECCION': 'DIRECCION', 'DETALLE_DIRECCION': 'DETALLE_DIRECCION', 'DESCRIPCION': 'DESCRIPCION' };
+        case 'nominas': return { 'NOMINA': 'NOMINA', 'DESCRIPCION': 'DESCRIPCION', 'TIPO_NOMINA': 'TIPO_NOMINA' };
+        case 'puestos': return { 'PUESTO': 'PUESTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
+        case 'departamentos': return { 'DEPARTAMENTO': 'DEPARTAMENTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
+        case 'empleados': return { 'EMPLEADO': 'EMPLEADO', 'NOMBRE': 'NOMBRE', 'ACTIVO': 'ACTIVO', 'DEPARTAMENTO': 'DEPARTAMENTO', 'PUESTO': 'PUESTO', 'NOMINA': 'NOMINA' };
         default: return {};
     }
 }
@@ -1049,6 +1088,18 @@ async function importDataFromSql(type: ImportQuery['type']): Promise<{ count: nu
         await saveAllErpInvoiceHeaders(mappedData as ErpInvoiceHeader[]);
     } else if (type === 'erp_invoice_lines') {
         await saveAllErpInvoiceLines(mappedData as ErpInvoiceLine[]);
+    } else if (type === 'vendedores') {
+        await saveAllGeneric(mappedData, 'vendedores', ['VENDEDOR', 'NOMBRE', 'EMPLEADO']);
+    } else if (type === 'direcciones_embarque') {
+        await saveAllGeneric(mappedData, 'direcciones_embarque', ['CLIENTE', 'DIRECCION', 'DETALLE_DIRECCION', 'DESCRIPCION']);
+    } else if (type === 'nominas') {
+        await saveAllGeneric(mappedData, 'nominas', ['NOMINA', 'DESCRIPCION', 'TIPO_NOMINA']);
+    } else if (type === 'puestos') {
+        await saveAllGeneric(mappedData, 'puestos', ['PUESTO', 'DESCRIPCION', 'ACTIVO']);
+    } else if (type === 'departamentos') {
+        await saveAllGeneric(mappedData, 'departamentos', ['DEPARTAMENTO', 'DESCRIPCION', 'ACTIVO']);
+    } else if (type === 'empleados') {
+        await saveAllGeneric(mappedData, 'empleados', ['EMPLEADO', 'NOMBRE', 'ACTIVO', 'DEPARTAMENTO', 'PUESTO', 'NOMINA']);
     }
     return { count: mappedData.length, source: 'SQL Server' };
 }
@@ -1060,7 +1111,7 @@ export async function importData(type: ImportQuery['type']): Promise<{ count: nu
     if (companySettings.importMode === 'sql') {
         return importDataFromSql(type);
     } else {
-        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines'].includes(type)) {
+        if (['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados'].includes(type)) {
             return { count: 0, source: 'file (skipped)' };
         }
         return importDataFromFile(type as 'customers' | 'products' | 'exemptions' | 'stock' | 'locations' | 'cabys' | 'suppliers' | 'erp_purchase_order_headers' | 'erp_purchase_order_lines');
@@ -1078,6 +1129,8 @@ export async function importAllDataFromFiles(): Promise<{ type: string; count: n
         { type: 'erp_order_headers' }, { type: 'erp_order_lines' },
         { type: 'erp_purchase_order_headers' }, { type: 'erp_purchase_order_lines' },
         { type: 'erp_invoice_headers' }, { type: 'erp_invoice_lines' },
+        { type: 'vendedores'}, { type: 'direcciones_embarque' }, { type: 'nominas' },
+        { type: 'puestos' }, { type: 'departamentos' }, { type: 'empleados' },
     ];
     
     const results: { type: string; count: number; }[] = [];
@@ -1088,7 +1141,7 @@ export async function importAllDataFromFiles(): Promise<{ type: string; count: n
                 const filePathKey = `${task.type}FilePath` as keyof Company;
                 const filePath = companySettings[filePathKey] as string | undefined;
 
-                if (!filePath && !['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines'].includes(task.type)) {
+                if (!filePath && !['erp_order_headers', 'erp_order_lines', 'erp_purchase_order_headers', 'erp_purchase_order_lines', 'erp_invoice_headers', 'erp_invoice_lines', 'vendedores', 'direcciones_embarque', 'nominas', 'puestos', 'departamentos', 'empleados'].includes(task.type)) {
                     console.log(`Skipping file import for ${task.type}: no file path configured.`);
                     continue;
                 }
@@ -1743,4 +1796,25 @@ export async function getInvoicesByIds(documentIds: string[]): Promise<ErpInvoic
     const query = `SELECT * FROM erp_invoice_headers WHERE FACTURA IN (${placeholders})`;
     const headers = db.prepare(query).all(...documentIds) as ErpInvoiceHeader[];
     return JSON.parse(JSON.stringify(headers));
+}
+
+async function saveAllGeneric(data: any[], tableName: string, columns: string[]): Promise<void> {
+    const db = await connectDb();
+    const placeholders = columns.map(() => '?').join(',');
+    const insert = db.prepare(`INSERT OR REPLACE INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`);
+    
+    const transaction = db.transaction((rows) => {
+        db.prepare(`DELETE FROM ${tableName}`).run();
+        for (const row of rows) {
+            const values = columns.map(col => row[col]);
+            insert.run(...values);
+        }
+    });
+
+    try {
+        transaction(data);
+    } catch (error) {
+        console.error(`Failed to save all ${tableName}:`, error);
+        throw error;
+    }
 }

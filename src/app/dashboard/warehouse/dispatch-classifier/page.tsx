@@ -54,6 +54,7 @@ const DraggableItem = ({ item, erpHeaders, index, onUnassign }: { item: Dispatch
                         <div>
                             <p className="font-semibold">{item.documentId}</p>
                             <p className="text-sm text-muted-foreground">{item.clientName}</p>
+                            {erpHeader?.EMBARCAR_A && <p className="text-xs text-muted-foreground italic truncate max-w-xs">{erpHeader.EMBARCAR_A}</p>}
                             {isCancelled && <Badge variant="destructive" className="mt-1"><AlertTriangle className="mr-1 h-3 w-3" /> ANULADA</Badge>}
                         </div>
                     </div>
@@ -199,7 +200,6 @@ export default function DispatchClassifierPage() {
                     newAssignments[currentAssignment.containerId] = newAssignments[currentAssignment.containerId].filter(a => a.id !== currentAssignment.id);
                     return newAssignments;
                 });
-                await handleFetchDocuments();
             }
         } else { // Assigning
             await assignDocumentsToContainer([documentId], Number(containerId), user.name);
@@ -216,10 +216,9 @@ export default function DispatchClassifierPage() {
                     sortOrder: (assignments[containerId]?.length || 0) + 1, status: 'pending',
                 };
                 setAssignments(prev => ({ ...prev, [containerId]: [...(prev[containerId] || []), newAssignment] }));
-                // No longer remove from unassignedDocs
             }
         }
-    }, [user, assignments, unassignedDocs, handleFetchDocuments, toast]);
+    }, [user, assignments, unassignedDocs, toast]);
     
     const handleBulkAssign = useCallback(async () => {
         if (!user || selectedDocumentIds.size === 0 || !bulkAssignContainerId) {
@@ -265,7 +264,7 @@ export default function DispatchClassifierPage() {
         setSelectedDocumentIds(new Set());
         setBulkAssignContainerId('');
         toast({ title: 'Asignación Masiva Completa', description: `${validDocsToAssign.length} documentos asignados.`});
-    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast]);
+    }, [user, selectedDocumentIds, bulkAssignContainerId, unassignedDocs, toast, assignments]);
 
     const handleUnassign = async (assignment: DispatchAssignment) => {
         await unassignDocumentFromContainer(assignment.id);
