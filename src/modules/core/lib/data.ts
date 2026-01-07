@@ -40,6 +40,8 @@ import {
   PackageCheck,
   ClipboardList,
   Bell,
+  Box,
+  Split,
 } from "lucide-react";
 import { allAdminPermissions } from "./permissions";
 
@@ -144,28 +146,20 @@ export const mainTools: Tool[] = [
 
 export const warehouseTools: Tool[] = [
     {
-        id: "warehouse-search-simple",
-        name: "Búsqueda Rápida",
-        description: "Escanear o buscar un artículo para una consulta rápida.",
-        href: "/dashboard/warehouse/search/simple",
-        icon: QrCode,
-        bgColor: 'bg-sky-600',
-    },
-    {
-        id: "warehouse-search",
-        name: "Consulta de Almacén",
-        description: "Localizar artículos, clientes y unidades de inventario.",
-        href: "/dashboard/warehouse/search",
-        icon: Search,
+        id: "warehouse-dispatch-center",
+        name: "Centro de Despacho",
+        description: "Revisar y gestionar las rutas de entrega pendientes.",
+        href: "/dashboard/warehouse/dispatch-center",
+        icon: Truck,
         bgColor: 'bg-blue-600',
     },
-    {
-        id: "warehouse-dispatch-check",
-        name: "Chequeo de Despacho",
-        description: "Verificar artículos de una factura antes de cargar al camión.",
-        href: "/dashboard/warehouse/dispatch-check",
-        icon: ClipboardCheck,
-        bgColor: 'bg-sky-700',
+     {
+        id: "warehouse-dispatch-classifier",
+        name: "Clasificador de Despachos",
+        description: "Asignar facturas del ERP a los contenedores de ruta.",
+        href: "/dashboard/warehouse/dispatch-classifier",
+        icon: Split,
+        bgColor: 'bg-sky-600',
     },
     {
         id: 'receiving-wizard',
@@ -215,13 +209,21 @@ export const warehouseTools: Tool[] = [
         icon: Map,
         bgColor: 'bg-purple-600',
     },
+     {
+        id: "warehouse-containers-config",
+        name: "Config. Contenedores Despacho",
+        description: "Crear y administrar los contenedores de rutas de entrega.",
+        href: "/dashboard/warehouse/dispatch-containers",
+        icon: Box,
+        bgColor: 'bg-slate-500',
+    },
     {
         id: 'lock-management',
         name: 'Gestionar Bloqueos',
         description: 'Ver y liberar racks o niveles que están siendo editados.',
         href: '/dashboard/warehouse/locks',
         icon: Lock,
-        bgColor: 'bg-slate-500',
+        bgColor: 'bg-gray-500',
     }
 ];
 

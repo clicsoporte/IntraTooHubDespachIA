@@ -14,4 +14,6 @@ export const warehouseSchema: ExpectedSchema = {
     'movements': ['id', 'itemId', 'quantity', 'fromLocationId', 'toLocationId', 'timestamp', 'userId', 'notes'],
     'warehouse_config': ['key', 'value'],
     'dispatch_logs': ['id', 'documentId', 'documentType', 'verifiedAt', 'verifiedByUserId', 'verifiedByUserName', 'items', 'notes'],
+    'dispatch_containers': ['id', 'name', 'createdBy', 'createdAt', 'isLocked', 'lockedBy', 'lockedByUserId', 'lockedAt'],
+    'dispatch_assignments': ['id', 'containerId', 'documentId', 'documentType', 'documentDate', 'clientId', 'clientName', 'assignedBy', 'assignedAt', 'sortOrder', 'status'],
 };

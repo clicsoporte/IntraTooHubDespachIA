@@ -12,7 +12,7 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
 2.  **Reemplazar Archivos:** Reemplace todos los archivos y carpetas de la aplicación en el servidor con los de la nueva versión, **excepto** la carpeta `dbs/` y el archivo `.env.local`.
 3.  **Actualizar Dependencias:** Ejecute `npm install --omit=dev` en el servidor.
 4.  **Reconstruir y Reiniciar:** Ejecute `npm run build` y reinicie la aplicación (ej: `pm2 restart clic-tools`).
-5.  **Verificar:** Ejecute la auditoría desde **Administración > Mantenimiento** para confirmar que la estructura de la base de datos es correcta.
+5.  **Verificar:** Ejecute la auditoría desde **Administración > Mantenimiento** para confirmar que la estructura de la base de datos es correcta. Este paso es especialmente importante en la v2.2.0 para asegurar la creación de las nuevas tablas de despacho.
 
 **Para realizar un rollback (regresar a la versión anterior):**
 
@@ -20,6 +20,45 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
 2.  **Revertir Archivos:** Reemplace los archivos del servidor con los de la versión anterior.
 3.  **Reinstalar y Reconstruir:** Ejecute `npm install --omit=dev` y `npm run build`.
 4.  **Reiniciar:** Inicie la aplicación nuevamente.
+
+---
+
+## [2.2.0] - Publicado
+
+### Nueva Funcionalidad Mayor: Centro de Despacho
+
+Se ha implementado un nuevo módulo completo para digitalizar y optimizar el proceso de alistamiento y verificación de despachos, reemplazando el flujo de trabajo manual basado en papel.
+
+-   **[Nuevo] Contenedores de Ruta:**
+    -   Desde **Almacén > Configuración**, los administradores de logística ahora pueden crear "contenedores" que representan las rutas de entrega (ej: "Ruta San José", "Ruta Alajuela").
+
+-   **[Nuevo] Clasificador de Despachos:**
+    -   Una nueva herramienta en **Almacén > Clasificador de Despachos** permite al personal de logística ver todas las facturas y pedidos del ERP que no han sido asignados.
+    -   Los usuarios pueden seleccionar múltiples documentos y asignarlos de forma masiva a un contenedor de ruta específico.
+    -   Dentro de cada contenedor, es posible reordenar las facturas (arrastrando y soltando) para definir el orden de carga y entrega del camión.
+
+-   **[Nuevo] Flujo de Chequeo para Bodegueros:**
+    -   En la nueva herramienta **Almacén > Centro de Despacho**, el personal de bodega ve los contenedores de ruta.
+    -   Al seleccionar un contenedor, este se **bloquea** para ese usuario, evitando que dos personas trabajen en la misma ruta simultáneamente (similar al bloqueo del Asistente de Poblado).
+    -   Dentro del contenedor, se muestra la lista de facturas en el orden de entrega. Al seleccionar una, se abre la interfaz de verificación de artículos.
+
+-   **[Mejora] Verificación de Artículos Inteligente:**
+    -   La herramienta de chequeo ahora es consciente del contexto de la ruta y avanza automáticamente a la siguiente factura de la lista una vez que se completa la actual.
+    -   **Manejo de Múltiples Bodegas:** Si una factura contiene artículos de diferentes bodegas, el sistema permitirá verificar solo los artículos de una bodega a la vez (próximamente se implementará la selección de bodega).
+    -   El bodeguero ahora tiene un botón para **"Enviar a otra ruta"**, permitiendo mover una factura a un contenedor diferente si fue asignada por error.
+
+-   **[Seguridad y Auditoría] Detección de Facturas Anuladas:**
+    -   El sistema ahora compara continuamente los datos del ERP. Si una factura que ya fue asignada a una ruta es posteriormente **anulada en el ERP**, aparecerá con una alerta visual de "ANULADA" en la lista de chequeo, impidiendo su despacho por error.
+
+-   **[Nuevo] Reporte de Despachos:**
+    -   Ubicado en **Analíticas**, este reporte permite auditar todas las verificaciones realizadas, ver quién verificó qué documento, cuándo, y si hubo discrepancias.
+
+### Mejoras y Correcciones Generales
+
+-   **[Estabilidad] Notificaciones Automáticas:** Se corrigió un error crítico que impedía que el motor de notificaciones configurables enviara correos correctamente, asegurando que las alertas de eventos (como despachos finalizados, órdenes aprobadas, etc.) funcionen como se espera.
+-   **[Calidad de Código] Mantenimiento de Dependencias:** Se actualizaron varias dependencias internas para mejorar la estabilidad y el rendimiento general de la aplicación.
+-   **[UI] Mejoras de Accesibilidad:** Se añadieron descripciones a varios diálogos modales en toda la aplicación para mejorar la compatibilidad con lectores de pantalla y eliminar advertencias en la consola de desarrollo.
+-   **[Estabilidad] Filtros de Fecha:** Se solucionó un bug persistente en los reportes donde el filtro de fecha no se aplicaba correctamente al seleccionar un solo día. Ahora los rangos de fechas funcionan de manera precisa e intuitiva.
 
 ---
 

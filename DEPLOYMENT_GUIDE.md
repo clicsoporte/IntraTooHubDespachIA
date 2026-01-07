@@ -34,4 +34,5 @@ Estos archivos se generan automáticamente durante el proceso de instalación en
 2.  **Crea y configura** tu archivo `.env.local` si es necesario (para la conexión a SQL Server).
 3.  **Ejecuta `npm install --omit=dev`** para instalar las dependencias de producción.
 4.  **Ejecuta `npm run build`** para compilar la aplicación.
-5.  **Ejecuta `npm run start`** (o usa un gestor de procesos como PM2 o IIS) para iniciar el servidor de producción.
+5.  **Ejecuta la Auditoría de Base de Datos:** Después de una actualización importante (como a la v2.2.0), es muy recomendable ir a **Administración > Mantenimiento** y ejecutar la auditoría para asegurar que las nuevas tablas y columnas se hayan creado correctamente.
+6.  **Ejecuta `npm run start`** (o usa un gestor de procesos como PM2 o IIS) para iniciar el servidor de producción.
