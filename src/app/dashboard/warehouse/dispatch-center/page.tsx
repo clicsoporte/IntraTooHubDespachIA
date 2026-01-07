@@ -276,7 +276,10 @@ export default function DispatchCenterPage() {
         if (!containerToModify) return;
         try {
             await unassignAllFromContainer(containerToModify.id!);
-            setAssignments(prev => ({ ...prev, [containerToModify!.id!]: [] }));
+            setAssignments(prev => ({
+                ...prev,
+                [containerToModify!.id!]: []
+            }));
             toast({ title: 'Contenedor Limpiado', description: `Se desasignaron todos los documentos de "${containerToModify.name}".`, variant: 'destructive'});
         } catch (error: any) {
             toast({ title: 'Error al Limpiar', description: `No se pudieron limpiar las asignaciones. ${error.message}`, variant: 'destructive'});
@@ -418,7 +421,10 @@ export default function DispatchCenterPage() {
         );
     }
     
-    const isRouteCompleted = (c: DispatchContainer) => (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === c.assignmentCount;
+    const isRouteCompleted = (c: DispatchContainer) => {
+        const assignmentCount = c.assignmentCount ?? 0;
+        return assignmentCount > 0 && c.completedAssignmentCount === assignmentCount;
+    }
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -525,11 +531,11 @@ export default function DispatchCenterPage() {
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto">
                 {containers.map(c => {
-                    const isLocked = c.isLocked && c.lockedByUserId !== user?.id;
                     const assignmentCount = c.assignmentCount ?? 0;
                     const completedCount = c.completedAssignmentCount ?? 0;
-                    const isCompleted = assignmentCount > 0 && completedCount === assignmentCount;
-                    
+                    const isCompleted = (c.assignmentCount ?? 0) > 0 && c.completedAssignmentCount === c.assignmentCount;
+                    const isLocked = c.isLocked && c.lockedByUserId !== user?.id;
+
                     return (
                         <Card 
                             key={c.id} 

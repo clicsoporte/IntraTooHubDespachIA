@@ -26,7 +26,7 @@ import type { DispatchContainer, ErpInvoiceHeader, DispatchAssignment } from '@/
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, CalendarIcon, Truck, AlertTriangle, List, Check, ChevronsUpDown, Send, Trash2, GripVertical, RefreshCcw } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/modules/core/hooks/use-toast';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -136,7 +136,7 @@ export default function DispatchClassifierPage() {
     
     useEffect(() => {
         setTitle("Clasificador de Despachos");
-        if (hasPermission) {
+        if (hasPermission('warehouse:dispatch-classifier:use')) {
             fetchAllData();
         } else {
             setIsLoading(false);
@@ -476,7 +476,7 @@ export default function DispatchClassifierPage() {
                                                             </AlertDialogTrigger>
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Limpiar Contenedor &quot;{container.name}&quot;?</AlertDialogTitle>
+                                                                    <AlertDialogTitle>¿Limpiar Contenedor "{container.name}"?</AlertDialogTitle>
                                                                     <AlertDialogDescription>
                                                                         Esta acción desasignará **TODOS** los documentos del contenedor. Es útil para reiniciar la ruta para el día siguiente. No se borra ningún registro de verificación.
                                                                     </AlertDialogDescription>
@@ -506,9 +506,9 @@ export default function DispatchClassifierPage() {
                                                         </AlertDialogTrigger>
                                                         <AlertDialogContent>
                                                             <AlertDialogHeader>
-                                                                <AlertDialogTitle>¿Reiniciar la ruta &quot;{container.name}&quot;?</AlertDialogTitle>
+                                                                <AlertDialogTitle>¿Reiniciar la ruta "{container.name}"?</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Todos los documentos en este contenedor volverán al estado &quot;pendiente&quot;, permitiendo que sean verificados de nuevo.
+                                                                    Todos los documentos en este contenedor volverán al estado "pendiente", permitiendo que sean verificados de nuevo.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>
                                                             <AlertDialogFooter>
