@@ -45,7 +45,7 @@ export default function AdminDashboardPage() {
                 case 'admin:settings:requests':
                     return hasPermission('admin:settings:requests');
                 case 'admin:settings:warehouse':
-                     return hasPermission('admin:settings:warehouse');
+                     return hasPermission('admin:settings:warehouse') || hasPermission('admin:settings:stock');
                 case 'admin:settings:cost-assistant':
                     return hasPermission('admin:settings:cost-assistant');
                 case 'admin:settings:quoter':
@@ -72,7 +72,9 @@ export default function AdminDashboardPage() {
              <main className="flex-1 p-4 md:p-6 lg:p-8">
                 <div className="grid gap-8">
                 <div>
-                    <Skeleton className="h-8 w-80 mb-4" />
+                    <h2 className="mb-4 text-2xl font-bold tracking-tight">
+                        Herramientas de Administración
+                    </h2>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     <Skeleton className="h-24 w-full" />
                     <Skeleton className="h-24 w-full" />
