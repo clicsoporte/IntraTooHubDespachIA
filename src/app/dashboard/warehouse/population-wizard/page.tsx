@@ -217,7 +217,7 @@ export default function PopulationWizardPage() {
     
     const handleProductSelect = (productId: string) => {
         setProductSearch(productId);
-        setProductSearchOpen(false);
+        setIsProductSearchOpen(false);
         assignAndNext(productId);
     };
 

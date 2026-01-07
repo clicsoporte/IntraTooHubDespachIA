@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useRouter } from 'next/navigation';
-import { getContainers, getAssignmentsForContainer, lockContainer, releaseContainer, moveAssignmentToContainer, getAssignmentsByIds } from '@/modules/warehouse/lib/actions';
+import { getContainers, getAssignmentsForContainer, lockEntity, releaseLock, moveAssignmentToContainer, getAssignmentsByIds } from '@/modules/warehouse/lib/actions';
 import type { DispatchContainer, DispatchAssignment, ErpInvoiceHeader, ErpInvoiceLine } from '@/modules/core/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
-import { getInvoicesByIdsFromMain } from '@/modules/core/lib/db';
+import { getInvoicesByIds } from '@/modules/core/lib/db';
 import { Badge } from '@/components/ui/badge';
 
 
@@ -56,7 +56,7 @@ export default function DispatchCenterPage() {
         
         if (!skipLock) {
             try {
-                const lockResult = await lockContainer({ entityId: container.id!, entityType: 'container', userId: user.id, userName: user.name });
+                const lockResult = await lockEntity({ entityIds: [container.id!], entityType: 'container', userId: user.id, userName: user.name });
                 if (lockResult.error) {
                     toast({ title: "Contenedor en Uso", description: lockResult.error, variant: "destructive" });
                     setIsLoading(false);
@@ -74,7 +74,7 @@ export default function DispatchCenterPage() {
             
             if (fetchedAssignments.length > 0) {
                 const documentIds = fetchedAssignments.map(a => a.documentId);
-                const invoiceDetails = await getInvoicesByIdsFromMain(documentIds);
+                const invoiceDetails = await getInvoicesByIds(documentIds);
                 const headersMap = new Map<string, ErpInvoiceHeader>(invoiceDetails.map((h: ErpInvoiceHeader) => [h.FACTURA, h]));
                 setErpHeaders(headersMap);
             }
@@ -116,7 +116,7 @@ export default function DispatchCenterPage() {
     const handleExitContainer = async () => {
         if (!user || !selectedContainer) return;
         try {
-            await releaseContainer(selectedContainer.id!, 'container', user.id);
+            await releaseLock([selectedContainer.id!], 'container', user.id);
             sessionStorage.removeItem('activeDispatchContainer');
             setSelectedContainer(null);
             setAssignments([]);

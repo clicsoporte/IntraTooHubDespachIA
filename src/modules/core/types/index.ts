@@ -488,7 +488,7 @@ export type WarehouseLocation = {
     parentId?: number | null; // For hierarchical structure
     isLocked?: 0 | 1;
     lockedBy?: string | null;
-    lockedBySessionId?: string;
+    lockedByUserId?: number;
 };
 
 /** Tracks physical quantity in a specific location */
@@ -870,6 +870,31 @@ export type DispatchLog = {
     items: VerificationItem[];
     notes: string | null;
 };
+
+export interface DispatchContainer {
+  id?: number;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  isLocked?: boolean;
+  lockedBy?: string | null;
+  lockedByUserId?: number | null;
+  lockedAt?: string | null;
+}
+
+export interface DispatchAssignment {
+    id: number;
+    containerId: number;
+    documentId: string;
+    documentType: string;
+    documentDate: string;
+    clientId: string;
+    clientName: string;
+    assignedBy: string;
+    assignedAt: string;
+    sortOrder: number;
+    status: 'pending' | 'in-progress' | 'completed' | 'discrepancy' | 'partial';
+}
 
 
 // --- Cost Assistant Types ---
