@@ -28,15 +28,15 @@ export function getInitials(name: string): string {
 export function reformatEmployeeName(name: string | null | undefined): string {
   if (!name) return "";
   const parts = name.trim().split(/\s+/);
-  
-  // If there are 2 or fewer parts, we can assume it's already in a reasonable format or un-formattable.
+
+  // If there are 2 or fewer parts, it's likely a simple name or already formatted.
   if (parts.length <= 2) {
     return name;
   }
 
   // The logic is to take the first two words as last names and move them to the end.
-  const lastNames = parts.slice(0, 2);
   const firstNames = parts.slice(2);
+  const lastNames = parts.slice(0, 2);
   
   return [...firstNames, ...lastNames].join(' ');
 }

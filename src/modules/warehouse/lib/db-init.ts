@@ -19,7 +19,8 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             isLocked BOOLEAN DEFAULT FALSE,
             lockedBy TEXT,
             lockedByUserId INTEGER,
-            lockedAt TEXT
+            lockedAt TEXT,
+            isFullyPopulated BOOLEAN DEFAULT FALSE
         );
 
         CREATE TABLE IF NOT EXISTS inventory (
@@ -147,6 +148,7 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
         if (!locationColumns.has('lockedBy')) db.exec(`ALTER TABLE locations ADD COLUMN lockedBy TEXT`);
         if (!locationColumns.has('lockedByUserId')) db.exec(`ALTER TABLE locations ADD COLUMN lockedByUserId INTEGER`);
         if (!locationColumns.has('lockedAt')) db.exec(`ALTER TABLE locations ADD COLUMN lockedAt TEXT`);
+        if (!locationColumns.has('isFullyPopulated')) db.exec(`ALTER TABLE locations ADD COLUMN isFullyPopulated BOOLEAN DEFAULT FALSE`);
 
         const inventoryTableInfo = db.prepare(`PRAGMA table_info(inventory)`).all() as { name: string }[];
         const inventoryColumns = new Set(inventoryTableInfo.map(c => c.name));
