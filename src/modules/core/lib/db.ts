@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file handles the SQLite database connection and provides
  * server-side functions for all database operations. It includes initialization,
@@ -956,7 +957,7 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'puestos': return { 'PUESTO': 'PUESTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'departamentos': return { 'DEPARTAMENTO': 'DEPARTAMENTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'empleados': return { 'EMPLEADO': 'EMPLEADO', 'NOMBRE': 'NOMBRE', 'ACTIVO': 'ACTIVO', 'DEPARTAMENTO': 'DEPARTAMENTO', 'PUESTO': 'PUESTO', 'NOMINA': 'NOMINA' };
-        case 'vehiculos': return { 'PLACA': 'placa', 'MARCA': 'marca' };
+        case 'vehiculos': return { 'NUMERO_PLACA': 'placa', 'ENTIDAD_EMISORA': 'marca' };
         default: return {};
     }
 }
@@ -1847,3 +1848,4 @@ export async function getVehicles(): Promise<Vehiculo[]> {
     }
 }
 
+  
