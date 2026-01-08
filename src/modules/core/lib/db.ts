@@ -1832,7 +1832,8 @@ export async function getEmployees(): Promise<Empleado[]> {
     const db = await connectDb();
     try {
         const employees = db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
-        return employees.map(e => ({...e, NOMBRE: reformatEmployeeName(e.NOMBRE) }));
+        // Return original data, formatting will be done in the component
+        return employees;
     } catch (error) {
         console.error("Failed to get all employees:", error);
         return [];

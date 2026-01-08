@@ -116,10 +116,24 @@ export default function DispatchCenterPage() {
     const [vehicles, setVehicles] = useState<Vehiculo[]>([]);
     const [employees, setEmployees] = useState<Empleado[]>([]);
     const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+    
+    // Driver state
     const [selectedDriver, setSelectedDriver] = useState<string>('');
     const [driverSearchTerm, setDriverSearchTerm] = useState('');
     const [isDriverSearchOpen, setIsDriverSearchOpen] = useState(false);
     const [debouncedDriverSearch] = useDebounce(driverSearchTerm, 300);
+
+    // Helper 1 state
+    const [selectedHelper1, setSelectedHelper1] = useState<string>('');
+    const [helper1SearchTerm, setHelper1SearchTerm] = useState('');
+    const [isHelper1SearchOpen, setIsHelper1SearchOpen] = useState(false);
+    const [debouncedHelper1Search] = useDebounce(helper1SearchTerm, 300);
+
+    // Helper 2 state
+    const [selectedHelper2, setSelectedHelper2] = useState<string>('');
+    const [helper2SearchTerm, setHelper2SearchTerm] = useState('');
+    const [isHelper2SearchOpen, setIsHelper2SearchOpen] = useState(false);
+    const [debouncedHelper2Search] = useDebounce(helper2SearchTerm, 300);
     
     const fetchContainers = useCallback(async (showLoading = true) => {
         if (showLoading) setIsLoading(true);
@@ -468,18 +482,42 @@ export default function DispatchCenterPage() {
     };
 
     const handleFinalizeDispatch = async () => {
-        if (!selectedContainer) return;
-        await finalizeDispatch(selectedContainer.id!, selectedVehicle, selectedDriver);
-        toast({ title: 'Ruta Finalizada', description: 'El vehículo y el chofer han sido asignados.' });
+        if (!selectedContainer || !user) return;
+        const driver = employees.find(e => e.EMPLEADO === selectedDriver);
+        const helper1 = employees.find(e => e.EMPLEADO === selectedHelper1);
+        const helper2 = employees.find(e => e.EMPLEADO === selectedHelper2);
+        
+        await finalizeDispatch(
+            selectedContainer.id!,
+            selectedVehicle,
+            driver ? driver.NOMBRE : '', // Pass the original name format
+            helper1 ? helper1.NOMBRE : '',
+            helper2 ? helper2.NOMBRE : ''
+        );
+        toast({ title: 'Ruta Finalizada', description: 'El vehículo y el personal han sido asignados.' });
         handleExitContainer();
     };
     
     const driverOptions = useMemo(() => {
         const searchLower = debouncedDriverSearch.toLowerCase();
         return employees
-            .filter(e => e.NOMBRE.toLowerCase().includes(searchLower))
+            .filter(e => reformatEmployeeName(e.NOMBRE).toLowerCase().includes(searchLower))
             .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
     }, [employees, debouncedDriverSearch]);
+
+    const helper1Options = useMemo(() => {
+        const searchLower = debouncedHelper1Search.toLowerCase();
+        return employees
+            .filter(e => reformatEmployeeName(e.NOMBRE).toLowerCase().includes(searchLower))
+            .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
+    }, [employees, debouncedHelper1Search]);
+
+    const helper2Options = useMemo(() => {
+        const searchLower = debouncedHelper2Search.toLowerCase();
+        return employees
+            .filter(e => reformatEmployeeName(e.NOMBRE).toLowerCase().includes(searchLower))
+            .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
+    }, [employees, debouncedHelper2Search]);
     
     const handleSelectDriver = (driverEmployeeId: string) => {
         const driver = employees.find(e => e.EMPLEADO === driverEmployeeId);
@@ -488,6 +526,24 @@ export default function DispatchCenterPage() {
             setDriverSearchTerm(reformatEmployeeName(driver.NOMBRE));
         }
         setIsDriverSearchOpen(false);
+    };
+
+    const handleSelectHelper1 = (helperEmployeeId: string) => {
+        const helper = employees.find(e => e.EMPLEADO === helperEmployeeId);
+        if (helper) {
+            setSelectedHelper1(helper.EMPLEADO);
+            setHelper1SearchTerm(reformatEmployeeName(helper.NOMBRE));
+        }
+        setIsHelper1SearchOpen(false);
+    };
+
+    const handleSelectHelper2 = (helperEmployeeId: string) => {
+        const helper = employees.find(e => e.EMPLEADO === helperEmployeeId);
+        if (helper) {
+            setSelectedHelper2(helper.EMPLEADO);
+            setHelper2SearchTerm(reformatEmployeeName(helper.NOMBRE));
+        }
+        setIsHelper2SearchOpen(false);
     };
 
     if (isLoading) {
@@ -529,7 +585,7 @@ export default function DispatchCenterPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div className="space-y-2 text-left">
+                            <div className="space-y-2 text-left">
                                 <Label htmlFor="driver-search">Seleccionar Chofer</Label>
                                 <SearchInput
                                     options={driverOptions}
@@ -539,6 +595,30 @@ export default function DispatchCenterPage() {
                                     placeholder="Buscar empleado..."
                                     open={isDriverSearchOpen}
                                     onOpenChange={setIsDriverSearchOpen}
+                                />
+                            </div>
+                            <div className="space-y-2 text-left">
+                                <Label htmlFor="helper1-search">Ayudante 1 (Opcional)</Label>
+                                <SearchInput
+                                    options={helper1Options}
+                                    onSelect={handleSelectHelper1}
+                                    value={helper1SearchTerm}
+                                    onValueChange={setHelper1SearchTerm}
+                                    placeholder="Buscar empleado..."
+                                    open={isHelper1SearchOpen}
+                                    onOpenChange={setIsHelper1SearchOpen}
+                                />
+                            </div>
+                            <div className="space-y-2 text-left">
+                                <Label htmlFor="helper2-search">Ayudante 2 (Opcional)</Label>
+                                <SearchInput
+                                    options={helper2Options}
+                                    onSelect={handleSelectHelper2}
+                                    value={helper2SearchTerm}
+                                    onValueChange={setHelper2SearchTerm}
+                                    placeholder="Buscar empleado..."
+                                    open={isHelper2SearchOpen}
+                                    onOpenChange={setIsHelper2SearchOpen}
                                 />
                             </div>
                          </CardContent>
@@ -662,7 +742,7 @@ export default function DispatchCenterPage() {
                             </CardHeader>
                              <CardContent className="flex-grow">
                                 {isLocked ? (
-                                    <p className="text-sm font-semibold text-destructive">Bloqueado por: {c.lockedBy}</p>
+                                    <p className="text-sm font-semibold text-destructive">Revisando por: {c.lockedBy}</p>
                                 ) : isCompleted ? (
                                      <p className="text-sm text-green-700">Verificado por {c.lastVerifiedBy} el {c.lastVerifiedAt ? format(parseISO(c.lastVerifiedAt), 'dd/MM/yy HH:mm') : ''}</p>
                                 ) : (
@@ -681,3 +761,4 @@ export default function DispatchCenterPage() {
         </div>
     );
 }
+

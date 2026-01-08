@@ -83,7 +83,9 @@ export async function initializeWarehouseDb(db: import('better-sqlite3').Databas
             items TEXT NOT NULL,
             notes TEXT,
             vehiclePlate TEXT,
-            driverName TEXT
+            driverName TEXT,
+            helper1Name TEXT,
+            helper2Name TEXT
         );
 
         CREATE TABLE IF NOT EXISTS dispatch_containers (
@@ -173,6 +175,8 @@ export async function runWarehouseMigrations(db: import('better-sqlite3').Databa
             const dispatchLogsColumns = new Set(dispatchLogsTableInfo.map(c => c.name));
             if (!dispatchLogsColumns.has('vehiclePlate')) db.exec(`ALTER TABLE dispatch_logs ADD COLUMN vehiclePlate TEXT`);
             if (!dispatchLogsColumns.has('driverName')) db.exec(`ALTER TABLE dispatch_logs ADD COLUMN driverName TEXT`);
+            if (!dispatchLogsColumns.has('helper1Name')) db.exec(`ALTER TABLE dispatch_logs ADD COLUMN helper1Name TEXT`);
+            if (!dispatchLogsColumns.has('helper2Name')) db.exec(`ALTER TABLE dispatch_logs ADD COLUMN helper2Name TEXT`);
         }
 
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='dispatch_containers'`).get()) {

@@ -20,23 +20,21 @@ export function getInitials(name: string): string {
 }
 
 /**
- * Reformats an employee name from "LAST1 LAST2 NAME1 NAME2" to "NAME1 NAME2 LAST1 LAST2".
- * Handles names with single or compound first names.
+ * Reformats an employee name from "APELLIDO1 APELLIDO2 NOMBRE1 [NOMBRE2]" to "NOMBRE1 [NOMBRE2] APELLIDO1 APELLIDO2".
+ * This version is more robust and handles names with one or more first names.
  * @param name - The original name string from the database, e.g., "Vargas Mendez Juan Agustin".
- * @returns The reformatted name, or the original name if formatting fails.
+ * @returns The reformatted name, or the original name if formatting is not possible.
  */
 export function reformatEmployeeName(name: string | null | undefined): string {
   if (!name) return "";
-
   const parts = name.trim().split(/\s+/);
-
-  // If there are fewer than 3 parts, we can't reliably reorder, so return as is.
-  // This also handles names that might already be in the correct format.
-  if (parts.length < 3) {
+  
+  // If there are 2 or fewer parts, we can assume it's already in a reasonable format or un-formattable.
+  if (parts.length <= 2) {
     return name;
   }
 
-  // Assumes the first two words are always the last names.
+  // The logic is to take the first two words as last names and move them to the end.
   const lastNames = parts.slice(0, 2);
   const firstNames = parts.slice(2);
   
