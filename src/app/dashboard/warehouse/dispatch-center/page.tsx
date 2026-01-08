@@ -474,23 +474,27 @@ export default function DispatchCenterPage() {
         handleExitContainer();
     };
 
+    const formattedEmployees = useMemo(() => 
+        employees.map(e => ({ ...e, formattedName: reformatEmployeeName(e.NOMBRE) })),
+        [employees]
+    );
+
     const driverOptions = useMemo(() => {
         if (debouncedDriverSearch.length < 2) return [];
         const searchLower = debouncedDriverSearch.toLowerCase();
-        return employees
-            .filter(e => reformatEmployeeName(e.NOMBRE).toLowerCase().includes(searchLower))
-            .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
-    }, [employees, debouncedDriverSearch]);
+        return formattedEmployees
+            .filter(e => e.formattedName.toLowerCase().includes(searchLower))
+            .map(e => ({ value: e.EMPLEADO, label: e.formattedName }));
+    }, [formattedEmployees, debouncedDriverSearch]);
 
     const handleSelectDriver = (driverEmployeeId: string) => {
-        const driver = employees.find(e => e.EMPLEADO === driverEmployeeId);
+        const driver = formattedEmployees.find(e => e.EMPLEADO === driverEmployeeId);
         if (driver) {
             setSelectedDriver(driver.EMPLEADO);
-            setDriverSearchTerm(reformatEmployeeName(driver.NOMBRE));
+            setDriverSearchTerm(driver.formattedName); // Correctly set the formatted name
         }
         setIsDriverSearchOpen(false);
     };
-
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
