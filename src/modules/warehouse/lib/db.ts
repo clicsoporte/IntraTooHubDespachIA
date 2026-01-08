@@ -381,9 +381,9 @@ export async function assignItemToLocation(itemId: string, locationId: number, c
     return newItemLocation;
 }
 
-export async function unassignItemFromLocation(assignmentId: number): Promise<void> {
+export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM item_locations WHERE id = ?').run(assignmentId);
+    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
 }
 
 export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {
@@ -595,8 +595,7 @@ export async function logDispatch(dispatchData: any): Promise<void> {
 
 export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLog[]> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
-    const mainDb = await connectDb();
-
+    
     const params: any[] = [];
     let query = `
         SELECT 
@@ -614,9 +613,9 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
             h.NOMBRE_CLIENTE as clientName,
             h.EMBARCAR_A as shippingAddress
         FROM dispatch_logs dl
-        LEFT JOIN main.erp_invoice_headers h ON dl.documentId = h.FACTURA
+        LEFT JOIN main_db.erp_invoice_headers h ON dl.documentId = h.FACTURA
     `;
-    warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main`);
+    warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main_db`);
 
 
     if (dateRange?.from) {
@@ -632,7 +631,7 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
     query += ' ORDER BY dl.verifiedAt DESC';
 
     const logs = warehouseDb.prepare(query).all(...params) as any[];
-    warehouseDb.exec(`DETACH DATABASE main`);
+    warehouseDb.exec(`DETACH DATABASE main_db`);
     return logs.map(log => ({
         ...log,
         items: JSON.parse(log.items),
@@ -818,27 +817,6 @@ export async function unassignAllFromContainer(containerId: number): Promise<voi
     logInfo(`All assignments cleared from container ${containerId}.`);
 }
 
-export async function finalizeDispatch(containerId: number, vehiclePlate: string, driverName: string): Promise<void> {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    // Find all documents for this container that have been logged
-    const assignments = await getAssignmentsForContainer(containerId);
-    const documentIds = assignments.map(a => a.documentId);
-    if(documentIds.length === 0) return;
-
-    const placeholders = documentIds.map(() => '?').join(',');
-    const stmt = db.prepare(`
-        UPDATE dispatch_logs
-        SET vehiclePlate = ?, driverName = ?
-        WHERE documentId IN (${placeholders})
-    `);
-    
-    const transaction = db.transaction(() => {
-        stmt.run(vehiclePlate, driverName, ...documentIds);
-    });
-
-    transaction();
-    logInfo(`Finalized dispatch for container ${containerId}`, { vehiclePlate, driverName });
-}
 
 export async function getEmployees(): Promise<Empleado[]> {
     const db = await connectDb();
@@ -859,3 +837,4 @@ export async function getVehicles(): Promise<Vehiculo[]> {
         return [];
     }
 }
+
