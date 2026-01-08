@@ -48,6 +48,7 @@ import {
     updateAssignmentStatus as updateAssignmentStatusServer,
     resetContainerAssignments as resetContainerAssignmentsServer,
     finalizeDispatch as finalizeDispatchServer,
+    unassignDocumentFromContainer as unassignDocumentFromContainerServer,
     getVehicles as getVehiclesServer,
     getEmployees as getEmployeesServer
 } from './db';
@@ -231,6 +232,7 @@ export const moveAssignmentToContainer = async (assignmentId: number, targetCont
 export const updateAssignmentStatus = async (documentId: string, status: 'pending' | 'in-progress' | 'completed' | 'discrepancy' | 'partial'): Promise<void> => updateAssignmentStatusServer(documentId, status);
 export const resetContainerAssignments = async (containerId: number): Promise<void> => resetContainerAssignmentsServer(containerId);
 export const unassignAllFromContainer = async (containerId: number): Promise<void> => unassignAllFromContainerServer(containerId);
+export const unassignDocumentFromContainer = async (assignmentId: number): Promise<void> => unassignDocumentFromContainerServer(assignmentId);
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();

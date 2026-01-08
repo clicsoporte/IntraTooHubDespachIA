@@ -596,6 +596,8 @@ export async function logDispatch(dispatchData: any): Promise<void> {
 export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLog[]> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
+    warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main_db`);
+
     const params: any[] = [];
     let query = `
         SELECT 
@@ -615,8 +617,6 @@ export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLo
         FROM dispatch_logs dl
         LEFT JOIN main_db.erp_invoice_headers h ON dl.documentId = h.FACTURA
     `;
-    warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main_db`);
-
 
     if (dateRange?.from) {
         const startDate = new Date(dateRange.from);
@@ -668,12 +668,6 @@ export async function deleteContainer(id: number): Promise<void> {
 
 export async function getUnassignedDocuments(dateRange: DateRange): Promise<ErpInvoiceHeader[]> {
     const mainDb = await connectDb();
-    const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
-    
-    // Get all document IDs that have a log entry, meaning they have been dispatched at least once.
-    const dispatchedDocIds = new Set(
-        warehouseDb.prepare("SELECT DISTINCT documentId FROM dispatch_logs").all().map((row: any) => row.documentId)
-    );
     
     let query = `SELECT * FROM erp_invoice_headers WHERE TIPO_DOCUMENTO IN ('F', 'R')`;
     const params: any[] = [];
@@ -692,10 +686,8 @@ export async function getUnassignedDocuments(dateRange: DateRange): Promise<ErpI
     query += ' ORDER BY FECHA DESC';
 
     const allInvoices = mainDb.prepare(query).all(...params) as ErpInvoiceHeader[];
-    // Filter out invoices that are already in the dispatch logs.
-    const unassigned = allInvoices.filter(invoice => !dispatchedDocIds.has(invoice.FACTURA));
     
-    return JSON.parse(JSON.stringify(unassigned));
+    return JSON.parse(JSON.stringify(allInvoices));
 }
 
 export async function assignDocumentsToContainer(documentIds: string[], containerId: number, updatedBy: string): Promise<void> {
@@ -815,6 +807,11 @@ export async function unassignAllFromContainer(containerId: number): Promise<voi
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare('DELETE FROM dispatch_assignments WHERE containerId = ?').run(containerId);
     logInfo(`All assignments cleared from container ${containerId}.`);
+}
+
+export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
 }
 
 export async function finalizeDispatch(containerId: number, vehiclePlate: string, driverName: string): Promise<void> {
