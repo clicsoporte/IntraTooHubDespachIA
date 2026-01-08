@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Main page for the Dispatch Center, where checkers access their assigned routes.
  */
@@ -31,7 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { format, parseISO, startOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn, reformatEmployeeName } from '@/lib/utils';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { getInvoicesByIds } from '@/modules/core/lib/db';
 import { Badge } from '@/components/ui/badge';
@@ -480,12 +479,15 @@ export default function DispatchCenterPage() {
         const searchLower = debouncedDriverSearch.toLowerCase();
         return employees
             .filter(e => e.NOMBRE.toLowerCase().includes(searchLower))
-            .map(e => ({ value: e.NOMBRE, label: e.NOMBRE }));
+            .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
     }, [employees, debouncedDriverSearch]);
 
-    const handleSelectDriver = (driverName: string) => {
-        setSelectedDriver(driverName);
-        setDriverSearchTerm(driverName);
+    const handleSelectDriver = (driverEmployeeId: string) => {
+        const driver = employees.find(e => e.EMPLEADO === driverEmployeeId);
+        if (driver) {
+            setSelectedDriver(driver.EMPLEADO);
+            setDriverSearchTerm(reformatEmployeeName(driver.NOMBRE));
+        }
         setIsDriverSearchOpen(false);
     };
 
@@ -529,8 +531,7 @@ export default function DispatchCenterPage() {
                                 </Select>
                             </div>
                              <div className="space-y-2 text-left">
-                                <Label>
-                                    Seleccionar Chofer
+                                <Label>Seleccionar Chofer</Label>
                                     <SearchInput
                                         options={driverOptions}
                                         onSelect={handleSelectDriver}
@@ -540,7 +541,6 @@ export default function DispatchCenterPage() {
                                         open={isDriverSearchOpen}
                                         onOpenChange={setIsDriverSearchOpen}
                                     />
-                                </Label>
                             </div>
                          </CardContent>
                          <CardFooter className="flex-col sm:flex-row justify-center gap-2 mt-6">
