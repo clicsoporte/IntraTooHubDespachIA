@@ -31,10 +31,8 @@ export function reformatEmployeeName(name: string | null | undefined): string {
   if (parts.length === 2) {
     const lastNamePart = parts[0].trim();
     const firstNamePart = parts[1].trim();
-    // Return in "FirstName LastName" format
     return `${firstNamePart} ${lastNamePart}`;
   }
   
-  // Return the original name if it doesn't match the "LastName, FirstName" format
   return name;
 }
