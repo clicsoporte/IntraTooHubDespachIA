@@ -297,13 +297,13 @@ export async function updateInventory(itemId: string, locationId: number, newQua
             if (difference !== 0) {
                 warehouseDb.prepare(
                     `INSERT INTO inventory (itemId, locationId, quantity, lastUpdated, updatedBy) 
-                     VALUES (?, ?, ?, datetime('now'), ?)
+                     VALUES (?, ?, ?, datetime('now', 'localtime'), ?)
                      ON CONFLICT(itemId, locationId) 
-                     DO UPDATE SET quantity = ?, updatedBy = ?, lastUpdated = datetime('now')`
+                     DO UPDATE SET quantity = ?, updatedBy = ?, lastUpdated = datetime('now', 'localtime')`
                 ).run(itemId, locationId, newQuantity, userName, newQuantity, userName);
 
                 warehouseDb.prepare(
-                    'INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) VALUES (?, ?, ?, ?, datetime(\'now\'), ?, ?)'
+                    "INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) VALUES (?, ?, ?, ?, datetime('now', 'localtime'), ?, ?)"
                 ).run(itemId, difference, null, locationId, userId, `Ajuste de inventario físico. Conteo: ${newQuantity}`);
             }
         });
@@ -840,7 +840,7 @@ export async function getEmployees(): Promise<Empleado[]> {
     const db = await connectDb();
     try {
         const employees = db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
-        return employees.map(e => ({...e, NOMBRE: reformatEmployeeName(e.NOMBRE) }));
+        return employees; // Keep original format
     } catch (error) {
         console.error("Failed to get all employees:", error);
         return [];
@@ -856,3 +856,5 @@ export async function getVehicles(): Promise<Vehiculo[]> {
         return [];
     }
 }
+
+    

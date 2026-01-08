@@ -473,20 +473,19 @@ export default function DispatchCenterPage() {
         toast({ title: 'Ruta Finalizada', description: 'El vehículo y el chofer han sido asignados.' });
         handleExitContainer();
     };
-
+    
     const driverOptions = useMemo(() => {
         const searchLower = debouncedDriverSearch.toLowerCase();
-        if (searchLower.length < 2) return [];
         return employees
             .filter(e => e.NOMBRE.toLowerCase().includes(searchLower))
-            .map(e => ({ value: e.EMPLEADO, label: e.NOMBRE }));
+            .map(e => ({ value: e.EMPLEADO, label: reformatEmployeeName(e.NOMBRE) }));
     }, [employees, debouncedDriverSearch]);
     
     const handleSelectDriver = (driverEmployeeId: string) => {
         const driver = employees.find(e => e.EMPLEADO === driverEmployeeId);
         if (driver) {
             setSelectedDriver(driver.EMPLEADO);
-            setDriverSearchTerm(driver.NOMBRE);
+            setDriverSearchTerm(reformatEmployeeName(driver.NOMBRE));
         }
         setIsDriverSearchOpen(false);
     };
