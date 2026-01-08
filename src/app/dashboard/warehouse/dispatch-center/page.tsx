@@ -474,24 +474,19 @@ export default function DispatchCenterPage() {
         handleExitContainer();
     };
 
-    const formattedEmployees = useMemo(() => 
-        employees.map(e => ({ ...e, formattedName: reformatEmployeeName(e.NOMBRE) })),
-        [employees]
-    );
-
     const driverOptions = useMemo(() => {
-        if (debouncedDriverSearch.length < 2) return [];
         const searchLower = debouncedDriverSearch.toLowerCase();
-        return formattedEmployees
-            .filter(e => e.formattedName.toLowerCase().includes(searchLower))
-            .map(e => ({ value: e.EMPLEADO, label: e.formattedName }));
-    }, [formattedEmployees, debouncedDriverSearch]);
-
+        if (searchLower.length < 2) return [];
+        return employees
+            .filter(e => e.NOMBRE.toLowerCase().includes(searchLower))
+            .map(e => ({ value: e.EMPLEADO, label: e.NOMBRE }));
+    }, [employees, debouncedDriverSearch]);
+    
     const handleSelectDriver = (driverEmployeeId: string) => {
-        const driver = formattedEmployees.find(e => e.EMPLEADO === driverEmployeeId);
+        const driver = employees.find(e => e.EMPLEADO === driverEmployeeId);
         if (driver) {
             setSelectedDriver(driver.EMPLEADO);
-            setDriverSearchTerm(driver.formattedName); // Correctly set the formatted name
+            setDriverSearchTerm(driver.NOMBRE);
         }
         setIsDriverSearchOpen(false);
     };
@@ -536,8 +531,8 @@ export default function DispatchCenterPage() {
                                 </Select>
                             </div>
                              <div className="space-y-2 text-left">
-                                <Label>Seleccionar Chofer</Label>
-                                 <SearchInput
+                                <Label htmlFor="driver-search">Seleccionar Chofer</Label>
+                                <SearchInput
                                     options={driverOptions}
                                     onSelect={handleSelectDriver}
                                     value={driverSearchTerm}

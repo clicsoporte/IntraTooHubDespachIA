@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file handles the SQLite database connection and provides
  * server-side functions for all database operations. It includes initialization,
@@ -26,6 +25,7 @@ import { initializeWarehouseDb, runWarehouseMigrations } from '../../warehouse/l
 import { initializeCostAssistantDb, runCostAssistantMigrations } from '../../cost-assistant/lib/db';
 import { initializeNotificationsDb, runNotificationsMigrations } from '../../notifications/lib/db';
 import { revalidatePath } from 'next/cache';
+import { reformatEmployeeName } from '@/lib/utils';
 
 const DB_FILE = 'intratool.db';
 const SALT_ROUNDS = 10;
@@ -1831,7 +1831,8 @@ async function saveAllGeneric(data: any[], tableName: string, columns: string[])
 export async function getEmployees(): Promise<Empleado[]> {
     const db = await connectDb();
     try {
-        return db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
+        const employees = db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
+        return employees.map(e => ({...e, NOMBRE: reformatEmployeeName(e.NOMBRE) }));
     } catch (error) {
         console.error("Failed to get all employees:", error);
         return [];
