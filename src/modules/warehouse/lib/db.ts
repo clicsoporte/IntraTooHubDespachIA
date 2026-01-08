@@ -381,9 +381,9 @@ export async function assignItemToLocation(itemId: string, locationId: number, c
     return newItemLocation;
 }
 
-export async function unassignDocumentFromContainer(assignmentId: number): Promise<void> {
+export async function unassignItemFromLocation(assignmentId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    db.prepare('DELETE FROM dispatch_assignments WHERE id = ?').run(assignmentId);
+    db.prepare('DELETE FROM item_locations WHERE id = ?').run(assignmentId);
 }
 
 export async function addInventoryUnit(unit: Omit<InventoryUnit, 'id' | 'createdAt' | 'unitCode'>): Promise<InventoryUnit> {
@@ -817,6 +817,26 @@ export async function unassignAllFromContainer(containerId: number): Promise<voi
     logInfo(`All assignments cleared from container ${containerId}.`);
 }
 
+export async function finalizeDispatch(containerId: number, vehiclePlate: string, driverName: string): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const logs = db.prepare(`
+        SELECT dl.* 
+        FROM dispatch_logs dl
+        JOIN dispatch_assignments da ON dl.documentId = da.documentId
+        WHERE da.containerId = ?
+    `).all(containerId) as DispatchLog[];
+
+    const updateStmt = db.prepare(`UPDATE dispatch_logs SET vehiclePlate = ?, driverName = ? WHERE id = ?`);
+    
+    const transaction = db.transaction((logsToUpdate) => {
+        for (const log of logsToUpdate) {
+            updateStmt.run(vehiclePlate, driverName, log.id);
+        }
+    });
+
+    transaction(logs);
+    logInfo(`Finalized dispatch for container ${containerId}`, { vehiclePlate, driverName });
+}
 
 export async function getEmployees(): Promise<Empleado[]> {
     const db = await connectDb();
@@ -837,4 +857,3 @@ export async function getVehicles(): Promise<Vehiculo[]> {
         return [];
     }
 }
-
