@@ -50,15 +50,20 @@ import {
     finalizeDispatch as finalizeDispatchServer,
     unassignDocumentFromContainer as unassignDocumentFromContainerServer,
     getVehicles as getVehiclesServer,
-    getEmployees as getEmployeesServer
+    getEmployees as getEmployeesServer,
+    getInventory as getPhysicalInventoryServer, // Renamed export
+    getSelectableLocations as getSelectableLocationsServer, // Renamed export
+    correctInventoryUnit as correctInventoryUnitServer, // Renamed export
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado, PhysicalInventoryComparisonItem } from '@/modules/core/types';
 import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format } from 'date-fns';
 import type { HAlignType, FontStyle, RowInput } from 'jspdf-autotable';
+import { getAllProducts, getAllStock, getAllItemLocations as getAllItemLocationsCore } from '@/modules/core/lib/db';
+
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
 export async function saveWarehouseSettings(settings: WarehouseSettings): Promise<void> {
@@ -236,3 +241,65 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
+
+// --- Analytics Actions moved here ---
+
+const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
+    if (!locationId) return "N/A";
+    const path: any[] = [];
+    let current = locations.find(l => l.id === locationId);
+    while (current) {
+        path.unshift(current);
+        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
+    }
+    return path.map(l => l.name).join(' > ');
+};
+
+export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
+    try {
+        const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations, selectableLocations] = await Promise.all([
+            getPhysicalInventoryServer(dateRange),
+            getAllStock(),
+            getAllProducts(),
+            getLocationsServer(),
+            getAllItemLocationsCore(),
+            getSelectableLocationsServer(),
+        ]);
+        
+        const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
+        const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
+        const locationMap = new Map(allLocations.map((item: WarehouseLocation) => [item.id, item]));
+        const itemLocationMap = new Map<string, string>();
+        allItemLocations.forEach((itemLoc: ItemLocation) => {
+            itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
+        });
+
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
+            const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
+            const location = locationMap.get(item.locationId);
+            return {
+                productId: item.itemId,
+                productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
+                locationId: item.locationId,
+                locationName: location?.name || 'Ubicación Desconocida',
+                locationCode: location?.code || 'N/A',
+                physicalCount: item.quantity,
+                erpStock: erpQuantity,
+                difference: item.quantity - erpQuantity,
+                lastCountDate: item.lastUpdated,
+                updatedBy: item.updatedBy || 'N/A',
+                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
+            };
+        });
+
+        return JSON.parse(JSON.stringify({ comparisonData, allLocations: selectableLocations }));
+    } catch (error) {
+        logError('Failed to generate physical inventory comparison report', { error });
+        throw new Error('No se pudo generar el reporte de inventario físico.');
+    }
+}
+
+
+export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
+    return correctInventoryUnitServer(originalUnit, newProductId, correctedByUserId);
+}

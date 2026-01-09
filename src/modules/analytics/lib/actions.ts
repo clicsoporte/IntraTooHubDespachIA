@@ -4,13 +4,13 @@
 'use server';
 
 import { getOrders as getPlannerOrders, getPlannerSettings, getCompletedOrdersByDateRange } from '@/modules/planner/lib/db';
-import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
+import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts } from '@/modules/core/lib/db';
 import { getAllUsersForReport } from '@/modules/core/lib/auth';
-import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, PhysicalInventoryComparisonItem, ItemLocation, WarehouseLocation, InventoryUnit } from '@/modules/core/types';
+import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
-import { getLocations as getWarehouseLocations, getInventory as getPhysicalInventory, getAllItemLocations, getSelectableLocations, getInventoryUnits, correctInventoryUnit as correctInventoryUnitServer } from '@/modules/warehouse/lib/actions';
+import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getInventoryUnits, correctInventoryUnit as correctInventoryUnitServer } from '@/modules/warehouse/lib/actions';
 import type { TransitReportItem } from '../hooks/useTransitsReport';
 
 
@@ -154,62 +154,6 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
     return JSON.parse(JSON.stringify(reportData));
 }
 
-const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
-    if (!locationId) return "N/A";
-    const path: any[] = [];
-    let current = locations.find(l => l.id === locationId);
-    while (current) {
-        path.unshift(current);
-        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
-    }
-    return path.map(l => l.name).join(' > ');
-};
-
-
-export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
-    try {
-        const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations, selectableLocations] = await Promise.all([
-            getPhysicalInventory(dateRange),
-            getAllStock(),
-            getAllProducts(),
-            getWarehouseLocations(),
-            getAllItemLocations(),
-            getSelectableLocations(),
-        ]);
-        
-        const erpStockMap = new Map(erpStock.map(item => [item.itemId, item.totalStock]));
-        const productMap = new Map(allProducts.map(item => [item.id, item.description]));
-        const locationMap = new Map(allLocations.map(item => [item.id, item]));
-        const itemLocationMap = new Map<string, string>();
-        allItemLocations.forEach(itemLoc => {
-            itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
-        });
-
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map(item => {
-            const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
-            const location = locationMap.get(item.locationId);
-            return {
-                productId: item.itemId,
-                productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
-                locationId: item.locationId,
-                locationName: location?.name || 'Ubicación Desconocida',
-                locationCode: location?.code || 'N/A',
-                physicalCount: item.quantity,
-                erpStock: erpQuantity,
-                difference: item.quantity - erpQuantity,
-                lastCountDate: item.lastUpdated,
-                updatedBy: item.updatedBy || 'N/A',
-                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
-            };
-        });
-
-        return JSON.parse(JSON.stringify({ comparisonData, allLocations: selectableLocations }));
-    } catch (error) {
-        logError('Failed to generate physical inventory comparison report', { error });
-        throw new Error('No se pudo generar el reporte de inventario físico.');
-    }
-}
-
 
 export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
     try {
@@ -227,5 +171,3 @@ export async function getReceivingReportData({ dateRange }: { dateRange?: DateRa
 export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
     return correctInventoryUnitServer(originalUnit, newProductId, correctedByUserId);
 }
-
-    

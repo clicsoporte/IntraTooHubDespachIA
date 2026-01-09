@@ -33,7 +33,7 @@ import { addNoteToOrder as addNoteServer } from '@/modules/planner/lib/actions';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag, Filter } from 'lucide-react';
 import { getStatusConfig } from '../lib/utils';
-import { saveUserPreferences, getUserPreferences } from '@/modules/core/lib/db';
+import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -657,7 +657,7 @@ export const usePlanner = () => {
                 { id: 'machineId', header: state.plannerSettings.assignmentLabel || 'Asignación', width: 75 },
                 { id: 'priority', header: 'Prioridad', width: 55 },
             ];
-        
+            
             const selectedColumnIds = state.plannerSettings.pdfExportColumns || [];
             const tableHeaders = selectedColumnIds.map(id => allPossibleColumns.find(c => c.id === id)?.header || id);
             

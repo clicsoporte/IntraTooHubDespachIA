@@ -27,8 +27,8 @@ import {
     getAllProducts, 
     getAllStock, 
     getAllCustomers,
-    getAllErpPurchaseOrderHeaders as getAllErpPurchaseOrderHeadersDb,
-    getAllErpPurchaseOrderLines as getAllErpPurchaseOrderLinesDb,
+    getAllErpPurchaseOrderHeaders,
+    getAllErpPurchaseOrderLines,
     saveUserPreferences as saveUserPreferencesServer,
     getUserPreferences as getUserPreferencesServer,
 } from '@/modules/core/lib/db';
@@ -208,8 +208,8 @@ export async function getRequestSuggestions(dateRange: DateRange): Promise<Purch
         getAllStock(),
         getAllProducts(),
         getAllCustomers(),
-        getAllErpPurchaseOrderHeadersDb(),
-        getAllErpPurchaseOrderLinesDb(),
+        getAllErpPurchaseOrderHeaders(),
+        getAllErpPurchaseOrderLines(),
     ]);
     const allActiveRequests = await getRequests({ page: 0, pageSize: 99999, isArchived: false, filters: {} }).then(res => res.requests.filter(r => ['pending', 'approved', 'ordered', 'purchasing-review', 'pending-approval'].includes(r.status)));
 
