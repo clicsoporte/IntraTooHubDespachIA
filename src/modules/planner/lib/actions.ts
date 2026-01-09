@@ -14,8 +14,8 @@ import {
     updateStatus, 
     updateDetails,
     getOrderHistory as getOrderHistoryServer,
-    getPlannerSettings as getSettingsServer,
-    saveSettings as saveSettingsServer,
+    getSettings,
+    saveSettings,
     addNote as addNoteServer,
     updatePendingAction as updatePendingActionServer,
     confirmModification as confirmModificationServer,
@@ -105,7 +105,7 @@ export async function updateProductionOrderStatus(payload: UpdateStatusPayload):
     // --- Create Notification ---
     if (updatedOrder.requestedBy !== payload.updatedBy) {
         const targetUser = await getUserByName(updatedOrder.requestedBy);
-        const settings = await getSettingsServer();
+        const settings = await getSettings();
         const statusConfig = getStatusConfig(settings);
 
         if (targetUser) {
@@ -140,7 +140,7 @@ export async function updateProductionOrderDetails(payload: UpdateOrderDetailsPa
  * @returns The current planner settings.
  */
 export async function getPlannerSettings(): Promise<PlannerSettings> {
-    return getSettingsServer();
+    return getSettings();
 }
 
 /**
@@ -149,7 +149,7 @@ export async function getPlannerSettings(): Promise<PlannerSettings> {
  */
 export async function savePlannerSettings(settings: PlannerSettings): Promise<void> {
     await logInfo('Planner settings updated.');
-    return saveSettingsServer(settings);
+    return saveSettings(settings);
 }
 
 /**

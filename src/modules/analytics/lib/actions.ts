@@ -195,3 +195,4 @@ export async function getReceivingReportData({ dateRange }: { dateRange?: DateRa
         throw new Error('No se pudo generar el reporte de recepciones.');
     }
 }
+

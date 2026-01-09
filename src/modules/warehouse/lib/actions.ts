@@ -247,7 +247,6 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
-
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
         const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
@@ -267,7 +266,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item) => {
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
             const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
             const location = locationMap.get(item.locationId);
             return {
@@ -281,7 +280,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
                 difference: Number(item.quantity) - erpQuantity,
                 lastCountDate: item.lastUpdated,
                 updatedBy: item.updatedBy || 'N/A',
-                assignedLocationPath: itemLocationMap.get(item.productId) || 'Sin Asignar',
+                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
             };
         });
 
@@ -291,3 +290,4 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
         throw new Error('No se pudo generar el reporte de inventario físico.');
     }
 }
+
