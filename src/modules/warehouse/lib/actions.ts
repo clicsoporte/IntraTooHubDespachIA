@@ -14,7 +14,7 @@ import {
     getInventoryForItem as getInventoryForItemServer,
     logMovement as logMovementServer,
     updateInventory as updateInventoryServer,
-    getAllItemLocations as getAllItemLocationsServer,
+    getItemLocations as getAllItemLocationsServer,
     assignItemToLocation as assignItemToLocationServer,
     unassignItemFromLocation as unassignItemFromLocationServer,
     unassignAllFromContainer as unassignAllFromContainerServer,
@@ -56,7 +56,7 @@ import {
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb, getAllProducts, getAllStock } from '@/modules/core/lib/db';
-import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado, PhysicalInventoryComparisonItem, Product } from '@/modules/core/types';
+import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado, PhysicalInventoryComparisonItem, Product, StockInfo } from '@/modules/core/types';
 import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format, parseISO } from 'date-fns';
@@ -250,13 +250,14 @@ export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer(
 
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
-        const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations] = await Promise.all([
+        const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
             getPhysicalInventoryServer(dateRange),
             getAllStock(),
             getAllProducts(),
             getLocationsServer(),
-            getAllItemLocationsServer(),
         ]);
+
+        const allItemLocations = await getAllItemLocationsServer();
         
         const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
         const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
@@ -266,7 +267,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item) => {
             const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
             const location = locationMap.get(item.locationId);
             return {
@@ -280,7 +281,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
                 difference: Number(item.quantity) - erpQuantity,
                 lastCountDate: item.lastUpdated,
                 updatedBy: item.updatedBy || 'N/A',
-                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
+                assignedLocationPath: itemLocationMap.get(item.productId) || 'Sin Asignar',
             };
         });
 
