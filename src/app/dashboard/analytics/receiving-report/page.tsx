@@ -30,14 +30,13 @@ export default function ReceivingReportPage() {
         isInitialLoading,
     } = useReceivingReport();
 
-    const { isLoading, dateRange, searchTerm, userFilter, locationFilter, visibleColumns } = state;
+    const { isLoading, dateRange, searchTerm, userFilter, locationFilter, visibleColumns, data } = state;
     const { sortedData, availableColumns, visibleColumnsData } = selectors;
 
     if (isInitialLoading) {
         return (
             <main className="flex-1 p-4 md:p-6 lg:p-8">
-                <Card>
-                    <CardHeader><Skeleton className="h-8 w-64" /><Skeleton className="h-5 w-96 mt-2" /></CardHeader>
+                <Card><CardHeader><Skeleton className="h-8 w-64" /><Skeleton className="h-5 w-96 mt-2" /></CardHeader>
                     <CardContent className="space-y-4"><Skeleton className="h-10 w-full max-w-sm" /><Skeleton className="h-48 w-full" /></CardContent>
                 </Card>
             </main>
@@ -65,7 +64,7 @@ export default function ReceivingReportPage() {
                     <div className="flex flex-wrap items-center gap-4">
                          <Popover>
                             <PopoverTrigger asChild>
-                                <Button id="date" variant={"outline"} className={cn("w-full sm:w-auto sm:min-w-[260px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                                <Button id="date" variant={'outline'} className={cn("w-full sm:w-auto sm:min-w-[260px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {dateRange?.from ? (dateRange.to ? (`${format(dateRange.from, "LLL dd, y", { locale: es })} - ${format(dateRange.to, "LLL dd, y", { locale: es })}`) : format(dateRange.from, "LLL dd, y", { locale: es })) : (<span>Rango de Fechas</span>)}
                                 </Button>
@@ -121,6 +120,8 @@ export default function ReceivingReportPage() {
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></TableCell></TableRow>
+                                ) : data.length === 0 ? (
+                                    <TableRow><TableCell colSpan={visibleColumns.length} className="h-24 text-center">Presiona &quot;Generar Reporte&quot; para ver los datos.</TableCell></TableRow>
                                 ) : sortedData.length > 0 ? (
                                     sortedData.map(item => (
                                         <TableRow key={item.id}>

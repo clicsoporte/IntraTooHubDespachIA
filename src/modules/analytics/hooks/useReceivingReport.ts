@@ -96,15 +96,25 @@ export function useReceivingReport() {
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
+        if (!isAuthorized) {
+            setIsInitialLoading(false);
+            return;
+        }
+        
         const loadPrefs = async () => {
-           if (isAuthorized && user) {
-               const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-               if (prefs && prefs.visibleColumns) {
-                   updateState({ visibleColumns: prefs.visibleColumns });
+           if (user) {
+               try {
+                   const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                   if (prefs && prefs.visibleColumns) {
+                       updateState({ visibleColumns: prefs.visibleColumns });
+                   }
+               } catch (error) {
+                   logError("Failed to load user preferences for receiving report", { error });
                }
            }
            setIsInitialLoading(false);
         };
+        
         loadPrefs();
     }, [setTitle, isAuthorized, user, updateState]);
     
@@ -219,7 +229,7 @@ export function useReceivingReport() {
                     case 'productDescription': cellValue = getProductDescription(item.productId); break;
                     case 'humanReadableId': cellValue = item.humanReadableId || 'N/A'; break;
                     case 'unitCode': cellValue = item.unitCode || 'N/A'; break;
-                    case 'documentId': cellValue = item.documentId || 'N/A';
+                    case 'documentId': cellValue = item.documentId || 'N/A'; break;
                     case 'locationPath': cellValue = getLocationPath(item.locationId); break;
                     case 'quantity': return String((item as any).quantity ?? 1);
                     case 'createdBy': cellValue = item.createdBy; break;
