@@ -59,7 +59,7 @@ import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockS
 import type { WarehouseSettings, WarehouseLocation, WarehouseInventoryItem, MovementLog, ItemLocation, InventoryUnit, StockSettings, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, Company, VerificationItem, DateRange, DispatchContainer, DispatchAssignment, Vehiculo, Empleado, PhysicalInventoryComparisonItem, Product, StockInfo } from '@/modules/core/types';
 import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import type { HAlignType, FontStyle, RowInput } from 'jspdf-autotable';
 import { triggerNotificationEvent } from '@/modules/notifications/lib/notifications-engine';
 import path from 'path';
@@ -76,6 +76,9 @@ export async function saveStockSettings(settings: StockSettings): Promise<void> 
     return saveStockSettingsDb(settings);
 }
 export const getLocations = async (): Promise<WarehouseLocation[]> => getLocationsServer();
+export const getSelectableLocations = async (): Promise<WarehouseLocation[]> => getSelectableLocationsServer();
+export const getInventory = async (dateRange?: DateRange): Promise<WarehouseInventoryItem[]> => getPhysicalInventoryServer(dateRange);
+
 
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {
     const newLocation = await addLocationServer(location);
@@ -120,6 +123,9 @@ export const addInventoryUnit = async (unit: Omit<InventoryUnit, 'id' | 'created
 export const getInventoryUnits = async (dateRange?: DateRange): Promise<InventoryUnit[]> => getInventoryUnitsServer(dateRange);
 export const deleteInventoryUnit = async (id: number): Promise<void> => deleteInventoryUnitServer(id);
 export const getInventoryUnitById = async (id: string | number): Promise<InventoryUnit | null> => getInventoryUnitByIdServer(id);
+export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
+    return correctInventoryUnitServer(originalUnit, newProductId, correctedByUserId);
+}
 
 // --- Wizard Lock Actions ---
 export const getActiveLocks = async (): Promise<any[]> => getActiveLocksServer();
@@ -241,8 +247,6 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
-export const getInventory = async (dateRange?: DateRange): Promise<WarehouseInventoryItem[]> => getPhysicalInventoryServer(dateRange);
-export const getSelectableLocations = async (): Promise<WarehouseLocation[]> => getSelectableLocationsServer();
 
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
@@ -285,22 +289,5 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
     } catch (error) {
         logError('Failed to generate physical inventory comparison report', { error });
         throw new Error('No se pudo generar el reporte de inventario físico.');
-    }
-}
-
-export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
-    return correctInventoryUnitServer(originalUnit, newProductId, correctedByUserId);
-}
-
-export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
-    try {
-        const [units, locations] = await Promise.all([
-            getInventoryUnits(dateRange),
-            getLocationsServer(),
-        ]);
-        return JSON.parse(JSON.stringify({ units, locations }));
-    } catch (error) {
-        logError('Failed to generate receiving report data', { error });
-        throw new Error('No se pudo generar el reporte de recepciones.');
     }
 }

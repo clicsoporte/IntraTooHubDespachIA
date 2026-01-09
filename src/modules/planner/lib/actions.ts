@@ -4,7 +4,7 @@
  */
 'use client';
 
-import type { ProductionOrder, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, PlannerSettings, UpdateProductionOrderPayload, DateRange, PlannerNotePayload, AdministrativeActionPayload, User, PlannerShift } from '../../core/types';
+import type { ProductionOrder, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, PlannerSettings, UpdateProductionOrderPayload, DateRange, PlannerNotePayload, AdministrativeActionPayload, User, PlannerShift, ProductionReportData } from '../../core/types';
 import { logInfo, logError } from '@/modules/core/lib/logger';
 import { createNotificationForPermission, createNotification } from '@/modules/core/lib/notifications-actions';
 import { 
@@ -21,9 +21,9 @@ import {
     confirmModification as confirmModificationServer,
     getUserByName,
     getRolesWithPermission,
+    getCompletedOrdersByDateRange as getCompletedOrdersByDateRangeServer,
 } from './db';
 import { getStatusConfig } from './utils';
-
 
 /**
  * Fetches production orders from the server.
@@ -37,7 +37,7 @@ export async function getProductionOrders(options: {
     filters: {
         searchTerm?: string;
         status?: string[];
-        classification?: string[];
+        classification?: string;
         showOnlyMy?: string;
         dateRange?: DateRange;
     };
@@ -193,4 +193,8 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
     }
 
     return updatedOrder;
+}
+
+export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {
+    return getCompletedOrdersByDateRangeServer(dateRange);
 }

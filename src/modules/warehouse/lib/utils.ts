@@ -20,7 +20,7 @@ export const renderLocationPathAsString = (locationId: number, locations: Wareho
         path.unshift(current);
         const parentId = current.parentId;
         if (!parentId) break; // Break if there is no parent
-        current = locations.find(l => l.id === parentId);
+        current = locations.find(l => l.id === current.parentId);
     }
     return path.map(l => l.name).join(' > ');
 };
