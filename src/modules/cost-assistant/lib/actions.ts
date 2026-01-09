@@ -29,12 +29,10 @@ const parseDecimal = (str: any): number => {
     if (str === null || str === undefined || str === '') return 0;
     const s = String(str).trim();
     
-    // If a comma exists, it is the decimal separator. Remove dots, replace comma.
     if (s.includes(',')) {
         return parseFloat(s.replace(/\./g, '').replace(',', '.'));
     }
     
-    // If no comma exists, treat as a standard float, respecting the dot as decimal separator
     return parseFloat(s);
 };
 

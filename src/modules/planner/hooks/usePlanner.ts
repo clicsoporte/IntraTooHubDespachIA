@@ -230,7 +230,7 @@ export const usePlanner = () => {
         const isPendingReview = order.status === 'pending-review';
         const isPendingApproval = order.status === 'pending-approval';
         const isApproved = order.status === 'approved';
-        const isInProgress = order.status === 'in-progress';
+        const isInProgress = order.status === 'in-progress' || order.status === 'in-queue'; // Corrected
         const isOnHold = order.status === 'on-hold' || order.status === 'in-maintenance';
         const isCompleted = order.status === 'completed';
     
@@ -249,7 +249,7 @@ export const usePlanner = () => {
             canGoBackToReview: isPendingApproval && hasPermission('planner:status:pending-approval'),
             canApprove: isPendingApproval && hasPermission('planner:status:approve'),
             canQueue: isApproved && hasPermission('planner:status:in-progress'),
-            canStart: isApproved && hasPermission('planner:status:in-progress') && (!state.plannerSettings?.requireMachineForStart || !!order.machineId),
+            canStart: (isApproved || order.status === 'in-queue') && hasPermission('planner:status:in-progress') && (!state.plannerSettings?.requireMachineForStart || !!order.machineId),
             canResumeFromHold: isOnHold && hasPermission('planner:status:in-progress'),
             canHold: isInProgress && hasPermission('planner:status:on-hold'),
             canMaintain: isInProgress && hasPermission('planner:status:on-hold'),
@@ -492,9 +492,9 @@ export const usePlanner = () => {
                 machineId: details.machineId === 'none' ? null : details.machineId,
                 shiftId: details.shiftId === 'none' ? null : details.shiftId,
             };
-            const updated = await updateProductionOrderDetails({ orderId, ...finalDetails, updatedBy: currentUser.name });
+            const updatedOrder = await updateProductionOrderDetails({ orderId, ...finalDetails, updatedBy: currentUser.name });
             updateState({ 
-                orders: state.orders.map(o => o.id === orderId ? updated : o)
+                orders: state.orders.map(o => o.id === orderId ? updatedOrder : o)
             });
         },
         

@@ -233,6 +233,6 @@ export const updateAssignmentStatus = async (documentId: string, status: 'pendin
 export const resetContainerAssignments = async (containerId: number): Promise<void> => resetContainerAssignmentsServer(containerId);
 export const unassignAllFromContainer = async (containerId: number): Promise<void> => unassignAllFromContainerServer(containerId);
 export const unassignDocumentFromContainer = async (assignmentId: number): Promise<void> => unassignDocumentFromContainerServer(assignmentId);
-export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName);
+export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();

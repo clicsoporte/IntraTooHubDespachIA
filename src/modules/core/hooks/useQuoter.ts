@@ -466,6 +466,7 @@ export const useQuoter = () => {
 
   const handleSelectProduct = useCallback(
     (productId: string) => {
+      setProductSearchOpen(false);
       if (!productId) {
         setProductSearchTerm("");
         return;
@@ -481,6 +482,7 @@ export const useQuoter = () => {
 
   const handleSelectCustomer = useCallback(
     (customerId: string) => {
+      setCustomerSearchOpen(false);
       setExemptionInfo(null); // CRITICAL FIX: Reset exemption info when changing customer
       if (!customerId) {
         setSelectedCustomer(null);

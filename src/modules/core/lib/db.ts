@@ -1635,28 +1635,47 @@ async function saveAllGeneric(data: any[], tableName: string, columns: string[])
     }
 }
 
-export async function getEmployees(): Promise<Empleado[]> {
-    const db = await connectDb();
-    try {
-        const employees = db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
-        // Format names at the source
-        return employees.map(e => ({...e, NOMBRE: reformatEmployeeName(e.NOMBRE)}));
-    } catch (error) {
-        console.error("Failed to get all employees:", error);
-        return [];
-    }
+export async function saveAllErpOrderHeaders(data: ErpOrderHeader[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_order_headers', ['PEDIDO', 'ESTADO', 'CLIENTE', 'FECHA_PEDIDO', 'FECHA_PROMETIDA', 'ORDEN_COMPRA', 'TOTAL_UNIDADES', 'MONEDA_PEDIDO', 'USUARIO']);
 }
 
-export async function getVehicles(): Promise<Vehiculo[]> {
-    const db = await connectDb();
-    try {
-        return db.prepare('SELECT * FROM vehiculos ORDER BY placa').all() as Vehiculo[];
-    } catch (error) {
-        console.error("Failed to get all vehicles:", error);
-        return [];
-    }
+export async function saveAllErpOrderLines(data: ErpOrderLine[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_order_lines', ['PEDIDO', 'PEDIDO_LINEA', 'ARTICULO', 'CANTIDAD_PEDIDA', 'PRECIO_UNITARIO']);
 }
 
-  
+export async function saveAllErpPurchaseOrderHeaders(data: ErpPurchaseOrderHeader[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_purchase_order_headers', ['ORDEN_COMPRA', 'PROVEEDOR', 'FECHA_HORA', 'ESTADO', 'CreatedBy']);
+}
 
-    
+export async function saveAllErpPurchaseOrderLines(data: ErpPurchaseOrderLine[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_purchase_order_lines', ['ORDEN_COMPRA', 'ARTICULO', 'CANTIDAD_ORDENADA']);
+}
+
+export async function saveAllErpInvoiceHeaders(data: ErpInvoiceHeader[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_invoice_headers', ['CLIENTE', 'NOMBRE_CLIENTE', 'TIPO_DOCUMENTO', 'FACTURA', 'PEDIDO', 'FACTURA_ORIGINAL', 'FECHA', 'FECHA_ENTREGA', 'ANULADA', 'EMBARCAR_A', 'DIRECCION_FACTURA', 'OBSERVACIONES', 'RUTA', 'USUARIO', 'USUARIO_ANULA', 'ZONA', 'VENDEDOR', 'REIMPRESO']);
+}
+
+export async function saveAllErpInvoiceLines(data: ErpInvoiceLine[]): Promise<void> {
+    await saveAllGeneric(data, 'erp_invoice_lines', ['FACTURA', 'TIPO_DOCUMENTO', 'LINEA', 'BODEGA', 'PEDIDO', 'ARTICULO', 'ANULADA', 'FECHA_FACTURA', 'CANTIDAD', 'PRECIO_UNITARIO', 'TOTAL_IMPUESTO1', 'PRECIO_TOTAL', 'DESCRIPCION', 'DOCUMENTO_ORIGEN', 'CANT_DESPACHADA', 'ES_CANASTA_BASICA']);
+}
+
+export async function getAllErpPurchaseOrderHeaders(): Promise<ErpPurchaseOrderHeader[]> {
+    const db = await connectDb();
+    return db.prepare('SELECT * FROM erp_purchase_order_headers').all() as ErpPurchaseOrderHeader[];
+}
+
+export async function getAllErpPurchaseOrderLines(): Promise<ErpPurchaseOrderLine[]> {
+    const db = await connectDb();
+    return db.prepare('SELECT * FROM erp_purchase_order_lines').all() as ErpPurchaseOrderLine[];
+}
+
+export async function getUserPreferences(userId: number, key: string): Promise<any | null> {
+    const db = await connectDb();
+    const row = db.prepare('SELECT value FROM user_preferences WHERE userId = ? AND key = ?').get(userId, key) as { value: string } | undefined;
+    return row ? JSON.parse(row.value) : null;
+}
+
+export async function saveUserPreferences(userId: number, key: string, value: any): Promise<void> {
+    const db = await connectDb();
+    db.prepare('INSERT OR REPLACE INTO user_preferences (userId, key, value) VALUES (?, ?, ?)').run(userId, key, JSON.stringify(value));
+}

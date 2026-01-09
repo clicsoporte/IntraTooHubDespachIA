@@ -7,7 +7,7 @@
  */
 
 import { connectDb } from '@/modules/core/lib/db';
-import type { Notification, NotificationRule, NotificationServiceConfig } from '@/modules/core/types';
+import type { Notification, NotificationRule, NotificationServiceConfig, Suggestion } from '@/modules/core/types';
 
 const NOTIFICATIONS_DB_FILE = 'notifications.db';
 
