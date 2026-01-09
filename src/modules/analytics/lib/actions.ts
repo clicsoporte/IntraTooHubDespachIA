@@ -3,7 +3,7 @@
  */
 'use server';
 
-import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
+import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl, getAllItemLocations as getAllItemLocationsCore } from '@/modules/core/lib/db';
 import { getAllUsersForReport } from '@/modules/core/lib/auth';
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
@@ -11,8 +11,10 @@ import type { ProductionReportDetail, ProductionReportData } from '../hooks/useP
 import { logError } from '@/modules/core/lib/logger';
 import type { TransitReportItem } from '../hooks/useTransitsReport';
 import { getPlannerSettings, getCompletedOrdersByDateRange } from '@/modules/planner/lib/actions';
-import { getInventoryUnits } from '@/modules/warehouse/lib/db';
-import { getReceivingReportData as getReceivingReportDataAction } from '@/modules/warehouse/lib/actions';
+import { getInventoryUnits as getInventoryUnitsServer, getLocations as getWarehouseLocations } from '@/modules/warehouse/lib/actions';
+import { getInventory as getPhysicalInventoryServer, getSelectableLocations } from '@/modules/warehouse/lib/db';
+import { reformatEmployeeName } from '@/lib/utils';
+import { renderLocationPathAsString } from '@/modules/warehouse/lib/utils';
 
 interface ReportFilters {
     productId?: string | null;
@@ -156,5 +158,53 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
 
 
 export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
-    return getReceivingReportDataAction({ dateRange });
+    const [units, locations] = await Promise.all([
+        getInventoryUnitsServer(dateRange),
+        getWarehouseLocations(),
+    ]);
+    return { units, locations };
+}
+
+export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
+    try {
+        const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations, selectableLocations] = await Promise.all([
+            getPhysicalInventoryServer(dateRange),
+            getAllStock(),
+            getAllProducts(),
+            getWarehouseLocations(),
+            getAllItemLocationsCore(),
+            getSelectableLocations(),
+        ]);
+        
+        const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
+        const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
+        const locationMap = new Map(allLocations.map((item: WarehouseLocation) => [item.id, item]));
+        const itemLocationMap = new Map<string, string>();
+        allItemLocations.forEach(itemLoc => {
+            itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
+        });
+
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
+            const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
+            const location = locationMap.get(item.locationId);
+            return {
+                productId: item.itemId,
+                productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
+                locationId: item.locationId,
+                locationName: location?.name || 'Ubicación Desconocida',
+                locationCode: location?.code || 'N/A',
+                physicalCount: item.quantity,
+                erpStock: erpQuantity,
+                difference: item.quantity - erpQuantity,
+                lastCountDate: item.lastUpdated,
+                updatedBy: item.updatedBy || 'N/A',
+                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
+            };
+        });
+
+        return JSON.parse(JSON.stringify({ comparisonData, allLocations: selectableLocations }));
+    } catch (error) {
+        logError('Failed to generate physical inventory comparison report', { error });
+        throw new Error('No se pudo generar el reporte de inventario físico.');
+    }
 }
