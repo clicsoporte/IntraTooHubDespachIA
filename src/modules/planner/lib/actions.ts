@@ -37,7 +37,7 @@ export async function getProductionOrders(options: {
     filters: {
         searchTerm?: string;
         status?: string[];
-        classification?: string[];
+        classification?: string;
         showOnlyMy?: string;
         dateRange?: DateRange;
     };
@@ -197,11 +197,11 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
 
 export async function getCompletedOrdersByDateRange(options: { 
     dateRange: DateRange, 
-    filters: { 
+    filters?: { 
         productId?: string | null, 
         classifications?: string[], 
         machineIds?: string[] 
     } 
 }): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {
-    return getCompletedOrdersByDateRangeServer(options.dateRange, options.filters);
+    return getCompletedOrdersByDateRangeServer(options);
 }

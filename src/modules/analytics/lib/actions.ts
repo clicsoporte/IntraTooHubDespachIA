@@ -4,10 +4,8 @@
 'use server';
 
 import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
-import { getAllUsersForReport } from '@/modules/core/lib/auth';
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
-import { getLocations as getWarehouseLocations } from '@/modules/warehouse/lib/db';
-import { getPhysicalInventory, getAllItemLocations, correctInventoryUnit as correctInventoryUnitServer } from '@/modules/warehouse/lib/actions';
+import { getLocations as getWarehouseLocations, getInventory as getPhysicalInventory, getAllItemLocations } from '@/modules/warehouse/lib/actions';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
@@ -177,21 +175,21 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
-            const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
-            const location = locationMap.get(item.locationId);
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: InventoryUnit) => {
+            const erpQuantity = erpStockMap.get(item.productId) ?? 0;
+            const location = locationMap.get(item.locationId!);
             return {
-                productId: item.itemId,
-                productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
-                locationId: item.locationId,
+                productId: item.productId,
+                productDescription: productMap.get(item.productId) || 'Producto Desconocido',
+                locationId: item.locationId!,
                 locationName: location?.name || 'Ubicación Desconocida',
                 locationCode: location?.code || 'N/A',
                 physicalCount: item.quantity,
                 erpStock: erpQuantity,
                 difference: item.quantity - erpQuantity,
-                lastCountDate: item.lastUpdated,
-                updatedBy: item.updatedBy || 'N/A',
-                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
+                lastCountDate: item.createdAt,
+                updatedBy: item.createdBy || 'N/A',
+                assignedLocationPath: itemLocationMap.get(item.productId) || 'Sin Asignar',
             };
         });
 
@@ -199,5 +197,18 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
     } catch (error) {
         logError('Failed to generate physical inventory comparison report', { error });
         throw new Error('No se pudo generar el reporte de inventario físico.');
+    }
+}
+
+export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
+    try {
+        const [units, locations] = await Promise.all([
+            getInventoryUnits(dateRange),
+            getWarehouseLocations(),
+        ]);
+        return { units, locations };
+    } catch (error) {
+        logError('Failed to generate receiving report data', { error });
+        throw new Error('No se pudo generar el reporte de recepciones.');
     }
 }

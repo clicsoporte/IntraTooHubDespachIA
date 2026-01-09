@@ -14,7 +14,7 @@ import {
     getInventoryForItem as getInventoryForItemServer,
     logMovement as logMovementServer,
     updateInventory as updateInventoryServer,
-    getItemLocations as getItemLocationsServer,
+    getAllItemLocations as getAllItemLocationsServer,
     assignItemToLocation as assignItemToLocationServer,
     unassignItemFromLocation as unassignItemFromLocationServer,
     unassignAllFromContainer as unassignAllFromContainerServer,
@@ -50,7 +50,7 @@ import {
     unassignDocumentFromContainer as unassignDocumentFromContainerServer,
     getVehicles as getVehiclesServer,
     getEmployees as getEmployeesServer,
-    getInventory as getPhysicalInventoryServer,
+    getPhysicalInventory as getPhysicalInventoryServer,
     getSelectableLocations as getSelectableLocationsServer,
     correctInventoryUnit as correctInventoryUnitServer,
 } from './db';
@@ -107,8 +107,7 @@ export const updateInventory = async(itemId: string, locationId: number, newQuan
 };
 
 // --- Simple Mode Actions ---
-export const getItemLocations = async (itemId: string): Promise<ItemLocation[]> => getItemLocationsServer(itemId);
-export const getAllItemLocations = async (): Promise<ItemLocation[]> => getItemLocationsServer();
+export const getAllItemLocations = async (): Promise<ItemLocation[]> => getAllItemLocationsServer();
 export const assignItemToLocation = async (itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> => assignItemToLocationServer(itemId, locationId, clientId, updatedBy);
 export async function unassignItemFromLocation(assignmentId: number): Promise<void> {
     return unassignItemFromLocationServer(assignmentId);
@@ -255,7 +254,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             getAllStock(),
             getAllProducts(),
             getLocationsServer(),
-            getAllItemLocations(),
+            getAllItemLocationsServer(),
         ]);
         
         const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
@@ -266,25 +265,25 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item) => {
-            const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
-            const location = locationMap.get(item.locationId);
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: InventoryUnit) => {
+            const erpQuantity = erpStockMap.get(item.productId) ?? 0;
+            const location = locationMap.get(item.locationId!);
             return {
-                productId: item.itemId,
-                productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
-                locationId: item.locationId,
+                productId: item.productId,
+                productDescription: productMap.get(item.productId) || 'Producto Desconocido',
+                locationId: item.locationId!,
                 locationName: location?.name || 'Ubicación Desconocida',
                 locationCode: location?.code || 'N/A',
                 physicalCount: item.quantity,
                 erpStock: erpQuantity,
                 difference: item.quantity - erpQuantity,
-                lastCountDate: item.lastUpdated,
-                updatedBy: item.updatedBy || 'N/A',
-                assignedLocationPath: itemLocationMap.get(item.itemId) || 'Sin Asignar',
+                lastCountDate: item.createdAt,
+                updatedBy: item.createdBy || 'N/A',
+                assignedLocationPath: itemLocationMap.get(item.productId) || 'Sin Asignar',
             };
         });
 
-        return JSON.parse(JSON.stringify({ comparisonData, allLocations }));
+        return JSON.parse(JSON.stringify({ comparisonData, allLocations: allLocations }));
     } catch (error) {
         logError('Failed to generate physical inventory comparison report', { error });
         throw new Error('No se pudo generar el reporte de inventario físico.');
