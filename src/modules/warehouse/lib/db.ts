@@ -356,11 +356,8 @@ export async function getMovements(itemId?: string): Promise<MovementLog[]> {
 
 export async function getItemLocations(itemId?: string): Promise<ItemLocation[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    if (itemId) {
-        const itemLocations = db.prepare('SELECT * FROM item_locations WHERE itemId = ?').all(itemId) as ItemLocation[];
-        return JSON.parse(JSON.stringify(itemLocations));
-    }
-    const itemLocations = db.prepare('SELECT * FROM item_locations').all() as ItemLocation[];
+    const stmt = itemId ? db.prepare('SELECT * FROM item_locations WHERE itemId = ?') : db.prepare('SELECT * FROM item_locations');
+    const itemLocations = stmt.all(itemId) as ItemLocation[];
     return JSON.parse(JSON.stringify(itemLocations));
 }
 
@@ -832,6 +829,59 @@ export async function getVehicles(): Promise<Vehiculo[]> {
         return [];
     }
 }
+
+export async function searchInventoryUnits(filters: {
+    dateRange?: DateRange;
+    productId?: string;
+    humanReadableId?: string;
+    unitCode?: string;
+    documentId?: string;
+}): Promise<InventoryUnit[]> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    
+    let query = 'SELECT * FROM inventory_units';
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+
+    if (filters.dateRange?.from) {
+        const fromDate = new Date(filters.dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        whereClauses.push('createdAt >= ?');
+        params.push(fromDate.toISOString());
+    }
+    if (filters.dateRange?.to) {
+        const toDate = new Date(filters.dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        whereClauses.push('createdAt <= ?');
+        params.push(toDate.toISOString());
+    }
+    if (filters.productId) {
+        whereClauses.push('productId LIKE ?');
+        params.push(`%${filters.productId}%`);
+    }
+    if (filters.humanReadableId) {
+        whereClauses.push('humanReadableId LIKE ?');
+        params.push(`%${filters.humanReadableId}%`);
+    }
+    if (filters.unitCode) {
+        whereClauses.push('unitCode LIKE ?');
+        params.push(`%${filters.unitCode}%`);
+    }
+     if (filters.documentId) {
+        whereClauses.push('documentId LIKE ?');
+        params.push(`%${filters.documentId}%`);
+    }
+
+    if (whereClauses.length > 0) {
+        query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    query += ' ORDER BY createdAt DESC LIMIT 100';
+
+    const units = db.prepare(query).all(...params) as InventoryUnit[];
+    return JSON.parse(JSON.stringify(units));
+}
+
 
 export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
