@@ -247,6 +247,7 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
+
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
         const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
@@ -268,7 +269,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
 
         const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
             const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
-            const location = locationMap.get(item.locationId);
+            const location: WarehouseLocation | undefined = locationMap.get(item.locationId);
             return {
                 productId: item.itemId,
                 productDescription: productMap.get(item.itemId) || 'Producto Desconocido',
