@@ -3,12 +3,14 @@
  */
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
-import { getReceivingReportData, correctInventoryUnit } from '@/modules/warehouse/lib/actions';
+import { getReceivingReportData } from '@/modules/analytics/lib/actions';
+import { correctInventoryUnit } from '@/modules/warehouse/lib/actions';
 import type { DateRange, InventoryUnit, Product, WarehouseLocation, UserPreferences } from '@/modules/core/types';
 import { subDays, startOfDay, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -17,7 +19,7 @@ import { useAuth } from '@/modules/core/hooks/useAuth';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
-import React from 'react';
+import { renderLocationPathAsString } from '@/modules/warehouse/lib/utils';
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -163,22 +165,7 @@ export function useReceivingReport() {
 
     const getLocationPath = useCallback((locationId: number | null): string => {
         if (!locationId) return 'N/A';
-        
-        const locationMap = new Map(state.allLocations.map(l => [l.id, l]));
-        const path: string[] = [];
-        let currentId: number | null = locationId;
-
-        // Loop with a safeguard
-        for (let i = 0; i < 10 && currentId !== null; i++) {
-            const current = locationMap.get(currentId);
-            if (current) {
-                path.unshift(current.name);
-                currentId = current.parentId ?? null;
-            } else {
-                break;
-            }
-        }
-        return path.join(' > ');
+        return renderLocationPathAsString(locationId, state.allLocations);
     }, [state.allLocations]);
 
 

@@ -241,6 +241,8 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
+export const getInventory = async (dateRange?: DateRange): Promise<WarehouseInventoryItem[]> => getPhysicalInventoryServer(dateRange);
+export const getSelectableLocations = async (): Promise<WarehouseLocation[]> => getSelectableLocationsServer();
 
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
@@ -261,7 +263,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
-        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: WarehouseInventoryItem) => {
+        const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item) => {
             const erpQuantity = erpStockMap.get(item.itemId) ?? 0;
             const location = locationMap.get(item.locationId);
             return {
