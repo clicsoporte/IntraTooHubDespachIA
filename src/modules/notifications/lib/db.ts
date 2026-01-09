@@ -161,7 +161,7 @@ export async function saveNotificationServiceSettings(service: 'telegram', confi
 
 export async function getNotifications(userId: number): Promise<Notification[]> {
     const db = await connectDb();
-    const suggestions = await dbGetUnreadSuggestions();
+    const suggestions: Suggestion[] = await dbGetUnreadSuggestions();
     const notifications = await db.prepare('SELECT * FROM notifications WHERE userId = ? ORDER BY timestamp DESC').all(userId) as Notification[];
     
     const suggestionNotifications: Notification[] = suggestions.map(s => ({

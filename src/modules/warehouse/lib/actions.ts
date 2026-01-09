@@ -62,7 +62,7 @@ import { logInfo, logWarn, logError } from '@/modules/core/lib/logger';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { format } from 'date-fns';
 import type { HAlignType, FontStyle, RowInput } from 'jspdf-autotable';
-import { getAllProducts, getAllStock, getAllItemLocations as getAllItemLocationsCore } from '@/modules/core/lib/db';
+import { getAllProducts, getAllStock, getAllItemLocations as getAllItemLocationsCore, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
 
 
 export const getWarehouseSettings = async (): Promise<WarehouseSettings> => getWarehouseSettingsServer();
@@ -243,17 +243,6 @@ export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
 
 // --- Analytics Actions moved here ---
-
-const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
-    if (!locationId) return "N/A";
-    const path: any[] = [];
-    let current = locations.find(l => l.id === locationId);
-    while (current) {
-        path.unshift(current);
-        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
-    }
-    return path.map(l => l.name).join(' > ');
-};
 
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {

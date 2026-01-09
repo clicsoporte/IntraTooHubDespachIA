@@ -633,7 +633,7 @@ export const usePlanner = () => {
         
             let logoDataUrl: string | null = null;
             if (authCompanyData.logoUrl) {
-                try {
+                 try {
                     const response = await fetch(authCompanyData.logoUrl);
                     const blob = await response.blob();
                     logoDataUrl = await new Promise((resolve) => {
