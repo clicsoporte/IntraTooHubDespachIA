@@ -5,13 +5,13 @@
 
 import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
 import { getAllUsersForReport } from '@/modules/core/lib/auth';
-import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, WarehouseInventoryItem } from '@/modules/core/types';
-import { getLocations as getWarehouseLocations, getInventory as getPhysicalInventory, getAllItemLocations } from '@/modules/warehouse/lib/actions';
+import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem } from '@/modules/core/types';
+import { getLocations as getWarehouseLocations, getPhysicalInventory, getAllItemLocations, correctInventoryUnit as correctInventoryUnitServer } from '@/modules/warehouse/lib/actions';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
 import type { TransitReportItem } from '../hooks/useTransitsReport';
-import { getPlannerSettings, getCompletedOrdersByDateRange } from '@/modules/planner/lib/actions';
+import { getPlannerSettings, getCompletedOrdersByDateRange as getCompletedOrdersByDateRangeServer } from '@/modules/planner/lib/actions';
 import { reformatEmployeeName } from '@/lib/utils';
 import { renderLocationPathAsString } from '@/modules/warehouse/lib/utils';
 
@@ -38,7 +38,7 @@ export async function getProductionReportData({ dateRange, filters = {} }: { dat
     }
     
     const [allOrders, plannerSettings, allProducts] = await Promise.all([
-        getCompletedOrdersByDateRange({
+        getCompletedOrdersByDateRangeServer({
             dateRange,
             filters,
         }),
@@ -172,7 +172,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
         const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
         const locationMap = new Map(allLocations.map((item: WarehouseLocation) => [item.id, item]));
         const itemLocationMap = new Map<string, string>();
-        allItemLocations.forEach(itemLoc => {
+        allItemLocations.forEach((itemLoc: ItemLocation) => {
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
@@ -199,4 +199,16 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
         logError('Failed to generate physical inventory comparison report', { error });
         throw new Error('No se pudo generar el reporte de inventario físico.');
     }
+}
+
+export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
+    const [units, locations] = await Promise.all([
+        getInventoryUnits(dateRange),
+        getWarehouseLocations(),
+    ]);
+    return { units, locations };
+}
+
+export async function correctInventoryUnit(unit: InventoryUnit, newProductId: string, userId: number): Promise<void> {
+    return correctInventoryUnitServer(unit, newProductId, userId);
 }

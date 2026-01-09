@@ -9,8 +9,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
-import { getReceivingReportData } from '@/modules/analytics/lib/actions';
-import { correctInventoryUnit as correctInventoryUnitServer } from '@/modules/warehouse/lib/actions';
+import { getReceivingReportData, correctInventoryUnit } from '@/modules/analytics/lib/actions';
 import type { DateRange, InventoryUnit, Product, WarehouseLocation, UserPreferences } from '@/modules/core/types';
 import { subDays, startOfDay, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -243,7 +242,7 @@ export function useReceivingReport() {
     const handleCorrection = async (unit: InventoryUnit, newProductId: string) => {
         if (!user) return;
         try {
-            await correctInventoryUnitServer(unit, newProductId, user.id);
+            await correctInventoryUnit(unit, newProductId, user.id);
             toast({ title: 'Corrección Aplicada', description: `Se ha corregido el ingreso de la unidad ${unit.unitCode}.` });
             await fetchData();
         } catch (error: any) {
