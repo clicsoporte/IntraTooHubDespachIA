@@ -25,6 +25,7 @@ import { PlusCircle, Trash2, Edit, Loader2, Settings, AlertTriangle } from 'luci
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import cronParser from 'cron-parser';
 
 const emptyRule: Omit<NotificationRule, 'id'> = {
     name: '',
@@ -41,6 +42,22 @@ const emptyTask: Omit<ScheduledTask, 'id'> = {
     taskId: 'sync-erp',
     enabled: true,
 };
+
+function CronDescription({ schedule }: { schedule: string }) {
+    try {
+        const interval = cronParser.parseExpression(schedule);
+        const nextRun = interval.next().toDate();
+        const readable = interval.stringify(false);
+        return (
+            <p className="text-xs text-muted-foreground">
+                Se ejecutará: {readable}. Próxima ejecución: {nextRun.toLocaleString('es-CR')}.
+            </p>
+        );
+    } catch (err) {
+        return <p className="text-xs text-destructive">Expresión cron inválida.</p>;
+    }
+}
+
 
 export default function AutomationManagerPage() {
     useAuthorization(['admin:access']);
@@ -164,7 +181,7 @@ export default function AutomationManagerPage() {
         if (!taskToDelete) return;
         setIsSubmitting(true);
         try {
-            await deleteTask(taskToDelete.id);
+            await deleteScheduledTask(taskToDelete.id);
             setTasks(tasks.filter(t => t.id !== taskToDelete.id));
             toast({ title: 'Tarea Eliminada', variant: 'destructive' });
             setTaskToDelete(null);
@@ -312,7 +329,12 @@ export default function AutomationManagerPage() {
                     <DialogHeader><DialogTitle>{isEditingTask ? 'Editar Tarea Programada' : 'Nueva Tarea Programada'}</DialogTitle></DialogHeader>
                      <div className="grid gap-4 py-4">
                         <div className="space-y-2"><Label htmlFor="task-name">Nombre de la Tarea</Label><Input id="task-name" value={currentTask.name} onChange={(e) => handleTaskFormChange('name', e.target.value)} placeholder="Ej: Sincronización Diaria del ERP" /></div>
-                        <div className="space-y-2"><Label htmlFor="task-schedule">Horario (Expresión Cron)</Label><Input id="task-schedule" className="font-mono" value={currentTask.schedule} onChange={(e) => handleTaskFormChange('schedule', e.target.value)} /><p className="text-xs text-muted-foreground">Formato: Minuto Hora DíaMes Mes DíaSemana. <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer" className="underline">Ayuda de Cron</a>.</p></div>
+                        <div className="space-y-2">
+                            <Label htmlFor="task-schedule">Horario (Expresión Cron)</Label>
+                            <Input id="task-schedule" className="font-mono" value={currentTask.schedule} onChange={(e) => handleTaskFormChange('schedule', e.target.value)} />
+                             <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground underline hover:text-primary">Ayuda de Cron</a>
+                            <CronDescription schedule={currentTask.schedule} />
+                        </div>
                         <div className="space-y-2"><Label htmlFor="task-id">Acción a Ejecutar</Label><Select value={currentTask.taskId} onValueChange={(val) => handleTaskFormChange('taskId', val)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(AVAILABLE_TASKS).map(([id, task]) => <SelectItem key={id} value={id}>{task.name}</SelectItem>)}</SelectContent></Select></div>
                     </div>
                     <DialogFooter><DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose><Button onClick={handleSaveTask} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Guardar Tarea</Button></DialogFooter>
