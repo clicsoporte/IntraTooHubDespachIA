@@ -14,7 +14,7 @@ import {
     getInventoryForItem as getInventoryForItemServer,
     logMovement as logMovementServer,
     updateInventory as updateInventoryServer,
-    getAllItemLocations as getAllItemLocationsServer,
+    getItemLocations as getAllItemLocationsServer, // Corrected alias
     assignItemToLocation as assignItemToLocationServer,
     unassignItemFromLocation as unassignItemFromLocationServer,
     unassignAllFromContainer as unassignAllFromContainerServer,
@@ -79,7 +79,7 @@ export async function saveStockSettings(settings: StockSettings): Promise<void> 
 }
 export const getLocations = async (): Promise<WarehouseLocation[]> => getLocationsServer();
 export const getSelectableLocations = async (): Promise<WarehouseLocation[]> => getSelectableLocationsServer();
-export const getPhysicalInventory = async (dateRange?: DateRange): Promise<InventoryUnit[]> => getPhysicalInventoryServer(dateRange);
+export const getPhysicalInventory = async (dateRange?: DateRange): Promise<InventoryUnit[]> => getInventoryUnitsServer(dateRange);
 
 
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {

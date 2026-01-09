@@ -78,6 +78,7 @@ export function useReceivingReport() {
     }, []);
 
     const fetchData = useCallback(async () => {
+        if (!isAuthorized) return;
         updateState({ isLoading: true });
         try {
             const data = await getReceivingReportData({ dateRange: state.dateRange });
@@ -91,24 +92,21 @@ export function useReceivingReport() {
         } finally {
             updateState({ isLoading: false });
         }
-    }, [state.dateRange, toast, updateState]);
+    }, [state.dateRange, toast, updateState, isAuthorized]);
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        if (isAuthorized) {
-            const loadPrefs = async () => {
-               if(user) {
-                   const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-                   if (prefs && prefs.visibleColumns) {
-                       updateState({ visibleColumns: prefs.visibleColumns });
-                   }
+        const loadPrefs = async () => {
+           if (isAuthorized && user) {
+               const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+               if (prefs && prefs.visibleColumns) {
+                   updateState({ visibleColumns: prefs.visibleColumns });
                }
-               setIsInitialLoading(false);
-            }
-            loadPrefs();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthorized]);
+           }
+           setIsInitialLoading(false);
+        };
+        loadPrefs();
+    }, [setTitle, isAuthorized, user, updateState]);
     
     const getAllChildLocationIds = useCallback((locationId: number): number[] => {
         let children: number[] = [];
@@ -242,7 +240,11 @@ export function useReceivingReport() {
 
     const actions = {
         fetchData,
-        setDateRange: (range: DateRange | undefined) => updateState({ dateRange: range || { from: undefined, to: undefined } }),
+        setDateRange: (range: DateRange | undefined) => {
+            if (range) {
+                updateState({ dateRange: range });
+            }
+        },
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
         setUserFilter: (filter: string[]) => updateState({ userFilter: filter }),
         setLocationFilter: (filter: string[]) => updateState({ locationFilter: filter }),
