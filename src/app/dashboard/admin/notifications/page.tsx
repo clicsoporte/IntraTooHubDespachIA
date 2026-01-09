@@ -46,11 +46,11 @@ const emptyTask: Omit<ScheduledTask, 'id'> = {
 function CronDescription({ schedule }: { schedule: string }) {
     try {
         const interval = cronParser.parseExpression(schedule);
-        const nextRun = interval.next().toDate();
         const readable = interval.stringify(false);
+        const nextRun = interval.next().toDate();
         return (
             <p className="text-xs text-muted-foreground">
-                Se ejecutará: {readable}. Próxima ejecución: {nextRun.toLocaleString('es-CR')}.
+                Se ejecutará {readable}. Próxima ejecución: {nextRun.toLocaleString('es-CR')}.
             </p>
         );
     } catch (err) {
@@ -181,7 +181,7 @@ export default function AutomationManagerPage() {
         if (!taskToDelete) return;
         setIsSubmitting(true);
         try {
-            await deleteScheduledTask(taskToDelete.id);
+            await deleteTaskServer(taskToDelete.id);
             setTasks(tasks.filter(t => t.id !== taskToDelete.id));
             toast({ title: 'Tarea Eliminada', variant: 'destructive' });
             setTaskToDelete(null);
