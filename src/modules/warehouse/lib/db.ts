@@ -5,10 +5,11 @@
 
 import { connectDb, getAllRoles as getAllRolesFromMain } from '../../core/lib/db';
 import { getAllUsers as getAllUsersFromMain } from '../../core/lib/auth';
-import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, DispatchContainer, DispatchAssignment, Vehiculo, Empleado } from '@/modules/core/types';
+import type { WarehouseLocation, WarehouseInventoryItem, MovementLog, WarehouseSettings, StockSettings, StockInfo, ItemLocation, InventoryUnit, DateRange, User, ErpInvoiceHeader, ErpInvoiceLine, DispatchLog, DispatchContainer, DispatchAssignment, Vehiculo, Empleado, PhysicalInventoryComparisonItem, Product } from '@/modules/core/types';
 import { logError, logInfo, logWarn } from '../../core/lib/logger';
 import { triggerNotificationEvent } from '@/modules/notifications/lib/notifications-engine';
 import path from 'path';
+import { renderLocationPathAsString } from './utils';
 
 const WAREHOUSE_DB_FILE = 'warehouse.db';
 
@@ -100,17 +101,6 @@ export async function getSelectableLocations(): Promise<WarehouseLocation[]> {
     const selectable = allLocations.filter(l => !parentIds.has(l.id));
     return JSON.parse(JSON.stringify(selectable));
 }
-
-export const renderLocationPathAsString = (locationId: number, locations: any[]): string => {
-    if (!locationId) return "N/A";
-    const path: any[] = [];
-    let current = locations.find(l => l.id === locationId);
-    while (current) {
-        path.unshift(current);
-        current = current.parentId ? locations.find(l => l.id === current.parentId) : undefined;
-    }
-    return path.map(l => l.name).join(' > ');
-};
 
 export async function addLocation(location: Omit<WarehouseLocation, 'id'>): Promise<WarehouseLocation> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
@@ -367,15 +357,9 @@ export async function getItemLocations(itemId: string): Promise<ItemLocation[]> 
     return JSON.parse(JSON.stringify(itemLocations));
 }
 
-export async function getAllItemLocations(): Promise<ItemLocation[]> {
-    const db = await connectDb(WAREHOUSE_DB_FILE);
-    const itemLocations = db.prepare('SELECT * FROM item_locations').all() as ItemLocation[];
-    return JSON.parse(JSON.stringify(itemLocations));
-}
-
 export async function assignItemToLocation(itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const info = db.prepare('INSERT OR REPLACE INTO item_locations (itemId, locationId, clientId, updatedBy, updatedAt) VALUES (?, ?, ?, ?, datetime(\'now\'))').run(itemId, locationId, clientId, updatedBy);
+    const info = db.prepare('INSERT OR REPLACE INTO item_locations (itemId, locationId, clientId, updatedBy, updatedAt) VALUES (?, ?, ?, ?, datetime('now\'))').run(itemId, locationId, clientId, updatedBy);
     const newId = info.lastInsertRowid;
     const newItemLocation = db.prepare('SELECT * FROM item_locations WHERE id = ?').get(newId) as ItemLocation;
     return newItemLocation;
@@ -565,7 +549,7 @@ export async function searchDocuments(searchTerm: string): Promise<{ id: string,
     const combinedResults = results.map(r => ({
         ...r,
         type: r.typeCode === 'F' ? 'Factura' : (r.typeCode === 'R' ? 'Remisión' : 'Pedido')
-    })).slice(0, 10);
+    }).slice(0, 10);
 
     return JSON.parse(JSON.stringify(combinedResults));
 }
@@ -821,7 +805,7 @@ export async function finalizeDispatch(containerId: number, vehiclePlate: string
     const logs = db.prepare(`
         SELECT dl.* 
         FROM dispatch_logs dl
-        JOIN dispatch_assignments da ON dl.documentId = da.documentId
+        JOIN dispatch_assignments da ON dl.documentId = dl.documentId
         WHERE da.containerId = ? AND dl.vehiclePlate IS NULL
     `).all(containerId) as DispatchLog[];
 
@@ -856,5 +840,67 @@ export async function getVehicles(): Promise<Vehiculo[]> {
     } catch (error) {
         console.error("Failed to get all vehicles:", error);
         return [];
+    }
+}
+
+export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
+    const db = await connectDb(WAREHOUSE_DB_FILE);
+    const mainDb = await connectDb();
+    
+    const user = mainDb.prepare('SELECT name FROM users WHERE id = ?').get(correctedByUserId) as { name: string } | undefined;
+    const userName = user?.name || 'Sistema';
+
+    const transaction = db.transaction(() => {
+        // Step 1: "Anular" the original unit by setting its quantity to 0
+        const notesForAnnulment = `ANULADO: Corregido por ${userName}. Producto original era ${originalUnit.productId}.`;
+        db.prepare('UPDATE inventory_units SET quantity = 0, notes = ? WHERE id = ?').run(notesForAnnulment, originalUnit.id);
+        
+        // Step 2: Log the "reversal" movement
+        db.prepare(
+            `INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) 
+             VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`
+        ).run(originalUnit.productId, -originalUnit.quantity, originalUnit.locationId, null, correctedByUserId, notesForAnnulment);
+
+        // Step 3: Create a new unit with the correct product ID
+        const newUnitPayload = {
+            ...originalUnit,
+            productId: newProductId,
+            createdBy: userName, // The person making the correction is the creator of the new record
+            notes: `CORRECCIÓN: Creado a partir de la unidad anulada ${originalUnit.unitCode}.`,
+        };
+        
+        // This reuses the logic to create a unit but we don't need the returned object here
+        const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string };
+        const parsedSettings: WarehouseSettings = JSON.parse(settingsRow.value);
+        const prefix = parsedSettings.unitPrefix || 'U';
+        const nextNumber = parsedSettings.nextUnitNumber || 1;
+        const newUnitCode = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+
+        const newUnitData = {
+            ...newUnitPayload,
+            unitCode: newUnitCode,
+            createdAt: new Date().toISOString(),
+        };
+
+        db.prepare(
+            'INSERT INTO inventory_units (unitCode, productId, humanReadableId, documentId, locationId, quantity, notes, createdAt, createdBy) VALUES (@unitCode, @productId, @humanReadableId, @documentId, @locationId, @quantity, @notes, @createdAt, @createdBy)'
+        ).run(newUnitData);
+        
+        parsedSettings.nextUnitNumber = nextNumber + 1;
+        db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(parsedSettings));
+
+        // Step 4: Log the "new" movement for the correct item
+        db.prepare(
+            `INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) 
+             VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`
+        ).run(newProductId, originalUnit.quantity, null, originalUnit.locationId, correctedByUserId, newUnitPayload.notes);
+    });
+
+    try {
+        transaction();
+        logInfo(`Inventory unit ${originalUnit.unitCode} corrected by ${userName}. New product: ${newProductId}.`);
+    } catch(err) {
+        logError('Failed to execute correctInventoryUnit transaction', { error: (err as Error).message });
+        throw err;
     }
 }
