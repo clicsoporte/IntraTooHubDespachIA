@@ -4,12 +4,18 @@
 "use server";
 
 import { revalidatePath } from 'next/cache';
-import { getNotifications as dbGetNotifications, markNotificationsAsRead as dbMarkAsRead, createNotification as dbCreateNotification, getNotificationById, deleteNotificationById } from './db';
+import { 
+    getNotifications as dbGetNotifications, 
+    markNotificationsAsRead as dbMarkAsRead, 
+    createNotification as dbCreateNotification, 
+    getNotificationById, 
+    deleteNotificationById 
+} from '@/modules/notifications/lib/db'; // CORRECTED IMPORT PATH
 import { getAllUsers as dbGetAllUsers } from './auth';
 import type { Notification, User, ProductionOrderStatus, PurchaseRequestStatus } from '../types';
 import { updateStatus as updatePlannerStatus, confirmModification } from '@/modules/planner/lib/db';
 import { updateStatus as updateRequestStatus, updatePendingAction } from '@/modules/requests/lib/db';
-import { logError } from './logger';
+import { logError } from '@/modules/core/lib/logger';
 import { getRolesWithPermission as getRolesWithPermissionFromDb } from '@/modules/planner/lib/db';
 
 
@@ -85,7 +91,7 @@ export async function markNotificationAsRead(notificationId: number, userId: num
  */
 export async function markAllNotificationsAsRead(userId: number): Promise<void> {
     const notifications = await dbGetNotifications(userId);
-    const unreadIds = notifications.filter(n => !n.isRead && typeof n.id === 'number').map(n => n.id as number);
+    const unreadIds = notifications.filter((n: Notification) => !n.isRead && typeof n.id === 'number').map((n: Notification) => n.id as number);
     if (unreadIds.length > 0) {
         await dbMarkAsRead(unreadIds, userId);
         revalidatePath('/dashboard');
