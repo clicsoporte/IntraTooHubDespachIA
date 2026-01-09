@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview A reusable multi-select filter component using a dialog modal.
  * This component provides a robust filtering experience with a search bar and checkboxes.
@@ -30,7 +31,7 @@ export interface MultiSelectOption {
 }
 
 interface MultiSelectFilterProps {
-  options: MultiSelectOption[];
+  options: (MultiSelectOption | string)[];
   selectedValues: string[];
   onSelectedChange: (selected: string[]) => void;
   title: string;
@@ -38,7 +39,7 @@ interface MultiSelectFilterProps {
 }
 
 export function MultiSelectFilter({
-  options,
+  options: rawOptions,
   selectedValues,
   onSelectedChange,
   title,
@@ -47,15 +48,17 @@ export function MultiSelectFilter({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   
-  // Temporary state to hold changes until the user clicks "Apply"
   const [tempSelected, setTempSelected] = React.useState(selectedValues);
   
   React.useEffect(() => {
-    // When the dialog opens, sync the temporary state with the external state
     if (open) {
       setTempSelected(selectedValues);
     }
   }, [open, selectedValues]);
+
+  const options: MultiSelectOption[] = React.useMemo(() => rawOptions.map(opt =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  ), [rawOptions]);
 
   const filteredOptions = React.useMemo(() =>
     options.filter(option =>

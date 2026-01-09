@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Hook to manage the logic for the new receiving report page.
  */
@@ -96,17 +97,17 @@ export function useReceivingReport() {
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        const loadPrefs = async () => {
-             if(user) {
-                const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-                if (prefs && prefs.visibleColumns) {
-                    updateState({ visibleColumns: prefs.visibleColumns });
-                }
-            }
-             // Do not fetch data automatically, wait for user action.
-             setIsInitialLoading(false);
-        }
         if (isAuthorized) {
+            const loadPrefs = async () => {
+                if(user) {
+                   const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                   if (prefs && prefs.visibleColumns) {
+                       updateState({ visibleColumns: prefs.visibleColumns });
+                   }
+               }
+               // Do not fetch data automatically, wait for user action.
+               setIsInitialLoading(false);
+            }
             loadPrefs();
         }
     }, [setTitle, isAuthorized, user, updateState]);

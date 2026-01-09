@@ -160,7 +160,7 @@ export async function getAllUsersForReport(): Promise<User[]> {
             return userWithoutPassword;
         }) as User[];
     } catch (error: any) {
-        await logError('getAllUsersForReport', { error: error.message });
+        await logError('getAllUsersForReport', { error: (error as Error).message });
         return [];
     }
 }

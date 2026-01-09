@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Hook to manage the logic for the physical inventory report page.
  */
@@ -9,7 +10,7 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError } from '@/modules/core/lib/logger';
-import { getPhysicalInventoryReportData } from '@/modules/warehouse/lib/actions';
+import { getPhysicalInventoryReportData } from '@/modules/analytics/lib/actions';
 import type { PhysicalInventoryComparisonItem, DateRange, Product, UserPreferences, WarehouseLocation } from '@/modules/core/types';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { format, parseISO, startOfDay, subDays } from 'date-fns';
@@ -101,21 +102,19 @@ export function usePhysicalInventoryReport() {
 
     useEffect(() => {
         setTitle("Reporte de Inventario Físico");
-        const loadPrefs = async () => {
-            if(user) {
-                const prefs = await getUserPreferences(user.id, 'physicalInventoryReportPrefs');
-                if (prefs) {
-                    updateState({
-                        visibleColumns: prefs.visibleColumns || availableColumns.map(c => c.id),
-                        classificationFilter: prefs.classificationFilter || [],
-                    });
-                }
-            }
-            setIsInitialLoading(false);
-            // No longer fetching data automatically
-        };
-
         if (isAuthorized) {
+            const loadPrefs = async () => {
+                if(user) {
+                    const prefs = await getUserPreferences(user.id, 'physicalInventoryReportPrefs');
+                    if (prefs) {
+                        updateState({
+                            visibleColumns: prefs.visibleColumns || availableColumns.map(c => c.id),
+                            classificationFilter: prefs.classificationFilter || [],
+                        });
+                    }
+                }
+                setIsInitialLoading(false);
+            };
             loadPrefs();
         }
     }, [setTitle, isAuthorized, user, updateState]);
