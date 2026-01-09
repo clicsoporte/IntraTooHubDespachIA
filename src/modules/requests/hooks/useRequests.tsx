@@ -28,16 +28,53 @@ import type {
     RequestSettings, 
     UpdatePurchaseRequestPayload, 
     DateRange, 
+    AdministrativeAction, 
     AdministrativeActionPayload,
-    ErpOrderHeader,
-    ErpOrderLine,
-    StockInfo,
-    PurchaseRequestPriority,
-    RequestNotePayload
+    StockInfo, 
+    ErpOrderHeader, 
+    ErpOrderLine, 
+    User, 
+    PurchaseSuggestion, 
+    PurchaseRequestPriority, 
+    RequestNotePayload,
+    PurchaseRequestStatus
 } from '../../core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
+import { subDays, startOfDay } from 'date-fns';
 import { useDebounce } from 'use-debounce';
 import { useRouter } from 'next/navigation';
+import { getStatusConfig as getPlannerStatusConfig } from '@/modules/planner/lib/utils';
+import { getDaysRemaining } from '@/modules/core/lib/time-utils';
+import { exportToExcel } from '@/modules/core/lib/excel-export';
+import { generateDocument } from '@/modules/core/lib/pdf-generator';
+import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
+import { getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines } from '@/modules/core/lib/db';
+
+const emptyRequest: Partial<PurchaseRequest> = {
+    priority: 'medium',
+    purchaseType: 'single',
+    salePriceCurrency: 'CRC',
+    requiresCurrency: false
+};
+
+const priorityConfig = { 
+    low: { label: "Baja", className: "text-gray-500" }, 
+    medium: { label: "Media", className: "text-blue-500" }, 
+    high: { label: "Alta", className: "text-yellow-600" }, 
+    urgent: { label: "Urgente", className: "text-red-600" }
+};
+
+const statusConfig = {
+    'pending': { label: 'Pendiente', color: 'bg-yellow-500' },
+    'purchasing-review': { label: 'Revisión Compras', color: 'bg-cyan-500' },
+    'pending-approval': { label: 'Pendiente Aprobación', color: 'bg-orange-500' },
+    'approved': { label: 'Aprobada', color: 'bg-green-500' },
+    'ordered': { label: 'Ordenada', color: 'bg-blue-600' },
+    'received-in-warehouse': { label: 'Recibido en Bodega', color: 'bg-teal-600' },
+    'entered-erp': { label: 'Ingresado ERP', color: 'bg-indigo-600' },
+    'canceled': { label: 'Cancelada', color: 'bg-red-700' },
+};
+
 
 export default function useRequests() {
     const { isAuthorized, hasPermission } = useAuthorization(['requests:access']);
@@ -58,7 +95,7 @@ export default function useRequests() {
         totalActive: 0,
         totalArchived: 0,
         requestSettings: null as RequestSettings | null,
-        newRequest: { priority: 'medium', purchaseType: 'single', salePriceCurrency: 'CRC', requiresCurrency: false } as Partial<PurchaseRequest>,
+        newRequest: emptyRequest,
         requestToEdit: null as PurchaseRequest | null,
         searchTerm: "",
         statusFilter: [] as string[],
@@ -112,7 +149,7 @@ export default function useRequests() {
     }, []);
 
     const loadInitialData = useCallback(async (isRefresh = false) => {
-        if (!isAuthReady) return;
+        if (!isReady) return;
         
         let isMounted = true;
         
@@ -158,12 +195,12 @@ export default function useRequests() {
             }
         }
         return () => { isMounted = false; };
-    }, [isAuthReady, toast, updateState, state.currentPage, state.pageSize, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, currentUser?.name]);
+    }, [isReady, toast, updateState, state.currentPage, state.rowsPerPage, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, currentUser?.name]);
 
     useEffect(() => {
-        if (!isAuthReady) return;
+        if (!isReady) return;
         loadInitialData();
-    }, [isAuthReady, loadInitialData]);
+    }, [isReady, loadInitialData]);
 
     const actions = {
         loadInitialData,

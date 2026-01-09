@@ -241,10 +241,9 @@ export const unassignDocumentFromContainer = async (assignmentId: number): Promi
 export const finalizeDispatch = async (containerId: number, vehiclePlate: string, driverName: string, helper1Name: string, helper2Name: string): Promise<void> => finalizeDispatchServer(containerId, vehiclePlate, driverName, helper1Name, helper2Name);
 export const getVehicles = async (): Promise<Vehiculo[]> => getVehiclesServer();
 export const getEmployees = async (): Promise<Empleado[]> => getEmployeesServer();
+export const getSelectableLocations = async(): Promise<WarehouseLocation[]> => getSelectableLocationsServer();
 
-// --- Analytics Actions moved here ---
-
-export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
+export const getPhysicalInventoryReportData = async({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> => {
     try {
         const [physicalInventory, erpStock, allProducts, allLocations, allItemLocations, selectableLocations] = await Promise.all([
             getPhysicalInventory(dateRange),
