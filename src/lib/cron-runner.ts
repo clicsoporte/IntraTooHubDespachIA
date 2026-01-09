@@ -8,7 +8,7 @@
 import cron from 'node-cron';
 import { getAllScheduledTasks } from '@/modules/notifications/lib/db';
 import { AVAILABLE_TASKS } from './task-registry';
-import { logInfo, logError } from './logger';
+import { logInfo, logError } from '@/modules/core/lib/logger';
 
 // In-memory store for currently running cron jobs
 const scheduledJobs = new Map<number, cron.ScheduledTask>();
