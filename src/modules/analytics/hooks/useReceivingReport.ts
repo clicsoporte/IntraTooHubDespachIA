@@ -107,7 +107,8 @@ export function useReceivingReport() {
             }
             loadPrefs();
         }
-    }, [setTitle, isAuthorized, user, updateState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthorized]);
     
     const getAllChildLocationIds = useCallback((locationId: number): number[] => {
         let children: number[] = [];

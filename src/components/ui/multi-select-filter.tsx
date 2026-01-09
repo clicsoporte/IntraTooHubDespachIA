@@ -61,7 +61,7 @@ export function MultiSelectFilter({
 
   const filteredOptions = React.useMemo(() =>
     options.filter(option =>
-      option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase())
+      option.label && typeof option.label === 'string' && option.label.toLowerCase().includes(searchTerm.toLowerCase())
     ), [options, searchTerm]
   );
 
