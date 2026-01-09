@@ -198,6 +198,7 @@ export default function CorrectionPage() {
                                         <TableRow>
                                             <TableHead>ID Unidad</TableHead>
                                             <TableHead>Producto</TableHead>
+                                            <TableHead>Documento</TableHead>
                                             <TableHead>Cant.</TableHead>
                                             <TableHead>Fecha Ingreso</TableHead>
                                             <TableHead className="text-right">Acción</TableHead>
@@ -213,6 +214,7 @@ export default function CorrectionPage() {
                                                         <p className="font-medium">{product?.description || 'Desconocido'}</p>
                                                         <p className="text-sm text-muted-foreground">{unit.productId}</p>
                                                     </TableCell>
+                                                    <TableCell>{unit.documentId || 'N/A'}</TableCell>
                                                     <TableCell className="font-bold">{unit.quantity}</TableCell>
                                                     <TableCell>{format(parseISO(unit.createdAt), 'dd/MM/yyyy HH:mm')}</TableCell>
                                                     <TableCell className="text-right">
