@@ -7,7 +7,7 @@
  */
 
 import { connectDb } from '@/modules/core/lib/db';
-import type { NotificationRule, NotificationServiceConfig } from '@/modules/core/types';
+import type { Notification, NotificationRule, NotificationServiceConfig } from '@/modules/core/types';
 
 const NOTIFICATIONS_DB_FILE = 'notifications.db';
 
@@ -104,4 +104,55 @@ export async function getNotificationServiceSettings(service: 'telegram'): Promi
 export async function saveNotificationServiceSettings(service: 'telegram', config: any): Promise<void> {
     const db = await connectDb(NOTIFICATIONS_DB_FILE);
     db.prepare('INSERT OR REPLACE INTO notification_settings (service, config) VALUES (?, ?)').run(service, JSON.stringify(config));
+}
+
+
+// --- Notification CRUD (from main db) ---
+
+export async function getNotifications(userId: number): Promise<Notification[]> {
+    const db = await connectDb();
+    const suggestions = await db.prepare('SELECT * FROM suggestions WHERE isRead = 0 ORDER BY timestamp DESC').all() as Suggestion[];
+    const notifications = await db.prepare('SELECT * FROM notifications WHERE userId = ? ORDER BY timestamp DESC').all(userId) as Notification[];
+    
+    const suggestionNotifications: Notification[] = suggestions.map(s => ({
+        id: `suggestion-${s.id}`,
+        userId: userId,
+        message: `Nueva sugerencia de: ${s.userName}`,
+        href: '/dashboard/admin/suggestions',
+        isRead: 0,
+        timestamp: s.timestamp,
+        isSuggestion: true,
+        suggestionId: s.id,
+    }));
+    
+    // Combine, sort, and return
+    const allNotifications = [...notifications, ...suggestionNotifications].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    return JSON.parse(JSON.stringify(allNotifications));
+}
+
+export async function markNotificationsAsRead(notificationIds: number[], userId: number): Promise<void> {
+  const db = await connectDb();
+  if (notificationIds.length === 0) return;
+  const placeholders = notificationIds.map(() => '?').join(',');
+  db.prepare(`UPDATE notifications SET isRead = 1 WHERE id IN (${placeholders}) AND userId = ?`).run(...notificationIds, userId);
+}
+
+export async function createNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): Promise<void> {
+    const db = await connectDb();
+    db.prepare(
+        `INSERT INTO notifications (userId, message, href, isRead, timestamp, entityId, entityType, entityStatus, taskType) 
+         VALUES (@userId, @message, @href, 0, datetime('now'), @entityId, @entityType, @entityStatus, @taskType)`
+    ).run(notification);
+}
+
+export async function getNotificationById(id: number): Promise<Notification | null> {
+    const db = await connectDb();
+    const notification = db.prepare('SELECT * FROM notifications WHERE id = ?').get(id) as Notification | undefined;
+    return notification || null;
+}
+
+export async function deleteNotificationById(id: number): Promise<void> {
+    const db = await connectDb();
+    db.prepare('DELETE FROM notifications WHERE id = ?').run(id);
 }
