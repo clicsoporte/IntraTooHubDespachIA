@@ -3,9 +3,8 @@
  */
 'use server';
 
-import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl, getAllItemLocations } from '@/modules/core/lib/db';
-import { getInventoryUnits as getPhysicalInventory } from '@/modules/warehouse/lib/actions';
-import { getLocations as getWarehouseLocations } from '@/modules/warehouse/lib/db';
+import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
+import { getInventoryUnits as getPhysicalInventory, getAllItemLocations, getLocations as getWarehouseLocations } from '@/modules/warehouse/lib/actions';
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
@@ -173,7 +172,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
 
         const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: InventoryUnit) => {
             const erpQuantity = erpStockMap.get(item.productId) ?? 0;
-            const location: WarehouseLocation | undefined = locationMap.get(item.locationId!);
+            const location = locationMap.get(item.locationId!);
             return {
                 productId: item.productId,
                 productDescription: productMap.get(item.productId) || 'Producto Desconocido',
