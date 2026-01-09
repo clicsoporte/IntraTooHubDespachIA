@@ -3,8 +3,9 @@
  */
 'use server';
 
-import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
-import { getLocations as getWarehouseLocations, getInventoryUnits, getAllItemLocations } from '@/modules/warehouse/lib/actions';
+import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl, getItemLocations } from '@/modules/core/lib/db';
+import { getInventoryUnits as getPhysicalInventory, getWarehouseLocations } from '@/modules/warehouse/lib/actions';
+
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
@@ -35,26 +36,7 @@ interface FullProductionReportData {
 export async function getProductionReportData(options: { dateRange: DateRange, filters?: ReportFilters }): Promise<FullProductionReportData> {
     const { dateRange, filters } = options;
     
-    let allOrders = await getCompletedOrdersByDateRangePlanner(dateRange);
-
-    if (filters) {
-        const allProducts = await getAllProducts();
-        allOrders = allOrders.filter(order => {
-            if (filters?.productId && order.productId !== filters.productId) {
-                return false;
-            }
-            if (filters?.machineIds && filters.machineIds.length > 0 && (!order.machineId || !filters.machineIds.includes(order.machineId))) {
-                return false;
-            }
-            if (filters?.classifications && filters.classifications.length > 0) {
-                const product = allProducts.find((p: Product) => p.id === order.productId);
-                if (!product || !product.classification || !filters.classifications.includes(product.classification)) {
-                    return false;
-                }
-            }
-            return true;
-        });
-    }
+    let allOrders = await getCompletedOrdersByDateRangePlanner({dateRange, filters});
 
     const details: ProductionReportDetail[] = allOrders.map((order) => {
         const history = order.history || [];
@@ -159,7 +141,7 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
 export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
     try {
         const [units, locations] = await Promise.all([
-            getInventoryUnits(dateRange),
+            getPhysicalInventory(dateRange),
             getWarehouseLocations(),
         ]);
         return { units, locations };
@@ -173,13 +155,13 @@ export async function getReceivingReportData({ dateRange }: { dateRange?: DateRa
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
         const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
-            getInventoryUnits(dateRange),
+            getPhysicalInventory(dateRange),
             getAllStock(),
             getAllProducts(),
             getWarehouseLocations(),
         ]);
         
-        const allItemLocations = await getAllItemLocations();
+        const allItemLocations = await getItemLocations();
         
         const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
         const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
@@ -191,7 +173,7 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
 
         const comparisonData: PhysicalInventoryComparisonItem[] = physicalInventory.map((item: InventoryUnit) => {
             const erpQuantity = erpStockMap.get(item.productId) ?? 0;
-            const location = locationMap.get(item.locationId!);
+            const location: WarehouseLocation | undefined = locationMap.get(item.locationId!);
             return {
                 productId: item.productId,
                 productDescription: productMap.get(item.productId) || 'Producto Desconocido',

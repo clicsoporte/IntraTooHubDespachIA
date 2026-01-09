@@ -196,13 +196,13 @@ export async function updatePendingAction(payload: AdministrativeActionPayload):
     return updatedOrder;
 }
 
-export async function getCompletedOrdersByDateRange(options: { 
-    dateRange: DateRange, 
-    filters?: { 
-        productId?: string | null, 
-        classifications?: string[], 
-        machineIds?: string[] 
-    } 
+export async function getCompletedOrdersByDateRange(options: {
+    dateRange: DateRange;
+    filters?: {
+        productId?: string | null;
+        classifications?: string[];
+        machineIds?: string[];
+    };
 }): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {
     const { dateRange, filters } = options;
     let allOrders = await getCompletedOrdersByDateRangeServer(dateRange);
