@@ -4,8 +4,8 @@
 'use server';
 
 import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
-import { getLocations as getWarehouseLocations, getInventoryUnits, getItemLocations } from '@/modules/warehouse/lib/actions';
-import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem } from '@/modules/core/types';
+import { getLocations as getWarehouseLocations, getInventoryUnits, getAllItemLocations } from '@/modules/warehouse/lib/actions';
+import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
 import { logError } from '@/modules/core/lib/logger';
@@ -34,14 +34,27 @@ interface FullProductionReportData {
  */
 export async function getProductionReportData(options: { dateRange: DateRange, filters?: ReportFilters }): Promise<FullProductionReportData> {
     const { dateRange, filters } = options;
-    if (!dateRange.from) {
-        throw new Error("Date 'from' is required for the production report.");
-    }
     
-    const [allOrders, plannerSettings] = await Promise.all([
-        getCompletedOrdersByDateRangePlanner({dateRange, filters}),
-        getPlannerSettings(),
-    ]);
+    let allOrders = await getCompletedOrdersByDateRangePlanner(dateRange);
+
+    if (filters) {
+        const allProducts = await getAllProducts();
+        allOrders = allOrders.filter(order => {
+            if (filters?.productId && order.productId !== filters.productId) {
+                return false;
+            }
+            if (filters?.machineIds && filters.machineIds.length > 0 && (!order.machineId || !filters.machineIds.includes(order.machineId))) {
+                return false;
+            }
+            if (filters?.classifications && filters.classifications.length > 0) {
+                const product = allProducts.find((p: Product) => p.id === order.productId);
+                if (!product || !product.classification || !filters.classifications.includes(product.classification)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
 
     const details: ProductionReportDetail[] = allOrders.map((order) => {
         const history = order.history || [];
@@ -69,6 +82,8 @@ export async function getProductionReportData(options: { dateRange: DateRange, f
         };
     });
 
+    const plannerSettings = await getPlannerSettings();
+
     return {
         reportData: {
             details: JSON.parse(JSON.stringify(details)),
@@ -76,6 +91,7 @@ export async function getProductionReportData(options: { dateRange: DateRange, f
         plannerSettings: JSON.parse(JSON.stringify(plannerSettings)),
     };
 }
+
 
 export async function getUserPermissionsReportData(): Promise<{ users: User[], roles: Role[] }> {
     try {
@@ -139,6 +155,21 @@ export async function getActiveTransitsReportData(dateRange: DateRange): Promise
     return JSON.parse(JSON.stringify(reportData));
 }
 
+
+export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
+    try {
+        const [units, locations] = await Promise.all([
+            getInventoryUnits(dateRange),
+            getWarehouseLocations(),
+        ]);
+        return { units, locations };
+    } catch (error) {
+        logError('Failed to generate receiving report data', { error });
+        throw new Error('No se pudo generar el reporte de recepciones.');
+    }
+}
+
+
 export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ comparisonData: PhysicalInventoryComparisonItem[], allLocations: WarehouseLocation[] }> {
     try {
         const [physicalInventory, erpStock, allProducts, allLocations] = await Promise.all([
@@ -148,13 +179,13 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             getWarehouseLocations(),
         ]);
         
-        const allItemLocations = await getItemLocations();
+        const allItemLocations = await getAllItemLocations();
         
         const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
         const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
         const locationMap = new Map(allLocations.map((item: WarehouseLocation) => [item.id, item]));
         const itemLocationMap = new Map<string, string>();
-        allItemLocations.forEach(itemLoc => {
+        allItemLocations.forEach((itemLoc: ItemLocation) => {
             itemLocationMap.set(itemLoc.itemId, renderLocationPathAsString(itemLoc.locationId, allLocations));
         });
 
@@ -180,18 +211,5 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
     } catch (error) {
         logError('Failed to generate physical inventory comparison report', { error });
         throw new Error('No se pudo generar el reporte de inventario físico.');
-    }
-}
-
-export async function getReceivingReportData({ dateRange }: { dateRange?: DateRange }): Promise<{ units: InventoryUnit[], locations: WarehouseLocation[] }> {
-    try {
-        const [units, locations] = await Promise.all([
-            getInventoryUnits(dateRange),
-            getWarehouseLocations(),
-        ]);
-        return { units, locations };
-    } catch (error) {
-        logError('Failed to generate receiving report data', { error });
-        throw new Error('No se pudo generar el reporte de recepciones.');
     }
 }
