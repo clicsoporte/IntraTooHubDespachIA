@@ -3,7 +3,6 @@
  */
 'use client';
 
-import React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
@@ -18,8 +17,6 @@ import { useAuth } from '@/modules/core/hooks/useAuth';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
-import { renderLocationPathAsString } from '@/modules/warehouse/lib/utils';
-
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -78,7 +75,6 @@ export function useReceivingReport() {
     }, []);
 
     const fetchData = useCallback(async () => {
-        if (!isAuthorized) return;
         updateState({ isLoading: true });
         try {
             const data = await getReceivingReportData({ dateRange: state.dateRange });
@@ -88,28 +84,28 @@ export function useReceivingReport() {
             });
         } catch (error: any) {
             logError("Failed to fetch receiving report data", { error: error.message });
-            toast({ title: 'Error', description: 'No se pudieron cargar los registros de recepción.', variant: 'destructive' });
+            toast({ title: "Error al Generar Reporte", description: error.message, variant: "destructive" });
         } finally {
             updateState({ isLoading: false });
         }
-    }, [state.dateRange, toast, updateState, isAuthorized]);
+    }, [state.dateRange, toast, updateState]);
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        const loadPrefs = async () => {
-            if (user) {
+        const loadPrefsAndData = async () => {
+             if(user) {
                 const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
                 if (prefs && prefs.visibleColumns) {
                     updateState({ visibleColumns: prefs.visibleColumns });
                 }
             }
-            setIsInitialLoading(false);
-        };
-        if (isAuthorized) {
-            loadPrefs();
+             // Do not fetch data automatically, wait for user action.
+             setIsInitialLoading(false);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthorized, user?.id]);
+        if (isAuthorized) {
+            loadPrefsAndData();
+        }
+    }, [setTitle, isAuthorized, user, updateState]);
     
     const getAllChildLocationIds = useCallback((locationId: number): number[] => {
         let children: number[] = [];
@@ -165,7 +161,22 @@ export function useReceivingReport() {
 
     const getLocationPath = useCallback((locationId: number | null): string => {
         if (!locationId) return 'N/A';
-        return renderLocationPathAsString(locationId, state.allLocations);
+        
+        const locationMap = new Map(state.allLocations.map(l => [l.id, l]));
+        const path: string[] = [];
+        let currentId: number | null = locationId;
+
+        // Loop with a safeguard
+        for (let i = 0; i < 10 && currentId !== null; i++) {
+            const current = locationMap.get(currentId);
+            if (current) {
+                path.unshift(current.name);
+                currentId = current.parentId ?? null;
+            } else {
+                break;
+            }
+        }
+        return path.join(' > ');
     }, [state.allLocations]);
 
 
@@ -243,11 +254,7 @@ export function useReceivingReport() {
 
     const actions = {
         fetchData,
-        setDateRange: (range: DateRange | undefined) => {
-            if (range) {
-                updateState({ dateRange: range });
-            }
-        },
+        setDateRange: (range: DateRange | undefined) => updateState({ dateRange: range || { from: undefined, to: undefined } }),
         setSearchTerm: (term: string) => updateState({ searchTerm: term }),
         setUserFilter: (filter: string[]) => updateState({ userFilter: filter }),
         setLocationFilter: (filter: string[]) => updateState({ locationFilter: filter }),
