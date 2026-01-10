@@ -5,7 +5,6 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/modules/core/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { runScheduledTasks } from "@/lib/cron-runner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -13,9 +12,6 @@ export const metadata: Metadata = {
   title: "Clic-Tools",
   description: "Your integrated tools dashboard.",
 };
-
-// This function runs only on the server, once, when the application starts.
-runScheduledTasks();
 
 export default function RootLayout({
   children,
