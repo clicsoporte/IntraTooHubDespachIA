@@ -94,28 +94,26 @@ export function useReceivingReport() {
         }
     }, [state.dateRange, toast, updateState, isAuthorized]);
     
-    const loadPrefs = useCallback(async () => {
-        if (user) {
-            try {
-                const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-                if (prefs && prefs.visibleColumns) {
-                    updateState({ visibleColumns: prefs.visibleColumns });
-                }
-            } catch (error) {
-                logError("Failed to load user preferences for receiving report", { error });
-            }
-        }
-    }, [user, updateState]);
-    
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        if (isAuthorized) {
-            loadPrefs().finally(() => setIsInitialLoading(false));
-        } else {
+
+        const loadPrefs = async () => {
+            if (user && isAuthorized) {
+                try {
+                    const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                    if (prefs && prefs.visibleColumns) {
+                        updateState({ visibleColumns: prefs.visibleColumns });
+                    }
+                } catch (error) {
+                    logError("Failed to load user preferences for receiving report", { error });
+                }
+            }
             setIsInitialLoading(false);
-        }
+        };
+        
+        loadPrefs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthorized]); 
+    }, [setTitle, isAuthorized, user?.id]);
     
     const getAllChildLocationIds = useCallback((locationId: number): number[] => {
         let children: number[] = [];
