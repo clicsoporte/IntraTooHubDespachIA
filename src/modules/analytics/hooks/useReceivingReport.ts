@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Hook to manage the logic for the new receiving report page.
  */
@@ -41,6 +40,7 @@ const availableColumns = [
 
 interface State {
     isLoading: boolean;
+    isInitialLoading: boolean;
     data: InventoryUnit[];
     allLocations: WarehouseLocation[];
     dateRange: DateRange;
@@ -57,7 +57,8 @@ export function useReceivingReport() {
     const { companyData, user, products } = useAuth();
     
     const [state, setState] = useState<State>({
-        isLoading: false, // This will now control all loading states
+        isLoading: false,
+        isInitialLoading: true,
         data: [],
         allLocations: [],
         dateRange: {
@@ -72,27 +73,6 @@ export function useReceivingReport() {
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
 
-    const updateState = useCallback((newState: Partial<State>) => {
-        setState(prevState => ({ ...prevState, ...newState }));
-    }, []);
-
-    const fetchData = useCallback(async () => {
-        if (!isAuthorized) return;
-        updateState({ isLoading: true });
-        try {
-            const data = await getReceivingReportData({ dateRange: state.dateRange });
-            updateState({ 
-                data: data.units, 
-                allLocations: data.locations 
-            });
-        } catch (error: any) {
-            logError("Failed to fetch receiving report data", { error: error.message });
-            toast({ title: 'Error', description: 'No se pudieron cargar los registros de recepción.', variant: 'destructive' });
-        } finally {
-            updateState({ isLoading: false });
-        }
-    }, [state.dateRange, toast, updateState, isAuthorized]);
-    
     useEffect(() => {
         setTitle("Reporte de Recepciones");
         
@@ -101,17 +81,38 @@ export function useReceivingReport() {
                 try {
                     const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
                     if (prefs && prefs.visibleColumns) {
-                        updateState({ visibleColumns: prefs.visibleColumns });
+                        setState(prevState => ({ ...prevState, visibleColumns: prefs.visibleColumns }));
                     }
                 } catch (error) {
                     logError('Failed to load user preferences for receiving report.', { error });
                 }
             }
+            setState(prevState => ({ ...prevState, isInitialLoading: false }));
         };
 
-        loadPrefs();
+        if (isAuthorized !== null) {
+            loadPrefs();
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthorized, user?.id]);
+    }, [setTitle, isAuthorized, user]);
+    
+    const fetchData = async () => {
+        if (!isAuthorized) return;
+        setState(prevState => ({ ...prevState, isLoading: true }));
+        try {
+            const data = await getReceivingReportData({ dateRange: state.dateRange });
+            setState(prevState => ({ 
+                ...prevState, 
+                data: data.units, 
+                allLocations: data.locations 
+            }));
+        } catch (error: any) {
+            logError("Failed to fetch receiving report data", { error: error.message });
+            toast({ title: 'Error', description: 'No se pudieron cargar los registros de recepción.', variant: 'destructive' });
+        } finally {
+            setState(prevState => ({ ...prevState, isLoading: false }));
+        }
+    };
     
     const getAllChildLocationIds = useCallback((locationId: number): number[] => {
         let children: number[] = [];
@@ -247,17 +248,20 @@ export function useReceivingReport() {
         fetchData,
         setDateRange: (range: DateRange | undefined) => {
             if (range) {
-                updateState({ dateRange: range });
+                setState(prevState => ({ ...prevState, dateRange: range }));
             }
         },
-        setSearchTerm: (term: string) => updateState({ searchTerm: term }),
-        setUserFilter: (filter: string[]) => updateState({ userFilter: filter }),
-        setLocationFilter: (filter: string[]) => updateState({ locationFilter: filter }),
-        handleClearFilters: () => updateState({ searchTerm: '', userFilter: [], locationFilter: [] }),
+        setSearchTerm: (term: string) => setState(prevState => ({ ...prevState, searchTerm: term })),
+        setUserFilter: (filter: string[]) => setState(prevState => ({ ...prevState, userFilter: filter })),
+        setLocationFilter: (filter: string[]) => setState(prevState => ({ ...prevState, locationFilter: filter })),
+        handleClearFilters: () => setState(prevState => ({ ...prevState, searchTerm: '', userFilter: [], locationFilter: [] })),
         handleExportExcel,
         handleExportPDF,
         handleColumnVisibilityChange: (columnId: string, checked: boolean) => {
-            updateState({ visibleColumns: checked ? [...state.visibleColumns, columnId] : state.visibleColumns.filter(id => id !== columnId) });
+            setState(prevState => ({
+                ...prevState,
+                visibleColumns: checked ? [...prevState.visibleColumns, columnId] : prevState.visibleColumns.filter(id => id !== columnId)
+            }));
         },
         handleSavePreferences,
     };
@@ -277,6 +281,6 @@ export function useReceivingReport() {
         actions,
         selectors,
         isAuthorized,
-        isInitialLoading: state.isLoading && state.data.length === 0, // A better representation of initial loading
+        isInitialLoading: state.isInitialLoading,
     };
 }
