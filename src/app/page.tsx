@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/card";
 import { headers } from "next/headers";
 import React from "react";
+import { getInitialPageData } from "@/app/actions";
 
 export const dynamic = 'force-dynamic';
 
-export default function InitialPage() {
+export default async function InitialPage() {
   // Extracting client info on the server side.
   // Note: In a typical server environment behind proxies, you'd need to check
   // 'x-forwarded-for' headers. For a LAN app, this is generally sufficient.
@@ -24,11 +25,15 @@ export default function InitialPage() {
     host: headerList.get("host") || "N/A",
   };
 
+  // Pre-fetch the initial data on the server to pass to the client component.
+  // This avoids a client-side fetch on initial load.
+  const initialData = await getInitialPageData();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm shadow-2xl">
         {/* The AuthForm component will now handle showing the correct title/description and form */}
-        <AuthForm clientInfo={clientInfo} />
+        <AuthForm clientInfo={clientInfo} initialData={initialData} />
       </Card>
     </div>
   );

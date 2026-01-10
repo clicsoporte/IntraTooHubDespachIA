@@ -3,8 +3,8 @@
  */
 'use server';
 
-import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl } from '@/modules/core/lib/db';
-import { getInventoryUnits as getPhysicalInventory, getAllItemLocations, getLocations as getWarehouseLocations } from '@/modules/warehouse/lib/actions';
+import { getAllRoles, getAllSuppliers, getAllStock, getAllProducts, getUserPreferences, saveUserPreferences, getAllErpPurchaseOrderHeaders, getAllErpPurchaseOrderLines, getPublicUrl, getItemLocations as getAllItemLocationsServer } from '@/modules/core/lib/db';
+import { getInventoryUnits as getPhysicalInventory, getLocations as getWarehouseLocationsServer } from '@/modules/warehouse/lib/actions';
 import type { DateRange, ProductionOrder, PlannerSettings, ProductionOrderHistoryEntry, Product, User, Role, ErpPurchaseOrderLine, ErpPurchaseOrderHeader, Supplier, StockInfo, InventoryUnit, WarehouseLocation, PhysicalInventoryComparisonItem, ItemLocation } from '@/modules/core/types';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { ProductionReportDetail, ProductionReportData } from '../hooks/useProductionReport';
@@ -35,7 +35,7 @@ interface FullProductionReportData {
 export async function getProductionReportData(options: { dateRange: DateRange, filters?: ReportFilters }): Promise<FullProductionReportData> {
     const { dateRange, filters } = options;
     
-    let allOrders = await getCompletedOrdersByDateRangePlanner({dateRange, filters});
+    let allOrders = await getCompletedOrdersByDateRangePlanner(dateRange, filters);
 
     const details: ProductionReportDetail[] = allOrders.map((order) => {
         const history = order.history || [];
@@ -141,7 +141,7 @@ export async function getReceivingReportData({ dateRange }: { dateRange?: DateRa
     try {
         const [units, locations] = await Promise.all([
             getPhysicalInventory(dateRange),
-            getWarehouseLocations(),
+            getWarehouseLocationsServer(),
         ]);
         return { units, locations };
     } catch (error) {
@@ -157,12 +157,12 @@ export async function getPhysicalInventoryReportData({ dateRange }: { dateRange?
             getPhysicalInventory(dateRange),
             getAllStock(),
             getAllProducts(),
-            getWarehouseLocations(),
+            getWarehouseLocationsServer(),
         ]);
         
-        const allItemLocations = await getAllItemLocations();
+        const allItemLocations = await getAllItemLocationsServer();
         
-        const erpStockMap = new Map(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
+        const erpStockMap = new Map<string, number>(erpStock.map((item: StockInfo) => [item.itemId, item.totalStock]));
         const productMap = new Map(allProducts.map((item: Product) => [item.id, item.description]));
         const locationMap = new Map(allLocations.map((item: WarehouseLocation) => [item.id, item]));
         const itemLocationMap = new Map<string, string>();

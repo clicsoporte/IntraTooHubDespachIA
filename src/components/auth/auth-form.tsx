@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Client component for handling the authentication form,
  * now also responsible for determining whether to show the login form or the setup wizard.
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2, Network, UserPlus, AlertTriangle } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import type { User } from "@/modules/core/types";
@@ -34,9 +33,8 @@ import {
   login,
   getAllUsers,
   saveAllUsers,
-  sendRecoveryEmail,
+  sendPasswordRecoveryEmail,
 } from "@/modules/core/lib/auth-client";
-import { getInitialPageData } from "@/app/actions";
 import { logInfo, logWarn, logError } from "@/modules/core/lib/logger";
 import { useAuth } from "@/modules/core/hooks/useAuth";
 import { SetupWizard } from "./setup-wizard";
@@ -47,20 +45,22 @@ interface AuthFormProps {
     ip: string;
     host: string;
   };
+  initialData: {
+    hasUsers: boolean;
+    companyName: string;
+  } | { error: string };
 }
 
 /**
  * Renders the login form, setup wizard, or password recovery flow.
  * This component is now the entry point for authentication logic on the client.
  */
-export function AuthForm({ clientInfo }: AuthFormProps) {
+export function AuthForm({ clientInfo, initialData }: AuthFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isReady, refreshAuth, redirectAfterLogin } = useAuth();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  // Initial page state
+  // Initial page state is now passed as a prop from the server component
   const [hasUsers, setHasUsers] = useState<boolean | null>(null);
   const [companyName, setCompanyName] = useState<string>("Clic-Tools");
   const [isLoading, setIsLoading] = useState(true);
@@ -89,26 +89,15 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
   }, [isReady, user, redirectAfterLogin]);
 
   useEffect(() => {
-    async function checkUserStatus() {
-      // Only run this check if the user is not logged in.
-      if (!user) {
-        try {
-          const { hasUsers, companyName } = await getInitialPageData();
-          setHasUsers(hasUsers);
-          setCompanyName(companyName);
-        } catch (err: any) {
-          console.error("Critical error on initial page data fetch:", err);
-          setError("No se pudo conectar con la base de datos. Revisa la consola del servidor.");
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        // If user is already loaded, we don't need to fetch initial data.
-        setIsLoading(false);
-      }
+    if ('error' in initialData) {
+      setError(initialData.error);
+      setHasUsers(true); // Default to login form on error
+    } else {
+      setHasUsers(initialData.hasUsers);
+      setCompanyName(initialData.companyName);
     }
-    checkUserStatus();
-  }, [user]);
+    setIsLoading(false);
+  }, [initialData]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +158,7 @@ export function AuthForm({ clientInfo }: AuthFormProps) {
     if (!recoveryEmail) return;
     setIsProcessing(true);
     try {
-      await sendRecoveryEmail(recoveryEmail, clientInfo);
+      await sendPasswordRecoveryEmail(recoveryEmail, clientInfo);
       toast({ title: "Correo de Recuperación Enviado", description: "Si el correo existe, recibirás una contraseña temporal." });
       setRecoveryDialogOpen(false);
       setRecoveryEmail("");
