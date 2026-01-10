@@ -1,5 +1,7 @@
 /**
  * @fileoverview Hook to manage the logic for the new receiving report page.
+ * This hook has been rebuilt to be a simple, read-only reporting tool,
+ * ensuring stability and preventing render-cycle errors.
  */
 'use client';
 
@@ -19,7 +21,6 @@ import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { generateDocument } from '@/modules/core/lib/pdf-generator';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 import { renderLocationPathAsString } from '@/modules/warehouse/lib/utils';
-
 
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return "";
@@ -73,44 +74,45 @@ export function useReceivingReport() {
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
 
+    const updateState = useCallback((newState: Partial<State>) => {
+        setState(prevState => ({ ...prevState, ...newState }));
+    }, []);
+
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        
         const loadPrefs = async () => {
             if (user && isAuthorized) {
                 try {
                     const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
                     if (prefs && prefs.visibleColumns) {
-                        setState(prevState => ({ ...prevState, visibleColumns: prefs.visibleColumns }));
+                        updateState({ visibleColumns: prefs.visibleColumns });
                     }
                 } catch (error) {
                     logError('Failed to load user preferences for receiving report.', { error });
                 }
             }
-            setState(prevState => ({ ...prevState, isInitialLoading: false }));
+            updateState({ isInitialLoading: false });
         };
-
+        
         if (isAuthorized !== null) {
             loadPrefs();
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setTitle, isAuthorized, user]);
+    }, [setTitle, isAuthorized, user, updateState]);
     
     const fetchData = async () => {
         if (!isAuthorized) return;
-        setState(prevState => ({ ...prevState, isLoading: true }));
+        updateState({ isLoading: true });
         try {
             const data = await getReceivingReportData({ dateRange: state.dateRange });
-            setState(prevState => ({ 
-                ...prevState, 
+            updateState({ 
                 data: data.units, 
                 allLocations: data.locations 
-            }));
+            });
         } catch (error: any) {
             logError("Failed to fetch receiving report data", { error: error.message });
             toast({ title: 'Error', description: 'No se pudieron cargar los registros de recepción.', variant: 'destructive' });
         } finally {
-            setState(prevState => ({ ...prevState, isLoading: false }));
+            updateState({ isLoading: false });
         }
     };
     
@@ -248,20 +250,19 @@ export function useReceivingReport() {
         fetchData,
         setDateRange: (range: DateRange | undefined) => {
             if (range) {
-                setState(prevState => ({ ...prevState, dateRange: range }));
+                updateState({ dateRange: range });
             }
         },
-        setSearchTerm: (term: string) => setState(prevState => ({ ...prevState, searchTerm: term })),
-        setUserFilter: (filter: string[]) => setState(prevState => ({ ...prevState, userFilter: filter })),
-        setLocationFilter: (filter: string[]) => setState(prevState => ({ ...prevState, locationFilter: filter })),
-        handleClearFilters: () => setState(prevState => ({ ...prevState, searchTerm: '', userFilter: [], locationFilter: [] })),
+        setSearchTerm: (term: string) => updateState({ searchTerm: term }),
+        setUserFilter: (filter: string[]) => updateState({ userFilter: filter }),
+        setLocationFilter: (filter: string[]) => updateState({ locationFilter: filter }),
+        handleClearFilters: () => updateState({ searchTerm: '', userFilter: [], locationFilter: [] }),
         handleExportExcel,
         handleExportPDF,
         handleColumnVisibilityChange: (columnId: string, checked: boolean) => {
-            setState(prevState => ({
-                ...prevState,
-                visibleColumns: checked ? [...prevState.visibleColumns, columnId] : prevState.visibleColumns.filter(id => id !== columnId)
-            }));
+            updateState({
+                visibleColumns: checked ? [...state.visibleColumns, columnId] : state.visibleColumns.filter(id => id !== columnId)
+            });
         },
         handleSavePreferences,
     };
