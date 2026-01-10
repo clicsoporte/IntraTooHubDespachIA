@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Hook to manage the logic for the new receiving report page.
  */
@@ -55,10 +56,8 @@ export function useReceivingReport() {
     const { toast } = useToast();
     const { companyData, user, products } = useAuth();
     
-    const [isInitialLoading, setIsInitialLoading] = useState(true);
-
     const [state, setState] = useState<State>({
-        isLoading: false,
+        isLoading: false, // This will now control all loading states
         data: [],
         allLocations: [],
         dateRange: {
@@ -96,18 +95,21 @@ export function useReceivingReport() {
     
     useEffect(() => {
         setTitle("Reporte de Recepciones");
+        
         const loadPrefs = async () => {
-            if (user) {
-                const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-                if (prefs && prefs.visibleColumns) {
-                    updateState({ visibleColumns: prefs.visibleColumns });
+            if (user && isAuthorized) {
+                try {
+                    const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                    if (prefs && prefs.visibleColumns) {
+                        updateState({ visibleColumns: prefs.visibleColumns });
+                    }
+                } catch (error) {
+                    logError('Failed to load user preferences for receiving report.', { error });
                 }
             }
-            setIsInitialLoading(false);
         };
-        if (isAuthorized) {
-            loadPrefs();
-        }
+
+        loadPrefs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [setTitle, isAuthorized, user?.id]);
     
@@ -275,6 +277,6 @@ export function useReceivingReport() {
         actions,
         selectors,
         isAuthorized,
-        isInitialLoading,
+        isInitialLoading: state.isLoading && state.data.length === 0, // A better representation of initial loading
     };
 }
