@@ -72,29 +72,32 @@ export function useReceivingReport() {
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
 
-    const loadPrefs = useCallback(async () => {
-        if (!user) {
-            setState(prevState => ({ ...prevState, isLoading: false }));
-            return;
-        }
-        try {
-            const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
-            if (prefs && prefs.visibleColumns) {
-                setState(prevState => ({ ...prevState, visibleColumns: prefs.visibleColumns }));
-            }
-        } catch (error) {
-            logError('Failed to load user preferences for receiving report.', { error });
-        } finally {
-            setState(prevState => ({ ...prevState, isLoading: false }));
-        }
-    }, [user]);
+    const updateState = useCallback((newState: Partial<State>) => {
+        setState(prevState => ({ ...prevState, ...newState }));
+    }, []);
 
     useEffect(() => {
         setTitle("Reporte de Recepciones");
-        if (isAuthorized) {
-            loadPrefs();
-        }
-    }, [setTitle, isAuthorized, loadPrefs]);
+        
+        const loadPrefs = async () => {
+            if (isAuthorized && user) {
+                try {
+                    const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
+                    if (prefs && prefs.visibleColumns) {
+                        updateState({ visibleColumns: prefs.visibleColumns });
+                    }
+                } catch (error) {
+                    logError('Failed to load user preferences for receiving report.', { error });
+                } finally {
+                    updateState({ isLoading: false });
+                }
+            } else if (isAuthorized === false) {
+                 updateState({ isLoading: false });
+            }
+        };
+
+        loadPrefs();
+    }, [setTitle, isAuthorized, user, updateState]);
 
 
     const fetchData = useCallback(async () => {
@@ -278,6 +281,6 @@ export function useReceivingReport() {
         actions,
         selectors,
         isAuthorized,
-        isInitialLoading: state.isLoading && state.data.length === 0,
+        isInitialLoading: state.isLoading && !state.data.length,
     };
 }

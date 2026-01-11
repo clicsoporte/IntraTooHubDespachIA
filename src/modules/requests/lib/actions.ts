@@ -4,7 +4,7 @@
  */
 'use client';
 
-import type { PurchaseRequest, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, RejectCancellationPayload, DateRange, AdministrativeAction, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader as ErpPOHeader, ErpPurchaseOrderLine } from '../../core/types';
+import type { PurchaseRequest, UpdateRequestStatusPayload, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, RejectCancellationPayload, DateRange, AdministrativeActionPayload, StockInfo, ErpOrderHeader, ErpOrderLine, User, RequestNotePayload, UserPreferences, PurchaseSuggestion, PurchaseRequestPriority, ErpPurchaseOrderHeader as ErpPOHeader, ErpPurchaseOrderLine } from '../../core/types';
 import { logInfo, logError } from '@/modules/core/lib/logger';
 import { createNotificationForPermission, createNotification } from '@/modules/core/lib/notifications-actions';
 import { 
@@ -17,7 +17,7 @@ import {
     saveSettings,
     updatePendingAction as updatePendingActionServer,
     getErpOrderData as getErpOrderDataServer,
-    getUserByName,
+    getUserByName as getUserByNameServer,
     getRolesWithPermission,
     addNote as addNoteServer,
     updateRequestDetails as updateRequestDetailsServer,
@@ -328,4 +328,8 @@ export async function saveCostAnalysis(requestId: number, cost: number, salePric
     const updatedRequest = await saveCostAnalysisServer(requestId, cost, salePrice);
     await logInfo(`Cost analysis saved for request ${updatedRequest.consecutive}`, { requestId, cost, salePrice });
     return updatedRequest;
+}
+
+export async function getUserByName(name: string): Promise<User | null> {
+    return await getUserByNameServer(name);
 }
