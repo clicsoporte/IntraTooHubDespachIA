@@ -1,79 +1,65 @@
 # Plan de Reconstrucción Post-Rollback a v2.0.0
 
-Este documento sirve como guía maestra para re-implementar de forma ordenada y estable las funcionalidades clave que se desarrollaron después de la versión 2.0.0.
+Este documento sirve como guía maestra para re-implementar de forma ordenada y estable las funcionalidades clave que se desarrollaron después de la versión 2.0.0, basándonos en la versión estable de `git`.
 
 ---
 
-## 1. Módulo: Centro de Notificaciones
+## 1. Módulo: Gestor de Notificaciones y Tareas Programadas (Cron)
 
 ### 1.1. Objetivo
-Implementar un sistema de notificaciones proactivo y accionable en la barra de encabezado para alertar a los usuarios sobre eventos relevantes.
+La versión antigua ya contaba con el icono de la campana y notificaciones básicas. Lo que se debe reconstruir es el **módulo de administración** que permite una configuración avanzada.
 
 ### 1.2. Requisitos de UI
-- **Componente `NotificationBell`:** Crear un componente en `src/components/layout/` que muestre un icono de campana.
-- **Contador de No Leídas:** El icono debe mostrar un badge rojo con el número total de notificaciones no leídas. Debe obtener este dato del `useAuth` hook.
-- **Panel Desplegable (`Popover`):** Al hacer clic, debe mostrar un `Popover` con una `ScrollArea` que liste las notificaciones más recientes.
-- **Diseño de Notificación:** Cada item debe mostrar el mensaje, un indicador de "no leído" (ej. un punto azul), y el tiempo transcurrido (ej. "hace 5 minutos").
-- **Botones de Acción:** Las notificaciones que lo requieran (ej. aprobación de cancelación) deben mostrar botones (`Aprobar`/`Rechazar`) directamente en el panel.
+- **Página de Automatización (`/admin/notifications`):**
+    - Una interfaz con dos pestañas: "Reglas de Notificación" y "Tareas Programadas".
+    - **Reglas:** Permite crear una regla que se dispara por un evento del sistema (ej: 'onDispatchCompleted') y ejecuta una acción (ej: 'sendEmail'). Debe permitir configurar destinatarios, asunto, etc.
+    - **Tareas:** Permite crear una tarea que se ejecuta en un horario cron (ej: `0 2 * * *`), selecciona una acción predefinida del sistema (ej: `sync-erp`) y la activa o desactiva.
+- **Página de Configuración de Servicios (`/admin/notifications/settings`):**
+    - Un formulario para guardar credenciales de servicios externos, específicamente para el bot de **Telegram** (Bot Token y Chat ID).
 
 ### 1.3. Lógica y Flujo
-- **`useAuth` Hook:** Modificar el `useAuth` hook para que incluya:
-    - Estado para `notifications` y `unreadNotificationsCount`.
-    - Una función `fetchUnreadNotifications` que se llame periódicamente (ej. cada 30 segundos) para mantener los datos frescos.
-- **Acciones del Servidor (`notifications-actions.ts`):**
-    - `createNotification(userId, message, href, entityId, entityType, taskType)`: Para notificaciones a un usuario específico.
-    - `createNotificationForPermission(permission, message, ...)`: Para notificar a todos los usuarios con un permiso dado.
-    - `markNotificationAsRead(notificationId)` y `markAllNotificationsAsRead()`.
-    - `executeNotificationAction(notificationId, action)`: Lógica para manejar los clics en los botones de "Aprobar/Rechazar".
-- **Integración:** Llamar a las funciones de creación de notificaciones en los puntos clave de la aplicación (ej. al cambiar el estado de una orden, al recibir una solicitud de cancelación, etc.).
+- **Registro de Tareas (`task-registry.ts`):** Un archivo central donde se definen las funciones que pueden ser llamadas por el cron (ej: `syncAllData`).
+- **Motor de Cron (`cron-runner.ts`):** Un script que se inicia con el servidor, lee las tareas activas de la base de datos y las programa usando `node-cron`.
+- **Motor de Eventos (`notifications-engine.ts`):** Una función `triggerNotificationEvent` que, al ser llamada desde cualquier parte del código, busca reglas que coincidan con el evento y ejecuta la acción correspondiente (enviar correo, telegram, etc.).
+- **Nuevas Tablas en `notifications.db`:**
+    - `notification_rules`: Para guardar las reglas de notificación.
+    - `scheduled_tasks`: Para guardar las tareas cron.
+    - `notification_settings`: Para guardar credenciales de servicios como Telegram.
 
 ---
 
-## 2. Módulo: Centro de Despacho
+## 2. Módulo: Centro de Despacho (FUNCIONALIDAD MAYOR)
 
-Este es el módulo más grande a reconstruir. Se divide en tres partes principales.
+Este es el módulo más grande y crítico a reconstruir. Digitaliza todo el proceso de alistamiento y verificación de mercadería.
 
 ### 2.1. Parte A: Configuración y Clasificación
 
-- **Tabla `dispatch_containers`:** En `warehouse.db`, crear una tabla para las rutas/contenedores (`id`, `name`, `createdBy`, `createdAt`, etc.).
-- **Tabla `dispatch_assignments`:** En `warehouse.db`, tabla para asociar documentos a contenedores (`id`, `containerId`, `documentId`, `status`, `sortOrder`, etc.).
-- **Página de Configuración:** En `Admin > Config. Almacenes`, añadir una sección para crear y eliminar `dispatch_containers`.
-- **Página del Clasificador (`/dashboard/warehouse/dispatch-classifier`):**
+- **Nuevas Tablas en `warehouse.db`:**
+    - `dispatch_containers`: Para las rutas/contenedores (ej: "Ruta San José").
+    - `dispatch_assignments`: Para asociar facturas a contenedores.
+    - `dispatch_logs`: Para auditar cada verificación.
+- **Página de Configuración (`/admin/warehouse`):** Añadir una sección para crear y eliminar `dispatch_containers`.
+- **Página del Clasificador (`/warehouse/dispatch-classifier`):**
     - Una vista con dos pestañas: "Asignar" y "Ordenar".
-    - **Pestaña "Asignar":**
-        - Filtro de fechas para buscar facturas y remisiones del ERP.
-        - Tabla con los resultados, mostrando `FACTURA`, `NOMBRE_CLIENTE`, `RUTA` del ERP.
-        - Checkbox para selección masiva.
-        - Un `Select` para elegir el contenedor de destino y un botón para "Asignar en Bloque".
-    - **Pestaña "Ordenar":**
-        - Vista de columnas, donde cada columna es un contenedor.
-        - Usar `@hello-pangea/dnd` para permitir arrastrar y soltar (`drag-and-drop`) las facturas dentro de y entre contenedores para reordenarlas.
-        - Cada tarjeta de factura debe mostrar una alerta visual si la factura fue anulada en el ERP.
+    - **Pestaña "Asignar":** Filtro de fechas para buscar facturas/remisiones del ERP que no han sido asignadas. Permite selección masiva y asignación a un contenedor.
+    - **Pestaña "Ordenar":** Vista de columnas (una por contenedor) que permite arrastrar y soltar (`drag-and-drop`) las facturas para definir el orden de entrega. Debe mostrar una alerta visual si una factura fue anulada.
 
 ### 2.2. Parte B: Flujo de Verificación del Bodeguero
 
-- **Página del Centro de Despacho (`/dashboard/warehouse/dispatch-center`):**
-    - Muestra una vista de tarjetas, una por cada `dispatch_container`.
-    - Al hacer clic, se debe ejecutar una acción de servidor `lockEntity` para bloquear el contenedor para ese usuario.
-    - Una vez dentro, se muestra una lista ordenada de los documentos asignados. El estado (`Pendiente`, `Verificado`) debe ser claro.
-- **Página de Verificación (`/dashboard/warehouse/dispatch-check`):**
-    - Al hacer clic en un documento, se navega a esta página (`?docId=...&containerId=...`).
-    - Muestra la lista de artículos de la factura.
-    - Incluye un `Input` para escanear códigos de barras. La lógica debe:
-        - Incrementar la cantidad del artículo correcto.
-        - Dar feedback visual/auditivo.
-        - Opcionalmente, permitir un "modo estricto" donde se debe escanear cada unidad.
-    - Al finalizar la verificación, se guarda un registro en `dispatch_logs` y se actualiza el estado del `assignment`.
-    - **Navegación Automática:** Si la verificación fue exitosa y hay más documentos pendientes en el contenedor, debe mostrar un botón "Siguiente Documento" que navegue al chequeo del próximo `docId`.
+- **Página del Centro de Despacho (`/warehouse/dispatch-center`):**
+    - Muestra tarjetas para cada contenedor. Al hacer clic, se debe **bloquear** el contenedor para ese usuario, evitando que dos personas trabajen en la misma ruta.
+    - Dentro, muestra la lista ordenada de documentos.
+- **Página de Verificación (`/warehouse/dispatch-check`):**
+    - La interfaz principal de escaneo. Muestra la lista de artículos de la factura.
+    - Un `Input` para escanear códigos de barras que incrementa la cantidad del artículo correcto.
+    - Al finalizar, guarda el `dispatch_log` y navega automáticamente al siguiente documento del contenedor si existe.
 
 ### 2.3. Parte C: Reporte de Despachos
 
-- **Nueva Página (`/dashboard/analytics/dispatch-report`):**
-    - Un reporte de solo lectura para auditar las verificaciones.
-    - Filtros por rango de fechas y término de búsqueda.
-    - Tabla que muestra `documentId`, `verifiedByUserName`, `verifiedAt`.
-    - Un `Dialog` para ver el detalle de los artículos verificados, resaltando discrepancias.
-    - Funcionalidad para exportar a PDF y Excel.
+- **Nueva Página (`/analytics/dispatch-report`):**
+    - Este reporte **no existe** en la versión antigua y debe ser creado.
+    - Debe permitir auditar todas las verificaciones, con filtros por fecha y búsqueda.
+    - Debe mostrar quién verificó qué documento, cuándo, y permitir ver el detalle de los artículos con sus discrepancias.
 
 ---
 
@@ -83,27 +69,21 @@ Este es el módulo más grande a reconstruir. Se divide en tres partes principal
 Crear una herramienta de "cuchillo suizo" para que un supervisor pueda corregir un error común: registrar un producto con un código incorrecto durante la recepción de mercadería.
 
 ### 3.2. Requisitos
-- **Nueva Página (`/dashboard/warehouse/correction`):**
-    - **Sección de Búsqueda:** Debe permitir buscar una `InventoryUnit` (unidad de inventario) por:
-        - Rango de Fechas de creación.
-        - Código de Producto (original, incorrecto).
-        - Lote / ID Humano (`humanReadableId`).
-        - Código de Unidad (`unitCode`, ej: U-00123).
-        - Documento de referencia (`documentId`).
-    - **Tabla de Resultados:** Mostrar las unidades encontradas con su información clave. Cada fila debe tener un botón "Corregir".
+- **Nueva Página (`/warehouse/correction`):**
+    - Una interfaz para **buscar** una unidad de inventario (`InventoryUnit`) por varios criterios (fecha, lote, producto, etc.).
+    - Una tabla con los resultados, donde cada fila tiene un botón "Corregir".
 - **Modal de Corrección:**
     - Al hacer clic en "Corregir", se abre un `Dialog`.
-    - Muestra la información de la unidad original (producto, cantidad, lote).
-    - Proporciona un `SearchInput` para que el supervisor busque y seleccione el **producto correcto**.
-    - Incluye una alerta de advertencia clara sobre la irreversibilidad de la acción.
-    - Un botón "Aplicar Corrección" que ejecuta la acción del servidor.
+    - Muestra la información de la unidad original.
+    - Proporciona un `SearchInput` para buscar y seleccionar el **producto correcto**.
+    - Incluye una advertencia clara sobre la irreversibilidad de la acción y requiere confirmación.
 - **Acción del Servidor (`correctInventoryUnit`):**
-    - Debe ejecutar una transacción en `warehouse.db` para:
-        1. "Anular" la `InventoryUnit` original (ej. poniendo su cantidad a 0 y añadiendo una nota).
-        2. Registrar un movimiento de inventario de "salida" para el producto incorrecto.
-        3. Crear una **nueva** `InventoryUnit` con los mismos datos (lote, ubicación, etc.) pero con el **ID del producto correcto**.
-        4. Registrar un movimiento de inventario de "entrada" para el producto correcto.
-        5. Registrar todo el evento en la tabla de `logs` para auditoría.
+    - Debe ejecutar una transacción en `warehouse.db` que:
+        1. Anula la `InventoryUnit` original (ej. cantidad a 0).
+        2. Registra un movimiento de inventario de **salida** para el producto incorrecto.
+        3. Crea una **nueva** `InventoryUnit` con los datos originales pero con el **ID del producto correcto**.
+        4. Registra un movimiento de inventario de **entrada** para el producto correcto.
+        5. Registra todo el evento en la tabla de `logs` para auditoría.
 
 ---
-**Nota Final:** Después del `rollback`, revisa el archivo `src/modules/core/lib/data.ts` y asegúrate de que los `ToolCard` para estos nuevos módulos estén añadidos a las listas `warehouseTools` y `analyticsTools` con sus respectivos permisos para que aparezcan en el panel.
+**Nota Final:** Después del `rollback`, revisa el archivo `src/modules/core/lib/data.ts` y asegúrate de que los `ToolCard` para estos nuevos módulos (`dispatch-report`, `correction`) estén añadidos a las listas `analyticsTools` y `warehouseTools` con sus respectivos permisos para que aparezcan en el panel.
