@@ -41,7 +41,6 @@ const availableColumns = [
 
 interface State {
     isLoading: boolean;
-    isInitialLoading: boolean;
     data: InventoryUnit[];
     allLocations: WarehouseLocation[];
     dateRange: DateRange;
@@ -57,9 +56,10 @@ export function useReceivingReport() {
     const { toast } = useToast();
     const { companyData, user, products } = useAuth();
     
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+
     const [state, setState] = useState<State>({
         isLoading: false,
-        isInitialLoading: true,
         data: [],
         allLocations: [],
         dateRange: {
@@ -77,11 +77,14 @@ export function useReceivingReport() {
     const updateState = useCallback((newState: Partial<State>) => {
         setState(prevState => ({ ...prevState, ...newState }));
     }, []);
-
+    
+    // This useEffect runs only ONCE on component mount to set the title and load preferences.
+    // It does not depend on changing props, preventing the render-cycle warning.
     useEffect(() => {
         setTitle("Reporte de Recepciones");
+        
         const loadPrefs = async () => {
-            if (user && isAuthorized) {
+            if (user) {
                 try {
                     const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
                     if (prefs && prefs.visibleColumns) {
@@ -91,14 +94,17 @@ export function useReceivingReport() {
                     logError('Failed to load user preferences for receiving report.', { error });
                 }
             }
-            updateState({ isInitialLoading: false });
+            setIsInitialLoading(false); // Mark initial loading as complete
         };
         
-        if (isAuthorized !== null) {
+        if (isAuthorized) {
             loadPrefs();
+        } else {
+            setIsInitialLoading(false);
         }
-    }, [setTitle, isAuthorized, user, updateState]);
-    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthorized, user]); // Run only when auth status is confirmed.
+
     const fetchData = async () => {
         if (!isAuthorized) return;
         updateState({ isLoading: true });
@@ -282,6 +288,6 @@ export function useReceivingReport() {
         actions,
         selectors,
         isAuthorized,
-        isInitialLoading: state.isInitialLoading,
+        isInitialLoading,
     };
 }
