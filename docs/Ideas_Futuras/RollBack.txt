@@ -38,7 +38,9 @@ Este es el módulo más grande y crítico a reconstruir. Digitaliza todo el proc
     - `dispatch_containers`: Para las rutas/contenedores (ej: "Ruta San José").
     - `dispatch_assignments`: Para asociar facturas a contenedores.
     - `dispatch_logs`: Para auditar cada verificación.
-- **Página de Configuración (`/admin/warehouse`):** Añadir una sección para crear y eliminar `dispatch_containers`.
+- **Ampliación de `Config. Almacenes`:** La página `/admin/warehouse` debe ser ampliada. Además de la configuración existente, se deben añadir dos nuevas secciones:
+    - **Notificaciones Automáticas de Despacho:** Un campo de texto para ingresar una lista de correos que recibirán una copia del comprobante de despacho.
+    - **Gestión de Contenedores de Despacho:** Una interfaz para crear y eliminar los `dispatch_containers` (rutas).
 - **Página del Clasificador (`/warehouse/dispatch-classifier`):**
     - Una vista con dos pestañas: "Asignar" y "Ordenar".
     - **Pestaña "Asignar":** Filtro de fechas para buscar facturas/remisiones del ERP que no han sido asignadas. Permite selección masiva y asignación a un contenedor.
