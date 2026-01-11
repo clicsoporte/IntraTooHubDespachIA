@@ -1,7 +1,7 @@
 /**
  * @fileoverview Hook to manage the logic for the new receiving report page.
- * This hook has been rebuilt to be a simple, read-only reporting tool,
- * ensuring stability and preventing render-cycle errors.
+ * This hook has been rebuilt from scratch to ensure stability and prevent render-cycle errors.
+ * It is now a read-only reporting tool.
  */
 'use client';
 
@@ -41,6 +41,7 @@ const availableColumns = [
 
 interface State {
     isLoading: boolean;
+    isInitialLoading: boolean;
     data: InventoryUnit[];
     allLocations: WarehouseLocation[];
     dateRange: DateRange;
@@ -56,10 +57,9 @@ export function useReceivingReport() {
     const { toast } = useToast();
     const { companyData, user, products } = useAuth();
     
-    const [isInitialLoading, setIsInitialLoading] = useState(true);
-
     const [state, setState] = useState<State>({
         isLoading: false,
+        isInitialLoading: true,
         data: [],
         allLocations: [],
         dateRange: {
@@ -74,12 +74,10 @@ export function useReceivingReport() {
 
     const [debouncedSearchTerm] = useDebounce(state.searchTerm, 500);
 
-    const updateState = useCallback((newState: Partial<State>) => {
+    const updateState = (newState: Partial<State>) => {
         setState(prevState => ({ ...prevState, ...newState }));
-    }, []);
-    
-    // This useEffect runs only ONCE on component mount to set the title and load preferences.
-    // It does not depend on changing props, preventing the render-cycle warning.
+    };
+
     useEffect(() => {
         setTitle("Reporte de Recepciones");
         
@@ -94,16 +92,16 @@ export function useReceivingReport() {
                     logError('Failed to load user preferences for receiving report.', { error });
                 }
             }
-            setIsInitialLoading(false); // Mark initial loading as complete
+            updateState({ isInitialLoading: false });
         };
         
         if (isAuthorized) {
-            loadPrefs();
+           loadPrefs();
         } else {
-            setIsInitialLoading(false);
+            updateState({ isInitialLoading: false });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthorized, user]); // Run only when auth status is confirmed.
+    }, [setTitle, isAuthorized, user]);
 
     const fetchData = async () => {
         if (!isAuthorized) return;
@@ -284,10 +282,13 @@ export function useReceivingReport() {
     };
     
     return {
-        state,
+        state: {
+            ...state,
+            isLoading: state.isLoading || state.isInitialLoading
+        },
         actions,
         selectors,
         isAuthorized,
-        isInitialLoading,
+        isInitialLoading: state.isInitialLoading,
     };
 }
