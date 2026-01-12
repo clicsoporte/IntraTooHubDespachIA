@@ -89,6 +89,9 @@ import {
   Wand2,
   Lock,
   LockKeyhole,
+  Split,
+  FileSearch,
+  RotateCcw,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -608,6 +611,21 @@ export default function HelpPage() {
                         </ul>
                     </li>
                 </ol>
+                 <h4 className="font-semibold text-lg pt-2 border-t">Reporte de Despachos (<Truck className="inline h-5 w-5 text-sky-600"/>)</h4>
+                <ol className="list-decimal space-y-3 pl-6">
+                    <li>
+                        <strong>¿Qué hace?:</strong> Esta herramienta te permite auditar todas las verificaciones de despacho que se han realizado, quién las hizo, cuándo y cuáles fueron las discrepancias.
+                    </li>
+                    <li>
+                        <strong>¿Cómo se usa?:</strong>
+                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
+                            <li>Filtra por un rango de fechas y presiona <strong>&quot;Generar Reporte&quot;</strong>.</li>
+                            <li>La tabla te mostrará un resumen de cada despacho. Haz clic en <strong>&quot;Ver Detalles&quot;</strong> en cualquier fila.</li>
+                            <li>Se abrirá una ventana con el desglose de cada artículo, resaltando en rojo o amarillo cualquier diferencia entre lo requerido y lo verificado.</li>
+                            <li>Desde esta ventana de detalles, puedes usar el botón <strong>&quot;Reimprimir Comprobante&quot;</strong> para generar el PDF de auditoría de esa verificación específica.</li>
+                        </ul>
+                    </li>
+                </ol>
             </div>
         )
     },
@@ -618,56 +636,53 @@ export default function HelpPage() {
             <div className="space-y-4">
                 <p>Este módulo te da control total sobre la localización y conteo de tu inventario. Incluye herramientas para mapear tu bodega, registrar conteos y generar etiquetas QR.</p>
                 
-                <h4 className="font-semibold text-lg pt-4 border-t">Configuraciones Clave (Para Administradores)</h4>
-                <p>Antes de poder usar el módulo de búsqueda eficazmente, un administrador debe realizar una configuración crítica desde <strong>Administración &gt; Config. Almacenes e Inventario</strong>:</p>
+                <h4 className="font-semibold text-lg pt-4 border-t">Nuevo Módulo: Centro de Despacho (<Truck className="inline h-4 w-4 text-blue-500"/>)</h4>
+                 <p>Esta es la funcionalidad más importante añadida en la v2.2.0. Digitaliza el proceso de alistamiento y verificación de mercadería, reemplazando el papel.</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Registrar las Bodegas del ERP:</strong> En la sección &quot;Gestión de Bodegas&quot;, debes registrar cada bodega que existe en tu ERP con su código y un nombre descriptivo (ej: ID `01`, Nombre `Bodega Principal`).
-                       <Alert variant="destructive" className="mt-2">
-                           <AlertTriangle className="h-4 w-4" />
-                           <AlertTitle>¡Paso Crítico!</AlertTitle>
-                           <AlertDescription>
-                                Si no registras las bodegas aquí, el desglose de inventario del ERP en las búsquedas **no aparecerá**, y solo verás un &quot;Total ERP&quot;, lo cual puede ser confuso.
-                           </AlertDescription>
-                       </Alert>
+                        <strong>Paso 1: Configurar Rutas (Admin).</strong> Un administrador debe ir a <strong>Administración &gt; Config. Almacenes</strong> y crear los "Contenedores de Despacho", que son tus rutas (ej: "Ruta San José", "Ruta Heredia").
                     </li>
                     <li>
-                        <strong>Asistente de Creación de Racks (<Wand2 className="inline h-4 w-4 text-purple-600"/>):</strong> En <strong>Administración &gt; Gestión de Ubicaciones</strong>, usa el botón &quot;Crear con Asistente&quot; para generar masivamente la estructura de un rack (niveles, posiciones, fondos) o para clonar un rack ya existente, ahorrando horas de trabajo manual.
+                        <strong>Paso 2: Asignar Facturas (Logística).</strong> En <strong>Almacén &gt; Clasificador de Despachos</strong>, el personal de logística ve las facturas del ERP sin asignar. Pueden seleccionarlas y moverlas al contenedor de ruta correcto. En la pestaña "Ordenar", pueden arrastrar las facturas para definir el orden de entrega.
+                    </li>
+                    <li>
+                        <strong>Paso 3: Verificar (Bodega).</strong> En <strong>Almacén &gt; Centro de Despacho</strong>, el bodeguero hace clic en una ruta. Esto **bloquea la ruta** para él.
+                    </li>
+                    <li>
+                        <strong>Paso 4: Chequeo Inteligente.</strong> Al hacer clic en un documento dentro de la ruta, se abre la pantalla de verificación. El bodeguero escanea los artículos. Cuando termina, el sistema lo pasa automáticamente al siguiente documento de la lista.
+                    </li>
+                    <li>
+                        <strong>Manejo de Errores:</strong>
+                        <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
+                           <li><strong>Facturas Anuladas (<AlertTriangle className="inline h-4 w-4 text-red-600"/>):</strong> Si una factura es anulada en el ERP después de ser asignada, aparecerá con una alerta visual roja y no se podrá verificar.</li>
+                           <li><strong>Mover a Otra Ruta:</strong> Si una factura se asignó mal, el bodeguero puede usar el botón "Mover" para enviarla a otro contenedor.</li>
+                        </ul>
                     </li>
                 </ol>
-                
-                <h4 className="font-semibold text-lg pt-4 border-t">Herramientas Operativas</h4>
+
+                <h4 className="font-semibold text-lg pt-4 border-t">Otras Herramientas de Almacén</h4>
                  <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
                     <HelpCircle className="h-5 w-5"/>
                     <p className="text-sm">Una vez configurado, el personal de almacén puede usar las herramientas desde el sub-panel <strong>Almacén</strong>:</p>
                 </div>
                  <ul className="list-disc space-y-3 pl-6 mt-4">
                     <li>
-                        <strong>Búsqueda Rápida (<QrCode className="inline h-4 w-4"/>):</strong> Una interfaz simple, ideal para celulares, que permite escanear un código QR o buscar rápidamente un artículo para ver su ubicación e inventario. **Mejora:** Ahora el cursor se re-enfoca automáticamente para permitir escaneos continuos.
+                        <strong>Corrección de Ingresos (<RotateCcw className="inline h-4 w-4 text-red-500"/>):</strong> Si se recibió un producto con un código incorrecto, esta herramienta permite buscar esa unidad de inventario y cambiarla por el producto correcto, generando los movimientos de inventario de anulación y nuevo ingreso automáticamente.
                     </li>
-                     <li>
+                    <li>
                         <strong>Asistente de Poblado (<Wand2 className="inline h-4 w-4 text-indigo-500" />):</strong> Permite poblar masivamente las ubicaciones de un rack de forma guiada, ideal para el ingreso de mercadería nueva. Incluye un sistema para retomar sesiones interrumpidas y ahora muestra un indicador de `(Finalizado)` en los niveles que ya se completaron.
                     </li>
                     <li>
-                        <strong>Asignar Ubicación a Producto (<PackagePlus className="inline h-4 w-4" />):</strong> Permite crear un &quot;catálogo&quot; indicando en qué ubicación física se almacena un producto específico de un cliente. Es ideal para productos que siempre van en el mismo lugar.
+                        <strong>Asistente de Recepción (<PackageCheck className="inline h-4 w-4 text-emerald-600"/>):</strong> Registra producto terminado o compras y genera etiquetas QR para las nuevas unidades.
                     </li>
                      <li>
                         <strong>Toma de Inventario Físico (<ClipboardCheck className="inline h-4 w-4"/>):</strong> Permite a los bodegueros registrar conteos físicos de un producto en una ubicación específica. Estos datos se pueden usar luego para generar reportes y ajustar el inventario en el ERP.
                     </li>
                      <li>
-                        <strong>Reporte de Inventario Físico (<ClipboardCheck className="inline h-4 w-4"/>):</strong> (En Analíticas) Es la contraparte de la toma de inventario. Muestra una tabla comparando la `Cantidad Contada` vs. el `Stock del ERP` y resalta las diferencias, lista para exportar y realizar ajustes.
+                        <strong>Reporte de Inventario Físico (<ClipboardList className="inline h-4 w-4"/>):</strong> (En Analíticas) Es la contraparte de la toma de inventario. Muestra una tabla comparando la `Cantidad Contada` vs. el `Stock del ERP` y resalta las diferencias.
                     </li>
                     <li>
-                        <strong>Consulta de Almacén (<Search className="inline h-4 w-4"/>):</strong> Herramienta completa y responsiva para buscar artículos y ver sus ubicaciones y stock del ERP desglosado por bodega.
-                    </li>
-                    <li>
-                        <strong>Gestión de Ubicaciones (<Map className="inline h-4 w-4"/>):</strong> Aquí es donde se construye el &quot;árbol&quot; real de tu almacén, creando las ubicaciones físicas (ej: &quot;Rack 01&quot;) y anidándolas según la jerarquía que un administrador haya definido.
-                    </li>
-                    <li>
-                        <strong>Gestión de Unidades (QR) (<QrCode className="inline h-4 w-4"/>):</strong> Úsalo para crear identificadores únicos para unidades físicas (ej. una tarima, un lote). El sistema genera un código QR que puedes imprimir y pegar en la unidad para rastrearla fácilmente.
-                    </li>
-                     <li>
-                        <strong>Gestión de Bloqueos (<Lock className="inline h-4 w-4"/>):</strong> Una herramienta administrativa para ver qué ubicaciones están siendo pobladas con el asistente y liberar bloqueos si un usuario deja una sesión abandonada.
+                        <strong>Gestión de Bloqueos (<Lock className="inline h-4 w-4"/>):</strong> Una herramienta administrativa para ver qué ubicaciones o contenedores están siendo usados y liberar bloqueos si un usuario deja una sesión abandonada.
                     </li>
                 </ul>
             </div>
@@ -736,6 +751,10 @@ export default function HelpPage() {
                         <div><h4 className="font-semibold">Gestión de Roles</h4><p>Define qué puede hacer cada usuario. Puedes crear roles personalizados (ej: &quot;Supervisor&quot;) y asignar permisos granulares para cada módulo.</p></div>
                     </div>
                      <div className="flex items-start gap-4">
+                        <BellRing className="mt-1 h-6 w-6 text-yellow-500 shrink-0" />
+                        <div><h4 className="font-semibold">Gestor de Automatización</h4><p>Define reglas de notificación automática (ej: enviar un correo cuando un despacho se completa) y tareas programadas (ej: sincronizar el ERP todas las noches).</p></div>
+                    </div>
+                    <div className="flex items-start gap-4">
                         <Mail className="mt-1 h-6 w-6 text-purple-600 shrink-0" />
                         <div><h4 className="font-semibold">Configuración de Correo</h4><p>Configura tu servidor de correo (SMTP) para habilitar el envío de notificaciones y la recuperación de contraseñas. Permite personalizar las plantillas de los correos.</p></div>
                     </div>
@@ -765,7 +784,7 @@ export default function HelpPage() {
                     </div>
                     <div className="flex items-start gap-4">
                         <Map className="mt-1 h-6 w-6 text-teal-700 shrink-0" />
-                        <div><h4 className="font-semibold">Config. Almacenes e Inventario</h4><p>Define la jerarquía de ubicaciones, gestiona las bodegas del ERP y ajusta los prefijos para las etiquetas de unidades de inventario.</p></div>
+                        <div><h4 className="font-semibold">Config. Almacenes e Inventario</h4><p>Define la jerarquía de ubicaciones, gestiona las bodegas del ERP, ajusta los prefijos para las etiquetas de unidades de inventario y configura las notificaciones de despacho.</p></div>
                     </div>
                     <div className="flex items-start gap-4">
                         <FileUp className="mt-1 h-6 w-6 text-cyan-500 shrink-0" />
