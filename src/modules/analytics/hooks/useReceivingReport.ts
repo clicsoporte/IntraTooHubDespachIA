@@ -86,16 +86,15 @@ export function useReceivingReport() {
                 try {
                     const prefs = await getUserPreferences(user.id, 'receivingReportPrefs');
                     if (prefs && prefs.visibleColumns) {
-                        setState(prev => ({ ...prev, visibleColumns: prefs.visibleColumns, isLoading: false }));
-                    } else {
-                        setState(prev => ({ ...prev, isLoading: false }));
+                        setState(prev => ({ ...prev, visibleColumns: prefs.visibleColumns }));
                     }
                 } catch (error) {
                     logError('Failed to load user preferences for receiving report.', { error });
-                    setState(prev => ({ ...prev, isLoading: false }));
+                } finally {
+                    setIsInitialLoading(false);
                 }
             } else {
-                 setState(prev => ({ ...prev, isLoading: false }));
+                 setIsInitialLoading(false);
             }
         };
 
