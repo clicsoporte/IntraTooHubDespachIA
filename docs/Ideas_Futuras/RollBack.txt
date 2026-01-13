@@ -4,10 +4,10 @@ Este documento sirve como guía maestra para re-implementar de forma ordenada y 
 
 ---
 
-## 1. Módulo: Gestor de Notificaciones y Tareas Programadas (Cron)
+## 1. Módulo: Gestor de Automatización (Notificaciones y Cron)
 
 ### 1.1. Objetivo
-La versión antigua ya contaba con el icono de la campana y notificaciones básicas. Lo que se debe reconstruir es el **módulo de administración** que permite una configuración avanzada.
+La versión antigua ya contaba con el icono de la campana y notificaciones básicas. Lo que se debe reconstruir es el **módulo de administración** que permite una configuración avanzada y la programación de tareas.
 
 ### 1.2. Requisitos de UI
 - **Página de Automatización (`/admin/notifications`):**
@@ -89,7 +89,73 @@ Crear una herramienta de "cuchillo suizo" para que un supervisor pueda corregir 
 
 ---
 
-## 4. Consultas SQL de Referencia (Crítico)
+## 4. Funcionalidad: Toma de Inventario Físico (Modo Escáner)
+
+### 4.1. Objetivo
+Optimizar el proceso de toma de inventario para usuarios con escáneres de códigos de barras, permitiendo un flujo de trabajo rápido y sin necesidad de usar el mouse o teclado para buscar.
+
+### 4.2. Requisitos de UI
+- **Página (`/warehouse/inventory-count`):**
+    - Añadir un `Switch` para cambiar entre "Modo Manual" y "Modo Escáner".
+    - **La preferencia del modo debe guardarse por usuario.**
+- **Modo Escáner:**
+    - La interfaz se simplifica a un solo campo de texto grande para escanear.
+    - El flujo es: 1. Escanear etiqueta de rack/producto. 2. Ingresar cantidad.
+    - Un `Alert` muestra qué ubicación y producto se cargaron desde el QR.
+    - El foco (`focus`) debe gestionarse automáticamente: después de escanear el QR, el foco pasa al campo de cantidad; después de ingresar la cantidad y presionar Enter, el foco vuelve al campo de escaneo.
+
+### 4.3. Formato del Código QR y Lógica
+- **Formato del QR:** `[ID_UBICACION]>[ID_PRODUCTO]` (Ej: `123>PS-450-B`). Esto lo genera la nueva herramienta "Centro de Etiquetas".
+- **Lógica de Procesamiento:**
+    1. El `hook` `useInventoryCount` detecta la entrada en el campo de escaneo.
+    2. Al presionar "Enter", divide la cadena por el carácter `>`.
+    3. Busca la ubicación y el producto en la base de datos usando los IDs obtenidos.
+    4. Si ambos se encuentran, puebla los estados internos y la UI con la información.
+    5. Mueve el foco al campo de cantidad.
+    6. Al guardar la cantidad, el ciclo se reinicia, listo para el próximo escaneo.
+
+---
+
+## 5. Módulo: Centro de Etiquetas (Almacén)
+
+### 5.1. Objetivo
+Centralizar la generación de todo tipo de etiquetas del almacén en un único lugar, con capacidades de impresión por lotes y filtros avanzados.
+
+### 5.2. Requisitos de UI
+- **Nueva Página (`/warehouse/labels`):**
+    - Un buscador inicial para seleccionar una "ubicación raíz" (ej: un rack completo).
+    - Una vez seleccionada, aparecen filtros dinámicos para **Nivel**, **Posición** y **Fondo**. Estos filtros se pueblan automáticamente con las opciones disponibles DENTRO del rack seleccionado.
+    - Un **Paso 3** para seleccionar el **Tipo de Etiqueta**:
+        - **"Etiqueta de Ubicación":** Para rotular estanterías. El QR contiene solo el ID de la ubicación.
+        - **"Etiqueta de Producto en Ubicación":** Para identificar qué producto va en esa ubicación. El QR contiene `ID_UBICACION>ID_PRODUCTO`.
+    - Un resumen que muestra cuántas etiquetas se generarán según los filtros.
+    - Un botón "Generar PDF" que crea un único archivo con una etiqueta por página.
+
+### 5.3. Lógica
+- El `hook` `useLabelCenter` maneja el estado de los filtros.
+- Al seleccionar un rack raíz, el `hook` debe recorrer todos sus descendientes para construir las listas de opciones para los filtros (Niveles, Posiciones, etc.).
+- Al generar el PDF de "Producto en Ubicación", el sistema debe consultar la tabla `item_locations` para encontrar qué producto está asignado a cada ubicación filtrada. Si no hay producto, esa etiqueta se omite.
+
+---
+
+## 6. Componente: Calculadora Rápida
+
+### 6.1. Objetivo
+Proveer una calculadora básica y de acceso rápido en toda la aplicación para cálculos sencillos sin salir de la pantalla actual.
+
+### 6.2. Requisitos de UI
+- **Nuevo Componente (`QuickCalculator.tsx`):**
+    - Una calculadora con botones para números (0-9), operaciones básicas (+, -, *, /), punto decimal, igual (=) y borrado (AC).
+- **Integración en `Header.tsx`:**
+    - Añadir un ícono de `Calculator` en la barra de navegación superior, cerca de la campana de notificaciones.
+- **Funcionalidad Popover:**
+    - La calculadora debe estar envuelta en un componente `Popover` de `shadcn/ui`.
+    - Debe aparecer al hacer clic en el ícono y desaparecer al hacer clic fuera de ella.
+    - Debe funcionar correctamente en vistas móviles y de escritorio.
+
+---
+
+## 7. Consultas SQL de Referencia (Crítico)
 
 Estas son las consultas SQL predeterminadas que la aplicación utiliza para sincronizarse con el ERP. Son esenciales para el funcionamiento de los nuevos módulos y reportes. Deben ser copiadas en **Administración > Importar Datos > Gestor de Consultas SQL**.
 
@@ -143,7 +209,7 @@ SELECT [NUMERO_PLACA], [ENTIDAD_EMISORA] FROM [SOFTLAND].[GAREND].[VEHICULO]
 
 ---
 
-## 5. Documentación de Ayuda (Copia de `help/page.tsx`)
+## 8. Documentación de Ayuda (Copia de `help/page.tsx`)
 
 <!-- Contenido del archivo de ayuda actualizado -->
 "use client";
@@ -412,7 +478,7 @@ export default function HelpPage() {
         content: (
             <div className="space-y-4">
                 <p>
-                Esta es una de las funcionalidades más importantes. Permite que la aplicación se mantenga al día con los datos maestros de tu sistema ERP (clientes, productos, inventario, etc.). Se gestiona desde <strong>Administración &gt; Importar Datos</strong> y tiene dos modos de funcionamiento.
+                Esta es una de las funcionalidades más importantes. Permite que la aplicación se mantenga al día con los datos maestros de tu sistema ERP (clientes, productos, inventario, etc.). Se gestiona desde <strong>Administración > Importar Datos</strong> y tiene dos modos de funcionamiento.
                 </p>
 
                 <h4 className="font-semibold text-lg pt-2 border-t">Modo 1: Importación desde Archivos</h4>
@@ -431,7 +497,7 @@ export default function HelpPage() {
                         <strong>¿Cómo funciona?:</strong> En lugar de archivos, la aplicación se conecta directamente a la base de datos de tu ERP (usando un usuario de **solo lectura**) y ejecuta consultas `SELECT` para traer los datos.
                     </li>
                      <li>
-                        <strong>¿Cómo se configura?:</strong> Un administrador debe ir a <strong>Administración &gt; Importar Datos</strong> y:
+                        <strong>¿Cómo se configura?:</strong> Un administrador debe ir a <strong>Administración > Importar Datos</strong> y:
                         <ol className="list-decimal space-y-2 pl-5 mt-2">
                             <li>Activar el interruptor a &quot;Importar desde SQL Server&quot;.</li>
                             <li>Ingresar las credenciales de la base de datos (servidor, usuario, contraseña, etc.).</li>
@@ -447,7 +513,7 @@ export default function HelpPage() {
                  <ul className="list-disc space-y-3 pl-6">
                     <li>Este botón, visible en el encabezado para usuarios con permisos, ejecuta el proceso de importación completo (ya sea desde archivos o SQL) en segundo plano.</li>
                     <li>
-                        <strong>Alerta de Sincronización Antigua (<AlertTriangle className="inline h-4 w-4 text-red-600"/>):</strong> Si ha pasado mucho tiempo desde la última sincronización (el tiempo es configurable en Administración &gt; General), el indicador &quot;Última Sinc&quot; y el botón de sincronización se pondrán en **rojo y parpadearán**. Esto es una alerta visual crítica que te indica que los datos de la aplicación (como precios o inventario) pueden estar desactualizados.
+                        <strong>Alerta de Sincronización Antigua (<AlertTriangle className="inline h-4 w-4 text-red-600"/>):</strong> Si ha pasado mucho tiempo desde la última sincronización (el tiempo es configurable en Administración > General), el indicador &quot;Última Sinc&quot; y el botón de sincronización se pondrán en **rojo y parpadearán**. Esto es una alerta visual crítica que te indica que los datos de la aplicación (como precios o inventario) pueden estar desactualizados.
                     </li>
                 </ul>
             </div>
@@ -472,7 +538,7 @@ export default function HelpPage() {
                 <h4 className="font-semibold text-lg pt-2 border-t">Configuración para Administradores</h4>
                 <ul className="list-disc space-y-3 pl-6">
                     <li>
-                        <strong>Paso 1: Configurar el SMTP.</strong> Para que el sistema pueda enviar correos, un administrador debe ir a <strong>Administración &gt; Configuración de Correo</strong>.
+                        <strong>Paso 1: Configurar el SMTP.</strong> Para que el sistema pueda enviar correos, un administrador debe ir a <strong>Administración > Configuración de Correo</strong>.
                     </li>
                     <li>
                         <strong>Campos Requeridos:</strong> Se deben ingresar los datos del servidor de correo de la empresa (Host, Puerto, Usuario, Contraseña y Seguridad). Estos datos se guardan de forma segura.
@@ -522,7 +588,7 @@ export default function HelpPage() {
                         <strong>Gestión para Administradores:</strong>
                         <ul className="list-[circle] space-y-2 pl-5 mt-2 text-sm">
                             <li>Los usuarios con permiso `admin:suggestions:read` verán un contador de sugerencias no leídas en el botón de &quot;Configuración&quot; del menú lateral.</li>
-                            <li>Dentro de <strong>Administración &gt; Buzón de Sugerencias</strong>, podrán ver todas las sugerencias enviadas, quién las envió y cuándo.</li>
+                            <li>Dentro de <strong>Administración > Buzón de Sugerencias</strong>, podrán ver todas las sugerencias enviadas, quién las envió y cuándo.</li>
                             <li>Las sugerencias nuevas aparecen resaltadas. Pueden marcarlas como leídas (<CheckCircle className="inline h-4 w-4 text-green-600"/>) o eliminarlas (<Trash2 className="inline h-4 w-4 text-red-600"/>).</li>
                         </ul>
                     </li>
@@ -661,7 +727,7 @@ export default function HelpPage() {
                     <strong>Tooltips Informativos:</strong> Si un botón de acción (como &quot;Aprobar&quot; o &quot;Reabrir&quot;) está desactivado, ahora puedes pasar el cursor sobre él para ver un mensaje que explica por qué no está disponible (ej: &quot;Solo para solicitudes aprobadas&quot;).
                 </li>
                 <li>
-                    <strong>Pasos Opcionales:</strong> En <strong>Administración &gt; Config. Compras</strong>, puedes activar el paso de &quot;Recibido en Bodega&quot; y el paso final &quot;Ingresado en ERP&quot; para un control más detallado del proceso logístico.
+                    <strong>Pasos Opcionales:</strong> En <strong>Administración > Config. Compras</strong>, puedes activar el paso de &quot;Recibido en Bodega&quot; y el paso final &quot;Ingresado en ERP&quot; para un control más detallado del proceso logístico.
                 </li>
                 <li>
                     <strong>Exportación:</strong> Puedes generar un archivo **PDF** o **Excel (.xlsx)** del reporte actual, incluyendo los filtros que hayas aplicado.
@@ -788,13 +854,13 @@ export default function HelpPage() {
                  <p>Esta es la funcionalidad más importante añadida en la v2.2.0. Digitaliza el proceso de alistamiento y verificación de mercadería, reemplazando el papel.</p>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Paso 1: Configurar Rutas (Admin).</strong> Un administrador debe ir a <strong>Administración &gt; Config. Almacenes</strong> y crear los "Contenedores de Despacho", que son tus rutas (ej: "Ruta San José", "Ruta Heredia").
+                        <strong>Paso 1: Configurar Rutas (Admin).</strong> Un administrador debe ir a <strong>Administración > Config. Almacenes</strong> y crear los "Contenedores de Despacho", que son tus rutas (ej: "Ruta San José", "Ruta Heredia").
                     </li>
                     <li>
-                        <strong>Paso 2: Asignar Facturas (Logística).</strong> En <strong>Almacén &gt; Clasificador de Despachos</strong>, el personal de logística ve las facturas del ERP sin asignar. Pueden seleccionarlas y moverlas al contenedor de ruta correcto. En la pestaña "Ordenar", pueden arrastrar las facturas para definir el orden de entrega.
+                        <strong>Paso 2: Asignar Facturas (Logística).</strong> En <strong>Almacén > Clasificador de Despachos</strong>, el personal de logística ve las facturas del ERP sin asignar. Pueden seleccionarlas y moverlas al contenedor de ruta correcto. En la pestaña "Ordenar", pueden arrastrar las facturas para definir el orden de entrega.
                     </li>
                     <li>
-                        <strong>Paso 3: Verificar (Bodega).</strong> En <strong>Almacén &gt; Centro de Despacho</strong>, el bodeguero hace clic en una ruta. Esto **bloquea la ruta** para él.
+                        <strong>Paso 3: Verificar (Bodega).</strong> En <strong>Almacén > Centro de Despacho</strong>, el bodeguero hace clic en una ruta. Esto **bloquea la ruta** para él.
                     </li>
                     <li>
                         <strong>Paso 4: Chequeo Inteligente.</strong> Al hacer clic en un documento dentro de la ruta, se abre la pantalla de verificación. El bodeguero escanea los artículos. Cuando termina, el sistema lo pasa automáticamente al siguiente documento de la lista.
@@ -974,7 +1040,7 @@ export default function HelpPage() {
                  <h4 className="font-semibold text-lg">Proceso de Actualización Seguro</h4>
                 <ol className="list-decimal space-y-3 pl-6">
                     <li>
-                        <strong>Paso 1: Realizar una Copia de Seguridad (<Copy className="inline h-4 w-4"/>).</strong> Este es el paso más importante. Antes de tocar nada, ve a <strong>Administración &gt; Mantenimiento</strong> y haz clic en <strong>&quot;Crear Punto de Restauración&quot;</strong>. Esto generará una copia segura de todas las bases de datos del sistema.
+                        <strong>Paso 1: Realizar una Copia de Seguridad (<Copy className="inline h-4 w-4"/>).</strong> Este es el paso más importante. Antes de tocar nada, ve a <strong>Administración > Mantenimiento</strong> y haz clic en <strong>&quot;Crear Punto de Restauración&quot;</strong>. Esto generará una copia segura de todas las bases de datos del sistema.
                     </li>
                     <li>
                         <strong>Paso 2: Reemplazar Archivos.</strong> Detén la aplicación (por ejemplo, usando `pm2 stop clic-tools` en Linux o deteniendo el sitio en IIS). Luego, borra todos los archivos y carpetas de la versión anterior **excepto** la carpeta `dbs/` y, si existe, el archivo `.env.local`. Después, copia todos los archivos de la nueva versión en su lugar.
@@ -983,7 +1049,7 @@ export default function HelpPage() {
                         <strong>Paso 3: Actualizar y Reconstruir.</strong> Abre una terminal en la carpeta del proyecto, ejecuta `npm install --omit=dev` para instalar cualquier nueva dependencia y luego `npm run build` para compilar la nueva versión.
                     </li>
                     <li>
-                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a <strong>Administración &gt; Mantenimiento &gt; Centro de Verificación</strong> y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
+                        <strong>Paso 4: Reiniciar y Verificar.</strong> Vuelve a iniciar la aplicación (ej: `pm2 start clic-tools`). Al arrancar, el sistema detectará las diferencias y añadirá las nuevas tablas o columnas automáticamente. Luego, ve a <strong>Administración > Mantenimiento > Centro de Verificación</strong> y ejecuta la auditoría para confirmar que todas las bases de datos tienen la estructura correcta.
                     </li>
                 </ol>
                 <Alert variant="destructive">
@@ -1064,118 +1130,3 @@ export default function HelpPage() {
     </main>
   );
 }
-
----
-
-## 6. Historial de Cambios (Copia de `CHANGELOG.md`)
-
-# Historial de Cambios (Changelog) - Clic-Tools
-
-Este documento registra todas las mejoras, correcciones y cambios significativos en cada versión de la aplicación.
-
----
-
-## Proceso de Actualización y Rollback
-
-**Para actualizar a una nueva versión, siga estos pasos:**
-
-1.  **¡Crítico! Crear Punto de Restauración:** Antes de cualquier cambio, vaya a **Administración > Mantenimiento** y haga clic en **"Crear Punto de Restauración"**. Esto crea una copia de seguridad completa de todas las bases de datos (`.db`).
-2.  **Reemplazar Archivos:** Reemplace todos los archivos y carpetas de la aplicación en el servidor con los de la nueva versión, **excepto** la carpeta `dbs/` y el archivo `.env.local`.
-3.  **Actualizar Dependencias:** Ejecute `npm install --omit=dev` en el servidor.
-4.  **Reconstruir y Reiniciar:** Ejecute `npm run build` y reinicie la aplicación (ej: `pm2 restart clic-tools`).
-5.  **Verificar:** Ejecute la auditoría desde **Administración > Mantenimiento** para confirmar que la estructura de la base de datos es correcta. Este paso es especialmente importante en la v2.2.0 para asegurar la creación de las nuevas tablas de despacho.
-
-**Para realizar un rollback (regresar a la versión anterior):**
-
-1.  **Restaurar Punto de Restauración:** Vaya a **Administración > Mantenimiento**, seleccione el punto de restauración que creó antes de la actualización y haga clic en "Restaurar". **Esto requiere un reinicio manual del servidor de la aplicación después de la restauración.**
-2.  **Revertir Archivos:** Reemplace los archivos del servidor con los de la versión anterior.
-3.  **Reinstalar y Reconstruir:** Ejecute `npm install --omit=dev` y `npm run build`.
-4.  **Reiniciar:** Inicie la aplicación nuevamente.
-
----
-
-## [2.2.0] - Publicado
-
-### Nueva Funcionalidad Mayor: Centro de Despacho
-
-Se ha implementado un nuevo módulo completo para digitalizar y optimizar el proceso de alistamiento y verificación de despachos, reemplazando el flujo de trabajo manual basado en papel.
-
--   **[Nuevo] Contenedores de Ruta:**
-    -   Desde **Almacén > Configuración**, los administradores de logística ahora pueden crear "contenedores" que representan las rutas de entrega (ej: "Ruta San José", "Ruta Alajuela").
-
--   **[Nuevo] Clasificador de Despachos:**
-    -   Una nueva herramienta en **Almacén > Clasificador de Despachos** permite al personal de logística ver todas las facturas y pedidos del ERP que no han sido asignados.
-    -   Los usuarios pueden seleccionar múltiples documentos y asignarlos de forma masiva a un contenedor de ruta específico.
-    -   Dentro de cada contenedor, es posible reordenar las facturas (arrastrando y soltando) para definir el orden de carga y entrega del camión.
-
--   **[Nuevo] Flujo de Chequeo para Bodegueros:**
-    -   En la nueva herramienta **Almacén > Centro de Despacho**, el personal de bodega ve los contenedores de ruta.
-    -   Al seleccionar un contenedor, este se **bloquea** para ese usuario, evitando que dos personas trabajen en la misma ruta simultáneamente (similar al bloqueo del Asistente de Poblado).
-    -   Dentro del contenedor, se muestra la lista de facturas en el orden de entrega. Al seleccionar una, se abre la interfaz de verificación de artículos.
-
--   **[Mejora] Verificación de Artículos Inteligente:**
-    -   La herramienta de chequeo ahora es consciente del contexto de la ruta y avanza automáticamente a la siguiente factura de la lista una vez que se completa la actual.
-    -   **Manejo de Múltiples Bodegas:** Si una factura contiene artículos de diferentes bodegas, el sistema permitirá verificar solo los artículos de una bodega a la vez (próximamente se implementará la selección de bodega).
-    -   El bodeguero ahora tiene un botón para **"Enviar a otra ruta"**, permitiendo mover una factura a un contenedor diferente si fue asignada por error.
-
--   **[Seguridad y Auditoría] Detección de Facturas Anuladas:**
-    -   El sistema ahora compara continuamente los datos del ERP. Si una factura que ya fue asignada a una ruta es posteriormente **anulada en el ERP**, aparecerá con una alerta visual de "ANULADA" en la lista de chequeo, impidiendo su despacho por error.
-
--   **[Nuevo] Reporte de Despachos:**
-    -   Ubicado en **Analíticas**, este reporte permite auditar todas las verificaciones realizadas, ver quién verificó qué documento, cuándo, y si hubo discrepancias.
-
-### Mejoras y Correcciones Generales
-
--   **[Estabilidad] Notificaciones Automáticas:** Se corrigió un error crítico que impedía que el motor de notificaciones configurables enviara correos correctamente, asegurando que las alertas de eventos (como despachos finalizados, órdenes aprobadas, etc.) funcionen como se espera.
--   **[Calidad de Código] Mantenimiento de Dependencias:** Se actualizaron varias dependencias internas para mejorar la estabilidad y el rendimiento general de la aplicación.
--   **[UI] Mejoras de Accesibilidad:** Se añadieron descripciones a varios diálogos modales en toda la aplicación para mejorar la compatibilidad con lectores de pantalla y eliminar advertencias en la consola de desarrollo.
--   **[Estabilidad] Filtros de Fecha:** Se solucionó un bug persistente en los reportes donde el filtro de fecha no se aplicaba correctamente al seleccionar un solo día. Ahora los rangos de fechas funcionan de manera precisa e intuitiva.
-
----
-
-## [2.1.0] - Publicado
-
-### Mejoras de Calidad y Estabilidad
-
--   **[Estabilidad] Corrección de Errores de Compilación:** Se solucionaron múltiples errores de `Cannot find module` que impedían que la aplicación se compilara correctamente. La causa raíz, relacionada con la carga inicial de la página y la detección de usuarios, ha sido resuelta para garantizar builds estables.
--   **[Calidad de Código] Centralización de Lógica Duplicada:**
-    -   Se unificó la lógica para determinar si un usuario es "Administrador", utilizando el sistema de permisos (`hasPermission('admin:access')`) en lugar de comprobaciones directas, lo que hace el código más mantenible.
-    -   Se eliminaron funciones duplicadas para obtener las iniciales de los usuarios, centralizando la lógica en un solo lugar.
--   **[UX] Optimización del Flujo de Escáner:** En la pantalla de **Búsqueda Rápida de Almacén**, después de que un escáner introduce un código y presiona "Enter", el campo de búsqueda ahora se limpia y se re-enfoca automáticamente, permitiendo un flujo de escaneo continuo y sin interrupciones.
--   **[UI] Corrección de Etiquetas de Almacén:** Se solucionó un problema en la generación de etiquetas PDF donde las rutas de ubicación largas se cortaban. Ahora, el texto se ajusta automáticamente en varias líneas para asegurar que la información siempre sea legible.
-
-### Mejoras de Seguridad Críticas
-
--   **[Seguridad] Fortalecimiento del Sistema de Autenticación:**
-    -   Se reemplazará el almacenamiento del ID de usuario en `sessionStorage` (inseguro y manipulable desde el navegador) por un sistema de **cookies seguras `httpOnly`**.
-    -   Esto previene que un usuario pueda suplantar la identidad de otro (ej. un administrador) modificando variables en el navegador. La sesión ahora será gestionada de forma segura por el servidor.
--   **[Seguridad] Protección de Rutas de Descarga:**
-    -   Se añadió una capa de autenticación y autorización a las rutas de descarga de archivos (`/api/temp-backups` y `/api/temp-exports`).
-    -   A partir de ahora, solo los usuarios autenticados con los permisos adecuados (ej. `admin:maintenance:backup`) podrán descargar respaldos de bases de datos o reportes de Excel, previniendo fugas de información.
-
-### Mejoras y Correcciones en Módulo de Almacén
-
--   **Asistente de Poblado de Racks (Funcionalidad Clave):**
-    -   **[Nuevo] Capacidad de Retomar Sesiones:** Se ha implementado un sistema de "sesiones" robusto. Si un usuario inicia el asistente de poblado y luego navega a otro módulo, cierra la pestaña o su sesión expira, al volver a la herramienta podrá **continuar exactamente donde se quedó**.
-    -   **[Solucionado] Error de Bloqueo por Sí Mismo:** Se solucionó el bug crítico que impedía a un usuario volver a usar el asistente si lo había abandonado sin finalizar, mostrándole que él mismo tenía el tramo bloqueado.
-    -   **[Mejora] Detección Visual de Bloqueos:** La interfaz ahora detecta y deshabilita visualmente los niveles de un rack que ya están siendo poblados por otro usuario, previniendo errores y mejorando la claridad.
-    -   **[Mejora] Indicador de Nivel Finalizado:** En el asistente, los niveles que ya han sido completamente poblados ahora muestran una etiqueta `(Finalizado)` para dar una retroalimentación visual clara al operario.
-    -   **[Solucionado] Corrección del "Unknown" en Gestión de Bloqueos:** Se solucionó el error que causaba que el nombre del tramo bloqueado apareciera como "unknown".
-    -   **[Estabilidad]** Se corrigieron múltiples errores de `NOT NULL constraint failed` y `Cannot read properties of undefined` que ocurrían debido a inconsistencias en la gestión del estado de la sesión, haciendo el asistente mucho más estable.
-
--   **Optimización para Dispositivos Móviles (Responsivo):**
-    -   **[Mejora] Consulta de Almacén:** La página principal de búsqueda (`/warehouse/search`) fue rediseñada para una mejor experiencia en celulares y tablets. La barra de búsqueda ahora es fija en la parte superior, y los filtros adicionales se han movido a un panel lateral desplegable para una interfaz más limpia.
-    -   **[Mejora] Gestión de Ubicaciones:** Se ajustó la disposición de los botones en pantallas pequeñas para un acceso más fácil y rápido.
-    -   **[Mejora] Consistencia General:** Se aplicaron ajustes menores de diseño en todas las herramientas del módulo de Almacén para una experiencia más unificada.
-
-### Correcciones Generales del Sistema
-
--   **[Estabilidad] Corrección de Errores de Renderizado en Servidor:** Se solucionó un error general (`Cannot read properties of undefined (reading 'call')`) que ocurría en varios módulos al no especificar correctamente que eran "componentes de cliente". Se añadió la directiva `"use client";` en todas las páginas afectadas, estabilizando la aplicación.
-
----
-
-## [2.0.0] - Lanzamiento Inicial
-
--   Lanzamiento de la versión 2.0.0 de Clic-Tools.
--   Incluye los módulos de Cotizador, Planificador OP, Solicitudes de Compra, Asistente de Costos, Almacenes, Consultas Hacienda y el panel de Administración completo.
--   Arquitectura basada en Next.js App Router, componentes de servidor y bases de datos modulares SQLite.
