@@ -44,6 +44,7 @@ import {
   Split,
   FileSearch,
   RotateCcw,
+  Printer,
 } from "lucide-react";
 import { allAdminPermissions } from "./permissions";
 
@@ -214,6 +215,14 @@ export const warehouseTools: Tool[] = [
         bgColor: 'bg-lime-600',
     },
     {
+        id: "warehouse-labels",
+        name: "Centro de Etiquetas",
+        description: "Imprimir etiquetas para ubicaciones, productos o lotes.",
+        href: "/dashboard/warehouse/labels",
+        icon: Printer,
+        bgColor: 'bg-gray-500',
+    },
+    {
         id: "warehouse-units",
         name: "Gestión de Lotes/Tarimas",
         description: "Crear y etiquetar unidades de inventario (lotes/tarimas).",
@@ -235,7 +244,7 @@ export const warehouseTools: Tool[] = [
         description: 'Ver y liberar racks o niveles que están siendo editados.',
         href: '/dashboard/warehouse/locks',
         icon: Lock,
-        bgColor: 'bg-gray-500',
+        bgColor: 'bg-slate-500',
     }
 ];
 

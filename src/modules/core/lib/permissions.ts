@@ -24,6 +24,7 @@ export const allAdminPermissions = [
     "warehouse:dispatch:reset",
     "warehouse:dispatch-classifier:use",
     "warehouse:dispatch-containers:manage",
+    "warehouse:labels:print", // New permission for the label center
     "hacienda:query",
     "analytics:read", "analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read", "analytics:dispatch-report:read",
     "users:create", "users:read", "users:update", "users:delete",
@@ -55,6 +56,7 @@ export const permissionGroups = {
         "warehouse:dispatch:reset",
         "warehouse:dispatch-classifier:use",
         "warehouse:dispatch-containers:manage",
+        "warehouse:labels:print",
     ],
     "Consultas Hacienda": ["hacienda:query"],
     "Analíticas y Reportes": ["analytics:read", "analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read", "analytics:dispatch-report:read"],
@@ -90,6 +92,7 @@ export const permissionTranslations: { [key: string]: string } = {
     "warehouse:dispatch:reset": "Despacho: Reiniciar Ruta",
     "warehouse:dispatch-classifier:use": "Despacho: Usar Clasificador",
     "warehouse:dispatch-containers:manage": "Despacho: Config. Contenedores",
+    "warehouse:labels:print": "Almacén: Imprimir Etiquetas",
     "hacienda:query": "Hacienda: Realizar Consultas",
     "analytics:read": "Analíticas: Acceso", "analytics:purchase-suggestions:read": "Analíticas: Sugerencias Compra", "analytics:purchase-report:read": "Analíticas: Reporte Compras", "analytics:production-report:read": "Analíticas: Reporte Producción", "analytics:transits-report:read": "Analíticas: Reporte Tránsitos", "analytics:user-permissions:read": "Analíticas: Reporte Permisos", "analytics:physical-inventory-report:read": "Analíticas: Reporte Inv. Físico", "analytics:receiving-report:read": "Analíticas: Reporte Recepciones", "analytics:dispatch-report:read": "Analíticas: Reporte Despachos",
     "users:create": "Usuarios: Crear", "users:read": "Usuarios: Leer", "users:update": "Usuarios: Actualizar", "users:delete": "Usuarios: Eliminar",
@@ -134,7 +137,7 @@ export const permissionTree: Record<string, string[]> = {
     // Top-level Access
     "admin:access": ["users:read", "roles:read", "admin:settings:general", "admin:settings:api", "admin:settings:email", "admin:settings:planner", "admin:settings:requests", "admin:settings:warehouse", "admin:settings:stock", "admin:settings:cost-assistant", "admin:suggestions:read", "admin:notifications:read", "admin:import:run", "admin:logs:read", "admin:maintenance:backup"],
     "analytics:read": ["analytics:purchase-suggestions:read", "analytics:purchase-report:read", "analytics:production-report:read", "analytics:transits-report:read", "analytics:user-permissions:read", "analytics:physical-inventory-report:read", "analytics:receiving-report:read", "analytics:dispatch-report:read"],
-    "warehouse:access": ["warehouse:search:full", "warehouse:search:simple", "warehouse:receiving-wizard:use", "warehouse:population-wizard:use", "warehouse:inventory-count:create", "warehouse:correction:use", "warehouse:item-assignment:create", "warehouse:locations:create", "warehouse:units:create", "warehouse:locks:manage", "warehouse:dispatch-check:use", "warehouse:dispatch-classifier:use", "warehouse:dispatch-containers:manage"],
+    "warehouse:access": ["warehouse:search:full", "warehouse:search:simple", "warehouse:receiving-wizard:use", "warehouse:population-wizard:use", "warehouse:inventory-count:create", "warehouse:correction:use", "warehouse:item-assignment:create", "warehouse:locations:create", "warehouse:units:create", "warehouse:locks:manage", "warehouse:dispatch-check:use", "warehouse:dispatch-classifier:use", "warehouse:dispatch-containers:manage", "warehouse:labels:print"],
     "requests:access": ["requests:read"],
     "planner:access": ["planner:read"],
     "requests:read": ["requests:read:all", "requests:create"],
@@ -179,3 +182,4 @@ export const permissionTree: Record<string, string[]> = {
 };
 
     
+

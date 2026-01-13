@@ -53,6 +53,8 @@ export default function WarehouseDashboardPage() {
                     return hasPermission('warehouse:dispatch-classifier:use');
                 case 'warehouse-dispatch-check':
                     return hasPermission('warehouse:dispatch-check:use');
+                case 'warehouse-labels':
+                    return hasPermission('warehouse:labels:print');
                 default:
                     // Fallback for general access if specific permission is not defined for a new tool
                     return hasPermission('warehouse:access');
