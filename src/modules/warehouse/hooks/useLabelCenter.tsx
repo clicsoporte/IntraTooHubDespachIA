@@ -8,8 +8,8 @@ import { useToast } from '@/modules/core/hooks/use-toast';
 import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
 import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
 import { logError, logInfo } from '@/modules/core/lib/logger';
-import { getLocations } from '@/modules/warehouse/lib/actions';
-import type { WarehouseLocation } from '@/modules/core/types';
+import { getLocations, getAllItemLocations } from '@/modules/warehouse/lib/actions';
+import type { WarehouseLocation, Product, ItemLocation } from '@/modules/core/types';
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import jsPDF from "jspdf";
@@ -28,22 +28,100 @@ const renderLocationPathAsString = (locationId: number, locations: WarehouseLoca
     return path.map(l => l.name).join(' > ');
 };
 
+const generateLocationLabelPage = (doc: jsPDF, location: WarehouseLocation, locations: WarehouseLocation[]) => {
+    const qrContent = String(location.id);
+    const pathString = renderLocationPathAsString(location.id, locations);
+    
+    doc.addPage();
+    
+    QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'H', width: 200 }, (err, url) => {
+        if (err) {
+            console.error("QR Code generation failed for location:", location.id);
+            return;
+        }
+        doc.addImage(url, 'PNG', 40, 40, 100, 100);
+    });
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Generado: ${new Date().toLocaleDateString()}`, doc.internal.pageSize.getWidth() - 40, 40, { align: 'right' });
+    
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(150);
+    const codeLines = doc.splitTextToSize(location.code, doc.internal.pageSize.getWidth() - 80);
+    let currentY = doc.internal.pageSize.getHeight() / 2 - 80;
+    doc.text(codeLines, doc.internal.pageSize.getWidth() / 2, currentY, { align: "center" });
+
+    currentY += (codeLines.length * 100);
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(36);
+    const pathLines = doc.splitTextToSize(pathString, doc.internal.pageSize.getWidth() - 80);
+    doc.text(pathLines, doc.internal.pageSize.getWidth() / 2, currentY + 40, { align: "center" });
+};
+
+const generateProductLocationLabelPage = (doc: jsPDF, location: WarehouseLocation, product: Product, locations: WarehouseLocation[]) => {
+    const qrContent = `${location.id}>${product.id}`;
+    const pathString = renderLocationPathAsString(location.id, locations);
+
+    doc.addPage();
+
+    QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'H', width: 200 }, (err, url) => {
+        if (err) {
+            console.error("QR Code generation failed for location:", location.id);
+            return;
+        }
+        doc.addImage(url, 'PNG', 40, 40, 100, 100);
+    });
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-CR')} ${new Date().toLocaleTimeString('es-CR')}`, doc.internal.pageSize.getWidth() - 40, 40, { align: 'right' });
+    
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(150);
+    const productCodeLines = doc.splitTextToSize(product.id, doc.internal.pageSize.getWidth() - 80);
+    let currentY = doc.internal.pageSize.getHeight() / 2 - 80;
+    doc.text(productCodeLines, doc.internal.pageSize.getWidth() / 2, currentY, { align: "center" });
+    
+    currentY += (productCodeLines.length * 100);
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(52);
+    const descriptionLines = doc.splitTextToSize(product.description, doc.internal.pageSize.getWidth() - 80);
+    doc.text(descriptionLines, doc.internal.pageSize.getWidth() / 2, currentY + 40, { align: "center" });
+    
+    const bottomY = doc.internal.pageSize.getHeight() - 40 - 55;
+    
+    doc.setFontSize(28);
+    doc.setFont("Helvetica", "bold");
+    doc.text("Ubicación:", 40, bottomY);
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(36);
+    
+    const locationLines = doc.splitTextToSize(pathString, doc.internal.pageSize.getWidth() - 80);
+    doc.text(locationLines, 40, bottomY + 30);
+};
+
+
 export function useLabelCenter() {
     const { isAuthorized } = useAuthorization(['warehouse:labels:print']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
-    const { user, companyData } = useAuth();
+    const { user, products } = useAuth();
 
     const [state, setState] = useState({
         isLoading: true,
         isSubmitting: false,
         allLocations: [] as WarehouseLocation[],
+        allItemAssignments: [] as ItemLocation[],
         rootLocationSearch: '',
         isRootLocationSearchOpen: false,
         selectedRootLocationId: null as number | null,
         levelFilter: [] as string[],
         positionFilter: [] as string[],
         depthFilter: [] as string[],
+        labelType: 'location' as 'location' | 'product_location',
     });
 
     const [debouncedSearch] = useDebounce(state.rootLocationSearch, 300);
@@ -60,8 +138,8 @@ export function useLabelCenter() {
                 return;
             };
             try {
-                const locs = await getLocations();
-                updateState({ allLocations: locs, isLoading: false });
+                const [locs, itemAssigns] = await Promise.all([getLocations(), getAllItemLocations()]);
+                updateState({ allLocations: locs, allItemAssignments: itemAssigns, isLoading: false });
             } catch (err: any) {
                 logError('Failed to load locations for label center', { error: err.message });
                 toast({ title: 'Error', description: 'No se pudieron cargar las ubicaciones.', variant: 'destructive' });
@@ -93,39 +171,7 @@ export function useLabelCenter() {
             depthFilter: [],
         });
     };
-
-    const generateLabelPage = (doc: jsPDF, location: WarehouseLocation) => {
-        const qrContent = String(location.id);
-        const pathString = renderLocationPathAsString(location.id, state.allLocations);
-        
-        doc.addPage();
-        
-        QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'H', width: 200 }, (err, url) => {
-            if (err) {
-                console.error("QR Code generation failed for location:", location.id);
-                return;
-            }
-            doc.addImage(url, 'PNG', 40, 40, 100, 100);
-        });
-
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(9);
-        doc.text(`Generado: ${new Date().toLocaleDateString()}`, doc.internal.pageSize.getWidth() - 40, 40, { align: 'right' });
-        
-        doc.setFont("Helvetica", "bold");
-        doc.setFontSize(150);
-        const codeLines = doc.splitTextToSize(location.code, doc.internal.pageSize.getWidth() - 80);
-        let currentY = doc.internal.pageSize.getHeight() / 2 - 80;
-        doc.text(codeLines, doc.internal.pageSize.getWidth() / 2, currentY, { align: "center" });
-
-        currentY += (codeLines.length * 100);
-
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(36);
-        const pathLines = doc.splitTextToSize(pathString, doc.internal.pageSize.getWidth() - 80);
-        doc.text(pathLines, doc.internal.pageSize.getWidth() / 2, currentY + 40, { align: "center" });
-    };
-
+    
     const handleGenerateLabels = async () => {
         if (selectors.filteredLocations.length === 0) {
             toast({ title: 'Sin selección', description: 'No hay etiquetas para generar con los filtros actuales.', variant: 'destructive' });
@@ -134,18 +180,39 @@ export function useLabelCenter() {
         updateState({ isSubmitting: true });
         try {
             const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter' });
-            // Remove the default first page
-            doc.deletePage(1);
+            doc.deletePage(1); // Remove the default first page
 
-            for (const location of selectors.filteredLocations) {
-                generateLabelPage(doc, location);
+            let generatedCount = 0;
+
+            if(state.labelType === 'location') {
+                 for (const location of selectors.filteredLocations) {
+                    generateLocationLabelPage(doc, location, state.allLocations);
+                    generatedCount++;
+                }
+            } else { // product_location
+                for (const location of selectors.filteredLocations) {
+                    const assignment = state.allItemAssignments.find(a => a.locationId === location.id);
+                    if(assignment) {
+                        const product = products.find(p => p.id === assignment.itemId);
+                        if (product) {
+                            generateProductLocationLabelPage(doc, location, product, state.allLocations);
+                            generatedCount++;
+                        }
+                    }
+                }
             }
             
+            if (generatedCount === 0) {
+                 toast({ title: 'Sin Datos', description: 'No se encontraron productos asignados a las ubicaciones filtradas para generar etiquetas.', variant: 'destructive' });
+                 updateState({ isSubmitting: false });
+                 return;
+            }
+
             const rootLocation = state.allLocations.find(l => l.id === state.selectedRootLocationId);
             doc.save(`etiquetas_${rootLocation?.code || 'rack'}.pdf`);
 
-            logInfo(`Generated ${selectors.filteredLocations.length} labels`, { root: rootLocation?.code });
-            toast({ title: 'PDF Generado', description: `Se creó un archivo con ${selectors.filteredLocations.length} etiquetas.` });
+            logInfo(`Generated ${generatedCount} labels`, { root: rootLocation?.code, type: state.labelType });
+            toast({ title: 'PDF Generado', description: `Se creó un archivo con ${generatedCount} etiquetas.` });
 
         } catch (error: any) {
             logError('Label generation failed', { error: error.message });
@@ -159,8 +226,8 @@ export function useLabelCenter() {
         const searchLower = debouncedSearch.toLowerCase();
         return state.allLocations
             .filter(l => 
-                l.type === 'rack' || l.type === 'zone' || l.type === 'building' &&
-                (l.name.toLowerCase().includes(searchLower) || l.code.toLowerCase().includes(searchLower))
+                (l.type === 'rack' || l.type === 'zone' || l.type === 'building') &&
+                (l.name.toLowerCase().includes(searchLower) || l.code.toLowerCase().includes(searchLower) || searchLower === '*')
             )
             .map(l => ({ value: String(l.id), label: renderLocationPathAsString(l.id, state.allLocations) }));
     }, [state.allLocations, debouncedSearch]);
@@ -188,9 +255,7 @@ export function useLabelCenter() {
             queue.push(...children.map(c => c.id));
         }
         
-        const leafLocations = descendants.filter(l => 
-            !descendants.some(other => other.parentId === l.id)
-        );
+        const leafLocations = descendants.filter(l => !descendants.some(other => other.parentId === l.id));
     
         const levels = new Set<string>();
         const positions = new Set<string>();
@@ -213,7 +278,7 @@ export function useLabelCenter() {
                 while(current.parentId) {
                     if (levelIds.has(current.parentId)) return true;
                     const parent = descendants.find(d => d.id === current.parentId);
-                    if (!parent) break;
+                    if (!parent || parent.id === state.selectedRootLocationId) break;
                     current = parent;
                 }
                 return false;
@@ -261,6 +326,7 @@ export function useLabelCenter() {
         setLevelFilter: (filter: string[]) => updateState({ levelFilter: filter }),
         setPositionFilter: (filter: string[]) => updateState({ positionFilter: filter }),
         setDepthFilter: (filter: string[]) => updateState({ depthFilter: filter }),
+        setLabelType: (type: 'location' | 'product_location') => updateState({ labelType: type }),
         handleClearFilters,
         handleGenerateLabels,
     };

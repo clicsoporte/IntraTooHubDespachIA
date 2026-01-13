@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from "@/components/ui/alert-dialog";
@@ -255,16 +255,15 @@ export default function AssignItemPage() {
 
     const handlePrintRackLabel = async (assignment: ItemLocation) => {
         const product = authProducts.find(p => p.id === assignment.itemId);
-        const client = authCustomers.find(c => c.id === assignment.clientId);
-        const locationString = renderLocationPathAsString(assignment.locationId, allLocations);
+        const location = allLocations.find(l => l.id === assignment.locationId);
     
-        if (!product || !companyData) {
-          toast({ title: "Error", description: "No se encontró el producto o la configuración de la empresa para esta asignación.", variant: "destructive" });
+        if (!product || !location || !companyData) {
+          toast({ title: "Error", description: "No se encontró el producto, ubicación o la configuración para esta asignación.", variant: "destructive" });
           return;
         }
     
         try {
-            const qrContent = `${assignment.locationId}>${product.id}`;
+            const qrContent = `${location.id}>${product.id}`;
             const qrCodeDataUrl = await QRCode.toDataURL(qrContent, { errorCorrectionLevel: 'H', width: 200 });
             
             const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "letter" });
@@ -275,7 +274,6 @@ export default function AssignItemPage() {
             doc.addImage(qrCodeDataUrl, 'PNG', margin, margin, 100, 100);
             
             doc.setFont("Helvetica", "normal");
-            doc.setTextColor(0);
             doc.setFontSize(9);
             doc.text(`Generado: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, pageWidth - margin, margin, { align: 'right' });
             
@@ -293,20 +291,13 @@ export default function AssignItemPage() {
     
             const bottomY = pageHeight - margin - 55;
             
-            if (client) {
-              doc.setFontSize(24);
-              doc.setFont("Helvetica", "bold");
-              doc.text("Cliente:", margin, bottomY - 30);
-              doc.setFont("Helvetica", "normal");
-              doc.text(client.name, margin + 80, bottomY - 30);
-            }
-            
             doc.setFontSize(28);
             doc.setFont("Helvetica", "bold");
             doc.text("Ubicación:", margin, bottomY);
             doc.setFont("Helvetica", "normal");
             doc.setFontSize(36);
             
+            const locationString = renderLocationPathAsString(location.id, allLocations);
             const locationLines = doc.splitTextToSize(locationString, pageWidth - (margin * 2) - 100);
             doc.text(locationLines, margin, bottomY + 30);
     
@@ -477,7 +468,7 @@ export default function AssignItemPage() {
                             <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2">
                                     <Label htmlFor="rows-per-page">Filas:</Label>
-                                    <Select value={String(rowsPerPage)} onValueChange={(value) => setRowsPerPage(Number(value))}>
+                                    <Select value={String(rowsPerPage)} onValueChange={setRowsPerPage}>
                                         <SelectTrigger id="rows-per-page" className="w-20"><SelectValue /></SelectTrigger>
                                         <SelectContent>{[10, 25, 50, 100].map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
                                     </Select>

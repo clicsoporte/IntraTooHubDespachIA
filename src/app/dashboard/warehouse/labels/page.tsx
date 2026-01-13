@@ -13,6 +13,7 @@ import { useLabelCenter } from '@/modules/warehouse/hooks/useLabelCenter';
 import { SearchInput } from '@/components/ui/search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export default function LabelCenterPage() {
     const {
@@ -48,9 +49,9 @@ export default function LabelCenterPage() {
             <div className="mx-auto max-w-4xl space-y-8">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Centro de Impresión de Etiquetas de Ubicación</CardTitle>
+                        <CardTitle>Centro de Impresión de Etiquetas</CardTitle>
                         <CardDescription>
-                            Selecciona una ubicación raíz (como un Rack) y luego filtra por niveles, posiciones o fondos para generar etiquetas en bloque.
+                            Selecciona una ubicación raíz, filtra las posiciones deseadas y elige el tipo de etiqueta a generar.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -100,6 +101,23 @@ export default function LabelCenterPage() {
                                         <FilterX className="mr-2 h-4 w-4"/> Limpiar Filtros
                                     </Button>
                                 </div>
+                            </div>
+                        )}
+                        {state.selectedRootLocationId && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <h3 className="font-semibold text-lg">3. Elige el Tipo de Etiqueta</h3>
+                                <RadioGroup value={state.labelType} onValueChange={(value) => actions.setLabelType(value as 'location' | 'product_location')} className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="location" id="type-location" />
+                                        <Label htmlFor="type-location">Etiqueta de Ubicación (para el Rack)</Label>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground pl-6">Genera una etiqueta con el código y ruta de la ubicación física. Ideal para rotular estanterías vacías.</p>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="product_location" id="type-product" />
+                                        <Label htmlFor="type-product">Etiqueta de Producto en Ubicación</Label>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground pl-6">Busca el producto asignado a cada ubicación filtrada y genera una etiqueta con los datos del producto y el QR compatible con el modo escáner.</p>
+                                </RadioGroup>
                             </div>
                         )}
                     </CardContent>
