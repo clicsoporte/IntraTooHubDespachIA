@@ -12,6 +12,7 @@ import { Loader2, Printer, Search, List, FilterX } from 'lucide-react';
 import { useLabelCenter } from '@/modules/warehouse/hooks/useLabelCenter';
 import { SearchInput } from '@/components/ui/search-input';
 import { MultiSelectFilter } from '@/components/ui/multi-select-filter';
+import { Label } from '@/components/ui/label';
 
 export default function LabelCenterPage() {
     const {
