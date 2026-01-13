@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file handles the SQLite database connection and provides
  * server-side functions for all database operations. It includes initialization,
@@ -961,7 +960,7 @@ const createHeaderMapping = (type: ImportQuery['type']) => {
         case 'puestos': return { 'PUESTO': 'PUESTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'departamentos': return { 'DEPARTAMENTO': 'DEPARTAMENTO', 'DESCRIPCION': 'DESCRIPCION', 'ACTIVO': 'ACTIVO' };
         case 'empleados': return { 'EMPLEADO': 'EMPLEADO', 'NOMBRE': 'NOMBRE', 'ACTIVO': 'ACTIVO', 'DEPARTAMENTO': 'DEPARTAMENTO', 'PUESTO': 'PUESTO', 'NOMINA': 'NOMINA' };
-        case 'vehiculos': return { 'NUMERO_PLACA': 'placa', 'ENTIDAD_EMISORA': 'marca' };
+        case 'vehiculos': return { 'placa': 'placa', 'marca': 'marca' };
         default: return {};
     }
 }
@@ -1663,16 +1662,6 @@ export async function saveAllErpInvoiceLines(data: ErpInvoiceLine[]): Promise<vo
     await saveAllGeneric(data, 'erp_invoice_lines', ['FACTURA', 'TIPO_DOCUMENTO', 'LINEA', 'BODEGA', 'PEDIDO', 'ARTICULO', 'ANULADA', 'FECHA_FACTURA', 'CANTIDAD', 'PRECIO_UNITARIO', 'TOTAL_IMPUESTO1', 'PRECIO_TOTAL', 'DESCRIPCION', 'DOCUMENTO_ORIGEN', 'CANT_DESPACHADA', 'ES_CANASTA_BASICA']);
 }
 
-export async function getAllErpPurchaseOrderHeaders(): Promise<ErpPurchaseOrderHeader[]> {
-    const db = await connectDb();
-    return db.prepare('SELECT * FROM erp_purchase_order_headers').all() as ErpPurchaseOrderHeader[];
-}
-
-export async function getAllErpPurchaseOrderLines(): Promise<ErpPurchaseOrderLine[]> {
-    const db = await connectDb();
-    return db.prepare('SELECT * FROM erp_purchase_order_lines').all() as ErpPurchaseOrderLine[];
-}
-
 export async function getUserPreferences(userId: number, key: string): Promise<any | null> {
     const db = await connectDb();
     const row = db.prepare('SELECT value FROM user_preferences WHERE userId = ? AND key = ?').get(userId, key) as { value: string } | undefined;
@@ -1687,6 +1676,7 @@ export async function saveUserPreferences(userId: number, key: string, value: an
 export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
     const db = await connectDb("warehouse.db");
     const stmt = itemId ? db.prepare('SELECT * FROM item_locations WHERE itemId = ?') : db.prepare('SELECT * FROM item_locations');
-    const itemLocations = stmt.all(itemId) as ItemLocation[];
+    const params = itemId ? [itemId] : [];
+    const itemLocations = stmt.all(...params) as ItemLocation[];
     return JSON.parse(JSON.stringify(itemLocations));
 }
