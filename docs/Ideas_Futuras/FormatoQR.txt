@@ -1,0 +1,68 @@
+# Documentación Técnica: Formato de Etiquetas y Códigos QR
+
+Este documento detalla la estructura y el contenido de las etiquetas PDF generadas por el sistema, tanto desde el "Centro de Etiquetas" como desde la herramienta "Ubicaciones por Artículo".
+
+---
+
+## 1. Tamaño y Orientación del Documento
+
+Todas las etiquetas se generan en un formato estandarizado para facilitar la impresión.
+
+-   **Tamaño de Página:** Carta (Letter).
+-   **Orientación:** Horizontal (Landscape).
+-   **Formato del Archivo:** PDF.
+
+Cada etiqueta ocupa una página completa para asegurar la máxima legibilidad de los códigos y textos, especialmente a distancia en el entorno del almacén.
+
+---
+
+## 2. Tipos de Etiquetas y Contenido del QR
+
+El sistema puede generar dos tipos principales de etiquetas, cada una con un propósito y un contenido de QR específico.
+
+### 2.1. Etiqueta de Ubicación (para Rotular Estanterías)
+
+Esta es la etiqueta más simple, diseñada para identificar una posición física en el almacén.
+
+-   **Propósito:** Rotular un estante, una casilla o una posición vacía.
+-   **Contenido Visual:**
+    -   **Código QR:** Grande y prominente.
+    -   **Código de Ubicación:** Texto de gran tamaño, fácil de leer desde lejos (ej: `R01-A-01-F`).
+    -   **Ruta Completa:** Texto más pequeño que describe la ruta jerárquica completa (ej: `Bodega Principal > Pasillo 01 > Rack 01 > Nivel A > Posición 01 > Frente`).
+-   **Contenido del Código QR:**
+    -   **Formato:** Un número simple que es el **ID único** de la ubicación en la base de datos.
+    -   **Ejemplo:** `123`
+
+### 2.2. Etiqueta de Producto en Ubicación (la más común)
+
+Esta etiqueta es la más potente. No solo identifica la ubicación, sino también el producto específico que va en ella, y es la que se integra con el "Modo Escáner" de la toma de inventario.
+
+-   **Propósito:** Identificar qué producto está asignado a una ubicación específica.
+-   **Contenido Visual:**
+    -   **Código QR:** Grande y prominente.
+    -   **Código de Producto:** Texto de gran tamaño (ej: `PS-450-B`).
+    -   **Descripción del Producto:** Texto secundario con el nombre completo del artículo.
+    -   **Ruta de Ubicación:** Texto más pequeño en la parte inferior que indica la ubicación física exacta.
+-   **Contenido del Código QR (¡CRÍTICO!):**
+    -   **Formato:** `[ID_UBICACION]>[ID_PRODUCTO]`
+    -   **Ejemplo:** `123>PS-450-B`
+    -   **Funcionamiento:** Este formato estructurado es la clave del "Modo Escáner". Cuando el escáner lee el QR, el sistema recibe la cadena completa, la divide por el carácter `>` y obtiene instantáneamente tanto el ID de la ubicación como el ID del producto, cargando ambos en la interfaz de conteo sin necesidad de búsquedas manuales.
+
+---
+
+## 3. Flujo de Generación
+
+### Desde "Centro de Etiquetas" (Masivo):
+
+1.  El usuario selecciona una ubicación raíz (ej: "Rack 01").
+2.  Aplica filtros opcionales (Nivel, Posición, Fondo).
+3.  **Selecciona el Tipo de Etiqueta:** "Etiqueta de Ubicación" o "Etiqueta de Producto en Ubicación".
+4.  Al hacer clic en "Generar Etiquetas":
+    -   Si se eligió **"Etiqueta de Ubicación"**, el sistema crea un PDF con una página por cada ubicación final que coincide con los filtros, usando el formato 2.1.
+    -   Si se eligió **"Etiqueta de Producto en Ubicación"**, el sistema primero busca en la tabla `item_locations` qué producto está asignado a cada ubicación filtrada. Solo para aquellas que tienen un producto, genera una página en el PDF usando el formato 2.2 (con el QR `ID_UBICACION>ID_PRODUCTO`).
+
+### Desde "Ubicaciones por Artículo" (Individual):
+
+1.  Esta herramienta solo genera **"Etiquetas de Producto en Ubicación"** (formato 2.2).
+2.  Al hacer clic en el icono de la impresora en una fila, el sistema toma el ID de la ubicación y el ID del producto de esa asignación específica.
+3.  Crea un PDF de una sola página con el QR formateado como `ID_UBICACION>ID_PRODUCTO`, listo para ser impreso y colocado.
