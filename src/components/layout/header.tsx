@@ -21,8 +21,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCw, Clock, DollarSign, Send, MessageSquare, PanelLeft } from "lucide-react";
+import { Loader2, RefreshCw, Clock, DollarSign, Send, MessageSquare, PanelLeft, Calculator } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { QuickCalculator } from "./QuickCalculator";
 
 interface HeaderProps {
   title: string;
@@ -153,6 +154,7 @@ function HeaderActions() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <QuickCalculator />
             <NotificationBell />
             <UserNav />
              {(isSyncing || isRateRefreshing) && (
