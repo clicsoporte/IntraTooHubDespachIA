@@ -254,13 +254,13 @@ export async function runMainDbMigrations(db: import('better-sqlite3').Database)
 async function checkAndApplyMigrations(db: import('better-sqlite3').Database) {
     // Main DB Migrations
     try {
-        const usersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='users'`).get();
+        const usersTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='users'`).get() as { name: string };
         if(!usersTable) {
              console.log("Migration check skipped: Main database not initialized yet.");
              return;
         }
 
-        const notificationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'`).get();
+        const notificationsTable = db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'`).get() as { name: string };
         if (!notificationsTable) {
             console.log("MIGRATION: Creating notifications table.");
             db.exec(`
@@ -1675,8 +1675,13 @@ export async function saveUserPreferences(userId: number, key: string, value: an
 
 export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
     const db = await connectDb("warehouse.db");
-    const stmt = itemId ? db.prepare('SELECT * FROM item_locations WHERE itemId = ?') : db.prepare('SELECT * FROM item_locations');
-    const params = itemId ? [itemId] : [];
-    const itemLocations = stmt.all(...params) as ItemLocation[];
-    return JSON.parse(JSON.stringify(itemLocations));
+    if (itemId) {
+        const stmt = db.prepare('SELECT * FROM item_locations WHERE itemId = ?');
+        const itemLocations = stmt.all(itemId) as ItemLocation[];
+        return JSON.parse(JSON.stringify(itemLocations));
+    } else {
+        const stmt = db.prepare('SELECT * FROM item_locations');
+        const itemLocations = stmt.all() as ItemLocation[];
+        return JSON.parse(JSON.stringify(itemLocations));
+    }
 }
