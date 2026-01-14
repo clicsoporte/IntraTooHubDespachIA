@@ -1664,6 +1664,7 @@ export async function getAllErpPurchaseOrderLines(): Promise<ErpPurchaseOrderLin
     return db.prepare('SELECT * FROM erp_purchase_order_lines').all() as ErpPurchaseOrderLine[];
 }
 
+
 export async function saveAllErpInvoiceHeaders(data: ErpInvoiceHeader[]): Promise<void> {
     await saveAllGeneric(data, 'erp_invoice_headers', ['CLIENTE', 'NOMBRE_CLIENTE', 'TIPO_DOCUMENTO', 'FACTURA', 'PEDIDO', 'FACTURA_ORIGINAL', 'FECHA', 'FECHA_ENTREGA', 'ANULADA', 'EMBARCAR_A', 'DIRECCION_FACTURA', 'OBSERVACIONES', 'RUTA', 'USUARIO', 'USUARIO_ANULA', 'ZONA', 'VENDEDOR', 'REIMPRESO']);
 }
@@ -1685,11 +1686,12 @@ export async function saveUserPreferences(userId: number, key: string, value: an
 
 export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
     const db = await connectDb("warehouse.db");
+    let stmt;
     if (itemId) {
-        return JSON.parse(JSON.stringify(db.prepare('SELECT * FROM item_locations WHERE itemId = ?').all(itemId)));
+        stmt = db.prepare('SELECT * FROM item_locations WHERE itemId = ?');
+        return JSON.parse(JSON.stringify(stmt.all(itemId)));
     } else {
-        return JSON.parse(JSON.stringify(db.prepare('SELECT * FROM item_locations').all()));
+        stmt = db.prepare('SELECT * FROM item_locations');
+        return JSON.parse(JSON.stringify(stmt.all()));
     }
 }
-
-    
