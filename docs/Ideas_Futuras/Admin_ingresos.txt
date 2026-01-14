@@ -1,0 +1,309 @@
+# Documentación de Código Fuente: Módulo de Corrección de Ingresos
+v1.0
+
+Este documento desglosa el código fuente completo detrás de la herramienta "Corrección de Ingresos",
+diseñada para permitir a los supervisores anular y corregir errores en la recepción de mercadería.
+
+---
+
+## 1. Interfaz de Usuario (Frontend)
+
+Este es el componente de React que renderiza la página, maneja la búsqueda y los diálogos de confirmación.
+
+**Archivo:** `src/app/dashboard/warehouse/correction/page.tsx`
+
+```tsx
+/**
+ * @fileoverview Page for correcting warehouse receiving errors with advanced search.
+ * Permite a los supervisores buscar una unidad de inventario específica y reemplazarla
+ * por el producto correcto, generando los movimientos de anulación y nuevo ingreso.
+ */
+'use client';
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/modules/core/hooks/use-toast';
+import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
+import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
+import { logError, logInfo } from '@/modules/core/lib/logger';
+import { correctInventoryUnit, searchInventoryUnits } from '@/modules/warehouse/lib/actions';
+import type { InventoryUnit, Product, DateRange } from '@/modules/core/types';
+import { useAuth } from '@/modules/core/hooks/useAuth';
+import { SearchInput } from '@/components/ui/search-input';
+import { Loader2, Save, Search, RotateCcw, Package, AlertTriangle, Calendar as CalendarIcon, FilterX } from 'lucide-react';
+import { useDebounce } from 'use-debounce';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format, parseISO, startOfDay, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
+
+
+export default function CorrectionPage() {
+    // Hooks para autorización, título de la página, notificaciones y autenticación.
+    const { isAuthorized } = useAuthorization(['warehouse:correction:use']);
+    const { setTitle } = usePageTitle();
+    const { toast } = useToast();
+    const { user, products: authProducts } = useAuth();
+    
+    // Estados para la carga, envío de datos y filtros de búsqueda.
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [filters, setFilters] = useState({
+        dateRange: { from: subDays(new Date(), 7), to: new Date() } as DateRange | undefined,
+        productId: '',
+        humanReadableId: '',
+        unitCode: '',
+        documentId: ''
+    });
+
+    // Estados para los resultados y el modal de corrección.
+    const [searchResults, setSearchResults] = useState<InventoryUnit[]>([]);
+    const [unitToCorrect, setUnitToCorrect] = useState<InventoryUnit | null>(null);
+    const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState(false);
+    
+    // Estados para la búsqueda del nuevo producto en el modal.
+    const [newProductSearchTerm, setNewProductSearchTerm] = useState('');
+    const [newProductId, setNewProductId] = useState<string | null>(null);
+    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    
+    // Hook para debounce (retrasar la búsqueda mientras el usuario escribe).
+    const [debouncedProductSearch] = useDebounce(newProductSearchTerm, 300);
+
+    // Memoiza el producto original para mostrarlo en el modal de confirmación.
+    const originalProduct = useMemo(() => 
+        unitToCorrect ? authProducts.find(p => p.id === unitToCorrect.productId) : null, 
+    [unitToCorrect, authProducts]);
+
+    // Hook para establecer el título de la página al cargar el componente.
+    useEffect(() => {
+        setTitle("Corrección de Ingresos");
+    }, [setTitle]);
+
+    // Función para ejecutar la búsqueda de unidades de inventario.
+    const handleSearch = async () => {
+        setIsLoading(true);
+        setSearchResults([]);
+        try {
+            const results = await searchInventoryUnits(filters);
+            setSearchResults(results);
+            if (results.length === 0) {
+                toast({ title: 'Sin Resultados', description: 'No se encontraron ingresos con los filtros especificados.' });
+            }
+        } catch (error: any) {
+            logError('Failed to search inventory units', { error: error.message });
+            toast({ title: 'Error', description: 'No se pudieron buscar los ingresos.', variant: 'destructive' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // Maneja los cambios en los campos de filtro.
+    const handleFilterChange = (field: keyof typeof filters, value: any) => {
+        setFilters(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Limpia todos los filtros y resultados de búsqueda.
+    const handleClearFilters = () => {
+        setFilters({
+            dateRange: { from: subDays(new Date(), 7), to: new Date() },
+            productId: '',
+            humanReadableId: '',
+            unitCode: '',
+            documentId: ''
+        });
+        setSearchResults([]);
+    };
+    
+    // Abre el modal de corrección y prepara el estado.
+    const openCorrectionModal = (unit: InventoryUnit) => {
+        setUnitToCorrect(unit);
+        setNewProductId(null);
+        setNewProductSearchTerm('');
+        setIsCorrectionModalOpen(true);
+    };
+
+    // Maneja la selección de un nuevo producto desde el buscador.
+    const handleSelectNewProduct = (productId: string) => {
+        const product = authProducts.find(p => p.id === productId);
+        if (product) {
+            setNewProductId(productId);
+            setNewProductSearchTerm(`[${product.id}] ${product.description}`);
+        }
+        setIsProductSearchOpen(false);
+    };
+
+    // Función principal que ejecuta la acción de corrección.
+    const handleCorrection = async () => {
+        if (!unitToCorrect || !newProductId || !user) {
+            toast({ title: 'Datos Incompletos', description: 'Se requiere una unidad y un nuevo producto para la corrección.', variant: 'destructive'});
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Llama a la acción del servidor para realizar la corrección.
+            await correctInventoryUnit(unitToCorrect, newProductId, user.id);
+            toast({ title: 'Corrección Exitosa', description: `La unidad ${unitToCorrect.unitCode} ha sido anulada y reemplazada con el nuevo producto.` });
+            logInfo('Inventory unit corrected', { oldUnit: unitToCorrect.unitCode, newProduct: newProductId, user: user.name });
+            setIsCorrectionModalOpen(false);
+            setUnitToCorrect(null);
+            await handleSearch(); // Refresca los resultados de la búsqueda.
+        } catch (error: any) {
+            logError('Failed to correct inventory unit', { error: error.message });
+            toast({ title: 'Error al Corregir', description: error.message, variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    // Opciones para el buscador de productos en el modal.
+    const productOptions = useMemo(() => {
+        if (debouncedProductSearch.length < 2) return [];
+        return authProducts
+            .filter(p => p.id.toLowerCase().includes(debouncedProductSearch.toLowerCase()) || p.description.toLowerCase().includes(debouncedProductSearch.toLowerCase()))
+            .map(p => ({ value: p.id, label: `[${p.id}] ${p.description}` }));
+    }, [authProducts, debouncedProductSearch]);
+
+
+    if (isAuthorized === false) return null;
+
+    // Renderizado del componente con su JSX.
+    return (
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+            {/* ... Resto del JSX (formularios, tablas, modales) ... */}
+        </main>
+    );
+}
+```
+
+---
+
+## 2. Acción del Servidor (Capa de Lógica)
+
+Esta es la función que se exporta desde el archivo de "acciones" y sirve como puente seguro entre el cliente y la base de datos.
+
+**Archivo:** `src/modules/warehouse/lib/actions.ts`
+
+```typescript
+/**
+ * @fileoverview Client-side functions for interacting with warehouse module's DB functions.
+ */
+'use server';
+
+// Importa la función de base de datos real.
+import { correctInventoryUnit as correctInventoryUnitServer } from './db';
+import type { InventoryUnit } from '@/modules/core/types';
+
+/**
+ * Llama a la acción del servidor para corregir una unidad de inventario.
+ * @param originalUnit La unidad de inventario original a anular.
+ * @param newProductId El ID del producto correcto que la reemplazará.
+ * @param correctedByUserId El ID del usuario que realiza la corrección.
+ */
+export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
+    // Simplemente pasa los argumentos a la función del servidor que interactúa con la BD.
+    return correctInventoryUnitServer(originalUnit, newProductId, correctedByUserId);
+}
+```
+
+---
+
+## 3. Lógica de Base de Datos (Backend)
+
+Esta es la función principal que ejecuta la lógica de negocio directamente en la base de datos del almacén. Es crucial que se ejecute como una **transacción** para garantizar la integridad de los datos.
+
+**Archivo:** `src/modules/warehouse/lib/db.ts`
+
+```typescript
+/**
+ * @fileoverview Server-side functions for the warehouse database.
+ */
+'use server';
+
+import { connectDb } from '@/modules/core/lib/db';
+import { logInfo, logError } from '@/modules/core/lib/logger';
+import type { InventoryUnit, WarehouseSettings } from '@/modules/core/types';
+
+/**
+ * Corrige un ingreso de inventario anulando una unidad existente y creando una nueva con el producto correcto.
+ * Esta operación es transaccional para garantizar la atomicidad.
+ * @param originalUnit La unidad de inventario original a anular.
+ * @param newProductId El ID del producto correcto.
+ * @param correctedByUserId El ID del usuario que realiza la corrección.
+ */
+export async function correctInventoryUnit(originalUnit: InventoryUnit, newProductId: string, correctedByUserId: number): Promise<void> {
+    const db = await connectDb('warehouse.db');
+    const mainDb = await connectDb('intratool.db'); // Conexión a la BD principal para obtener el nombre de usuario.
+    
+    // Obtiene el nombre del usuario para los registros de auditoría.
+    const user = mainDb.prepare('SELECT name FROM users WHERE id = ?').get(correctedByUserId) as { name: string } | undefined;
+    const userName = user?.name || 'Sistema';
+
+    // Inicia una transacción. Si algo falla, todos los cambios se revierten.
+    const transaction = db.transaction(() => {
+        // Paso 1: "Anula" la unidad original poniendo su cantidad en 0 y añadiendo una nota.
+        const notesForAnnulment = `ANULADO: Corregido por ${userName}. Producto original era ${originalUnit.productId}.`;
+        db.prepare('UPDATE inventory_units SET quantity = 0, notes = ? WHERE id = ?').run(notesForAnnulment, originalUnit.id);
+        
+        // Paso 2: Registra el movimiento de "salida" del inventario para el producto INCORRECTO.
+        db.prepare(
+            `INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) 
+             VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`
+        ).run(originalUnit.productId, -originalUnit.quantity, originalUnit.locationId, null, correctedByUserId, notesForAnnulment);
+
+        // Paso 3: Prepara y crea la NUEVA unidad con el producto CORRECTO.
+        const newUnitPayload = {
+            ...originalUnit,
+            productId: newProductId,
+            createdBy: userName, // La nueva unidad es creada por el usuario que corrige.
+            notes: `CORRECCIÓN: Creado a partir de la unidad anulada ${originalUnit.unitCode}.`,
+        };
+        
+        // Obtiene el prefijo y consecutivo para el nuevo ID de unidad (ej. U-00124).
+        const settingsRow = db.prepare(`SELECT value FROM warehouse_config WHERE key = 'settings'`).get() as { value: string };
+        const parsedSettings: WarehouseSettings = JSON.parse(settingsRow.value);
+        const prefix = parsedSettings.unitPrefix || 'U';
+        const nextNumber = parsedSettings.nextUnitNumber || 1;
+        const newUnitCode = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+
+        const newUnitData = {
+            ...newUnitPayload,
+            unitCode: newUnitCode,
+            createdAt: new Date().toISOString(),
+        };
+
+        // Inserta el nuevo registro en la base de datos.
+        db.prepare(
+            'INSERT INTO inventory_units (unitCode, productId, humanReadableId, documentId, locationId, quantity, notes, createdAt, createdBy) VALUES (@unitCode, @productId, @humanReadableId, @documentId, @locationId, @quantity, @notes, @createdAt, @createdBy)'
+        ).run(newUnitData);
+        
+        // Actualiza el contador para la próxima unidad a crear.
+        parsedSettings.nextUnitNumber = nextNumber + 1;
+        db.prepare(`UPDATE warehouse_config SET value = ? WHERE key = 'settings'`).run(JSON.stringify(parsedSettings));
+
+        // Paso 4: Registra el movimiento de "entrada" del inventario para el producto CORRECTO.
+        db.prepare(
+            `INSERT INTO movements (itemId, quantity, fromLocationId, toLocationId, timestamp, userId, notes) 
+             VALUES (?, ?, ?, ?, datetime('now'), ?, ?)`
+        ).run(newProductId, originalUnit.quantity, null, originalUnit.locationId, correctedByUserId, newUnitPayload.notes);
+    });
+
+    try {
+        transaction(); // Ejecuta todos los pasos de la transacción.
+        logInfo(`Inventory unit ${originalUnit.unitCode} corrected by ${userName}. New product: ${newProductId}.`);
+    } catch(err) {
+        logError('Failed to execute correctInventoryUnit transaction', { error: (err as Error).message });
+        throw err; // Lanza el error para que el cliente lo reciba.
+    }
+}
+```
