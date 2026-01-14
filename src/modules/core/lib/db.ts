@@ -1689,11 +1689,9 @@ export async function getAllItemLocations(itemId?: string): Promise<ItemLocation
     
     if (itemId) {
         const stmt = db.prepare('SELECT * FROM item_locations WHERE itemId = ?');
-        const itemLocations = stmt.all(itemId) as ItemLocation[];
-        return JSON.parse(JSON.stringify(itemLocations));
+        return JSON.parse(JSON.stringify(stmt.all(itemId)));
     } else {
         const stmt = db.prepare('SELECT * FROM item_locations');
-        const itemLocations = stmt.all() as ItemLocation[];
-        return JSON.parse(JSON.stringify(itemLocations));
+        return JSON.parse(JSON.stringify(stmt.all()));
     }
 }
