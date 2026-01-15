@@ -1683,15 +1683,3 @@ export async function saveUserPreferences(userId: number, key: string, value: an
     const db = await connectDb();
     db.prepare('INSERT OR REPLACE INTO user_preferences (userId, key, value) VALUES (?, ?, ?)').run(userId, key, JSON.stringify(value));
 }
-
-export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
-    const db = await connectDb("warehouse.db");
-    let stmt;
-    if (itemId) {
-        stmt = db.prepare('SELECT * FROM item_locations WHERE itemId = ?');
-        return JSON.parse(JSON.stringify(stmt.all(itemId)));
-    } else {
-        stmt = db.prepare('SELECT * FROM item_locations');
-        return JSON.parse(JSON.stringify(stmt.all()));
-    }
-}

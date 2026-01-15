@@ -76,8 +76,8 @@ function getAllFinalChildren(locationId: number, allLocations: WarehouseLocation
 export async function getLocations(): Promise<(WarehouseLocation & { isCompleted?: boolean })[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     const allLocations = db.prepare('SELECT * FROM locations ORDER BY parentId, name').all() as WarehouseLocation[];
-    const allAssignments = db.prepare('SELECT locationId FROM item_locations').all() as { locationId: number }[];
-    const populatedLocationIds = new Set(allAssignments.map(il => il.locationId));
+    const itemAssignments = db.prepare('SELECT locationId FROM item_locations').all() as { locationId: number }[];
+    const populatedLocationIds = new Set(itemAssignments.map(il => il.locationId));
 
     const enrichedLocations = allLocations.map(loc => {
         // Check if a location is a 'level' (has children)
@@ -354,12 +354,17 @@ export async function getMovements(itemId?: string): Promise<MovementLog[]> {
     return db.prepare('SELECT * FROM movements ORDER BY timestamp DESC').all() as MovementLog[];
 }
 
-export async function getAllItemLocations(): Promise<ItemLocation[]> {
+export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
-    const stmt = db.prepare('SELECT * FROM item_locations');
-    return JSON.parse(JSON.stringify(stmt.all()));
+    let stmt;
+    if (itemId) {
+        stmt = db.prepare('SELECT * FROM item_locations WHERE itemId = ?');
+        return JSON.parse(JSON.stringify(stmt.all(itemId)));
+    } else {
+        stmt = db.prepare('SELECT * FROM item_locations');
+        return JSON.parse(JSON.stringify(stmt.all()));
+    }
 }
-
 
 export async function assignItemToLocation(itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
@@ -792,7 +797,7 @@ export const finalizeDispatch = async (containerId: number, vehiclePlate: string
     const logs = db.prepare(`
         SELECT dl.* 
         FROM dispatch_logs dl
-        JOIN dispatch_assignments da ON dl.documentId = dl.documentId
+        JOIN dispatch_assignments da ON dl.documentId = da.documentId
         WHERE da.containerId = ? AND dl.vehiclePlate IS NULL
     `).all(containerId) as DispatchLog[];
 
@@ -836,7 +841,7 @@ export async function searchInventoryUnits(filters: {
     humanReadableId?: string;
     unitCode?: string;
     documentId?: string;
-}): Promise<InventoryUnit[]> => {
+}): Promise<InventoryUnit[]> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     
     let query = 'SELECT * FROM inventory_units';

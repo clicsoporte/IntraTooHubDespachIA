@@ -53,7 +53,7 @@ import {
     getSelectableLocations as getSelectableLocationsServer,
     correctInventoryUnit as correctInventoryUnitServer,
     searchInventoryUnits as searchInventoryUnitsServer,
-    getAllItemLocations as getAllItemLocationsFromDb,
+    getAllItemLocations as getAllItemLocationsServer,
 } from './db';
 import { sendEmail as sendEmailServer } from '@/modules/core/lib/email-service';
 import { getStockSettings as getStockSettingsDb, saveStockSettings as saveStockSettingsDb } from '@/modules/core/lib/db';
@@ -108,11 +108,7 @@ export const updateInventory = async(itemId: string, locationId: number, newQuan
     return updateInventoryServer(itemId, locationId, newQuantity, userId);
 };
 
-// Re-exporting the function from its correct location in the warehouse db module.
-export async function getAllItemLocations(itemId?: string): Promise<ItemLocation[]> {
-    return getAllItemLocationsFromDb(itemId);
-}
-
+export const getAllItemLocations = async (itemId?: string): Promise<ItemLocation[]> => getAllItemLocationsServer(itemId);
 
 export const assignItemToLocation = async (itemId: string, locationId: number, clientId: string | null, updatedBy: string): Promise<ItemLocation> => assignItemToLocationServer(itemId, locationId, clientId, updatedBy);
 export async function unassignItemFromLocation(assignmentId: number): Promise<void> {
@@ -261,3 +257,5 @@ export const searchInventoryUnits = async (filters: {
     unitCode?: string;
     documentId?: string;
 }): Promise<InventoryUnit[]> => searchInventoryUnitsServer(filters);
+
+    
