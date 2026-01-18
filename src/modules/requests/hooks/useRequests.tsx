@@ -158,7 +158,7 @@ export default function useRequests() {
                         status: state.statusFilter,
                         classification: state.classificationFilter,
                         showOnlyMy: state.showOnlyMyRequests ? currentUser.name : undefined,
-                        dateRange: state.dateFilter,
+                        dateRange: state.dateFilter?.from ? state.dateFilter : undefined,
                     },
                 }),
             ]);
