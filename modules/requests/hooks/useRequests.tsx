@@ -3,7 +3,6 @@
  * This hook encapsulates all state and logic for fetching, filtering, and managing purchase requests.
  */
 'use client';
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/modules/core/hooks/use-toast';
 import { ToastAction } from "@/components/ui/toast";
@@ -24,15 +23,35 @@ import {
     updateRequestDetails as updateRequestDetailsServer,
     saveCostAnalysis as saveCostAnalysisServer,
     getUserByName,
-} from '../lib/actions';
-import type { PurchaseRequest, PurchaseRequestHistoryEntry, RequestSettings, UpdatePurchaseRequestPayload, UpdateRequestStatusPayload, RequestNotePayload, PurchaseRequestPriority, ErpOrderHeader, ErpOrderLine, User, StockInfo, DateRange, AdministrativeActionPayload, PurchaseRequestStatus, Product, ErpPurchaseOrderHeader as ErpPOHeader, ErpPurchaseOrderLine } from '../../core/types';
+} from '@/modules/requests/lib/actions'; // CORREGIDO: Ruta absoluta
+import type { 
+    PurchaseRequest, 
+    PurchaseRequestHistoryEntry, 
+    RequestSettings, 
+    UpdatePurchaseRequestPayload, 
+    UpdateRequestStatusPayload, 
+    RequestNotePayload, 
+    PurchaseRequestPriority, 
+    ErpOrderHeader, 
+    ErpOrderLine, 
+    User, 
+    StockInfo, 
+    DateRange, 
+    AdministrativeActionPayload, 
+    PurchaseRequestStatus, 
+    Product, 
+    ErpPurchaseOrderHeader as ErpPOHeader, 
+    ErpPurchaseOrderLine 
+} from '@/modules/core/types'; // CORREGIDO: Ruta absoluta
 import { useAuth } from '@/modules/core/hooks/useAuth';
 import { useDebounce } from 'use-debounce';
 import { subDays, startOfDay } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { getDaysRemaining } from '@/modules/core/lib/time-utils';
 
-const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' | 'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' | 'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
+const emptyRequest: Omit<PurchaseRequest, 'id' | 'consecutive' |
+    'requestDate' | 'status' | 'reopened' | 'requestedBy' | 'deliveredQuantity' | 'receivedInWarehouseBy' | 'receivedDate' | 'previousStatus' | 'lastModifiedAt' | 'lastModifiedBy' |
+    'hasBeenModified' | 'approvedBy' | 'lastStatusUpdateBy' | 'lastStatusUpdateNotes'> = {
     requiredDate: new Date().toISOString().split('T')[0],
     clientId: '',
     clientName: '',
@@ -63,14 +82,12 @@ const statusConfig: { [key in PurchaseRequestStatus]: { label: string; color: st
     canceled: { label: "Cancelada", color: "bg-red-700" },
 };
 
-
 export default function useRequests() {
     const { isAuthorized, hasPermission } = useAuthorization(['requests:read']);
     const { setTitle } = usePageTitle();
     const { toast } = useToast();
     const { user: currentUser, customers, products, stockLevels: allStock, isReady: isAuthReady } = useAuth();
     const router = useRouter();
-
     const [state, setState] = useState({
         isLoading: true,
         isSubmitting: false,
@@ -169,7 +186,6 @@ export default function useRequests() {
                 totalActive,
                 totalArchived,
             });
-
         } catch (error: any) {
             logError("Failed to load requests data", { error: error.message });
             toast({ title: "Error", description: "No se pudieron cargar los datos de solicitudes.", variant: "destructive" });
@@ -177,12 +193,12 @@ export default function useRequests() {
             updateState({ isLoading: false, isRefreshing: false });
         }
     }, [isAuthReady, currentUser, state.currentPage, state.rowsPerPage, state.viewingArchived, debouncedSearchTerm, state.statusFilter, state.classificationFilter, state.showOnlyMyRequests, state.dateFilter, toast, updateState]);
-    
+
     useEffect(() => {
         setTitle("Solicitudes de Compra");
         loadInitialData();
     }, [setTitle, loadInitialData]);
-    
+
     // Actions and selectors go here...
     const actions = {
         // All actions previously in the hook
@@ -204,7 +220,7 @@ export default function useRequests() {
         hasPermission,
         stockLevels: allStock,
     };
-    
+
     return {
         state,
         actions,
