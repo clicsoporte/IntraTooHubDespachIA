@@ -36,6 +36,7 @@ const availableColumns = [
     { id: 'productDescription', label: 'Producto' },
     { id: 'priority', label: 'Prioridad' },
     { id: 'machineId', label: 'Asignación' },
+    { id: 'shiftId', label: 'Turno' },
     { id: 'quantity', label: 'Solicitado', align: 'right' },
     { id: 'deliveredQuantity', label: 'Producido', align: 'right' },
     { id: 'defectiveQuantity', label: 'Defectuoso', align: 'right' },

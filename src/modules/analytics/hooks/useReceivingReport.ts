@@ -275,7 +275,7 @@ export function useReceivingReport() {
     const selectors = {
         sortedData,
         userOptions: useMemo(() => Array.from(new Set(state.data.map(item => item.createdBy))).map(u => ({ value: u, label: u })), [state.data]),
-        locationOptions: useMemo(() => state.allLocations.map(l => ({ value: String(l.id), label: getLocationPath(l.id) })), [state.allLocations, getLocationPath]),
+        locationOptions: useMemo(() => state.allSelectableLocations.map(l => ({ value: String(l.id), label: getLocationPath(l.id) })), [state.allSelectableLocations, getLocationPath]),
         getLocationPath,
         getProductDescription,
         availableColumns,

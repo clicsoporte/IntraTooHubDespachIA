@@ -21,7 +21,7 @@ import type {
     ProductionOrder, ProductionOrderStatus, ProductionOrderPriority, 
     ProductionOrderHistoryEntry, User, PlannerSettings, DateRange, 
     PlannerNotePayload, UpdateProductionOrderPayload, AdministrativeActionPayload, Product, StockInfo 
-} from '../../core/types';
+} from '@/modules/core/types';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/modules/core/hooks/useAuth';
@@ -32,7 +32,7 @@ import type { RowInput } from 'jspdf-autotable';
 import { addNoteToOrder as addNoteServer } from '@/modules/planner/lib/actions';
 import { exportToExcel } from '@/modules/core/lib/excel-export';
 import { AlertTriangle, Undo2, ChevronsLeft, ChevronsRight, Send, ShoppingBag, Filter } from 'lucide-react';
-import { getStatusConfig } from '../lib/utils';
+import { getStatusConfig } from '@/modules/planner/lib/utils';
 import { getUserPreferences, saveUserPreferences } from '@/modules/core/lib/db';
 
 const normalizeText = (text: string | null | undefined): string => {
@@ -678,7 +678,7 @@ export const usePlanner = () => {
                 });
             });
 
-            const doc = generateDocument({
+            generateDocument({
                 docTitle: `Órdenes de Producción (${state.viewingArchived ? 'Archivadas' : 'Activas'})`,
                 docId: '',
                 companyData: authCompanyData,
@@ -699,9 +699,7 @@ export const usePlanner = () => {
                 topLegend: state.plannerSettings.pdfTopLegend,
                 paperSize: state.plannerSettings.pdfPaperSize,
                 orientation: orientation,
-            });
-        
-            doc.save(`ordenes_produccion_${new Date().getTime()}.pdf`);
+            }).save(`ordenes_produccion_${new Date().getTime()}.pdf`);
         },
 
         handleExportSingleOrderPDF: async (order: ProductionOrder) => {
