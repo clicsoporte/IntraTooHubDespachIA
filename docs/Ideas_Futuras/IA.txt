@@ -1,0 +1,97 @@
+# Plan de Implementación: IA Conversacional Local para Clic-Tools
+
+## 1. Visión General de la Arquitectura
+
+Vamos a integrar una capacidad de chat de IA directamente en Clic-Tools, ejecutándose 100% en tu red local para máxima privacidad y control. La arquitectura seguirá un patrón moderno y seguro conocido como "Tool Use" (Uso de Herramientas).
+
+El flujo será el siguiente:
+1.  **Frontend (Chat):** Un usuario escribe una pregunta en una nueva interfaz de chat dentro de Clic-Tools.
+2.  **Backend (Orquestador):** Una Server Action en Next.js recibe la pregunta. No le da a la IA acceso a la base de datos. En su lugar, le presenta a la IA una lista de "herramientas" que puede usar, como una función segura `executeQuery`.
+3.  **Servidor de IA (Ollama):** El orquestador envía la pregunta y la lista de herramientas a tu servidor local de Ollama.
+4.  **Modelo de IA (Llama 3):** El modelo de IA razona que para responder, necesita datos. En lugar de ejecutar una consulta, genera el código SQL y le pide a nuestro orquestador: "Por favor, ejecuta esta consulta SQL para mí".
+5.  **Ejecución Segura:** Nuestro backend recibe la petición, valida que sea una consulta segura (solo `SELECT`), la ejecuta contra la base de datos correspondiente (ej. `planner.db`, `requests.db`) y obtiene los resultados.
+6.  **Respuesta Final:** El backend le devuelve los datos a la IA, que los formatea en un lenguaje natural y amigable para el usuario.
+
+**Ventaja Clave:** La IA nunca tiene credenciales ni acceso directo a las bases de datos. Actúa como un asistente inteligente que solo puede solicitar información a través de las funciones seguras que nosotros le proporcionamos.
+
+---
+
+## 2. Tu Tarea: Configuración del Entorno de IA en tu Laptop de Pruebas
+
+Para que yo pueda implementar el código, primero necesitas preparar tu laptop Dell para que pueda ejecutar el modelo de IA. Sigue estos pasos cuidadosamente.
+
+### Paso 1: Sistema Operativo (Windows 11 con WSL2 Recomendado)
+
+Como discutimos, para la mayor facilidad y compatibilidad, usaremos Windows 11 con el Subsistema de Windows para Linux (WSL2). Si aún no lo tienes, ábrelo en tu laptop:
+1.  Abre PowerShell o Terminal **como Administrador**.
+2.  Ejecuta el comando: `wsl --install`
+3.  Reinicia tu computadora. Esto instalará Ubuntu automáticamente.
+
+### Paso 2: Instalación de Drivers NVIDIA
+
+La IA necesita los drivers correctos para comunicarse con tu GPU GeForce MX550.
+1.  Ve a la página de **GeForce Experience** de NVIDIA.
+2.  Descarga e instala la aplicación. Esta se encargará de mantener tus drivers actualizados automáticamente.
+3.  Una vez instalado, reinicia tu computadora.
+
+### Paso 3: Instalación de Ollama en Windows
+
+Ollama es el software que gestionará el modelo de IA.
+1.  Ve a la página oficial de Ollama: **https://ollama.com/**
+2.  Haz clic en el botón "Download" y selecciona "Download for Windows".
+3.  Ejecuta el instalador que descargaste. Sigue las instrucciones y permite que finalice la instalación. Ollama se ejecutará automáticamente en segundo plano.
+
+### Paso 4: Descargar el Modelo de IA (Llama 3 8B)
+
+Ahora le diremos a Ollama que descargue el "cerebro" que vamos a usar.
+1.  Abre una terminal de **CMD** o **PowerShell** (no es necesario que sea como administrador).
+2.  Ejecuta el siguiente comando. Esto descargará el modelo Llama 3 de 8 mil millones de parámetros (aproximadamente 4.7 GB).
+
+    ```bash
+    ollama pull llama3:8b-instruct
+    ```
+
+### Paso 5: Probar la IA Localmente
+
+Verifiquemos que todo funciona correctamente.
+1.  En la misma terminal, ejecuta:
+
+    ```bash
+    ollama run llama3:8b-instruct
+    ```
+2.  Deberías ver un mensaje de bienvenida y un cursor que dice `>>> Send a message`. ¡Ya estás chateando directamente con tu IA local!
+3.  Escribe una pregunta como `¿Cuál es la capital de Costa Rica?` y presiona Enter. Debería responderte.
+4.  Para salir del chat, escribe `/bye` y presiona Enter.
+
+### Paso 6: Exponer Ollama a tu Red Local (Paso Crítico)
+
+Por defecto, Ollama solo es accesible desde la propia máquina. Para que la aplicación Clic-Tools (corriendo en WSL2 o en otro lugar) pueda comunicarse con la IA que corre en Windows, necesitamos exponerlo.
+
+1.  **Abre el Editor de Variables de Entorno de Windows:**
+    *   Presiona la tecla de Windows, escribe `env` y selecciona "Editar las variables de entorno del sistema".
+2.  **Crea una Nueva Variable del Sistema:**
+    *   En la ventana que aparece, haz clic en el botón "Variables de entorno...".
+    *   En la sección de "Variables del sistema", haz clic en "Nueva...".
+    *   **Nombre de la variable:** `OLLAMA_HOST`
+    *   **Valor de la variable:** `0.0.0.0`
+    *   Haz clic en "Aceptar" en todas las ventanas para guardar.
+3.  **Reinicia Ollama:**
+    *   Busca el icono de Ollama en la bandeja del sistema (cerca del reloj).
+    *   Haz clic derecho sobre él y selecciona "Quit Ollama".
+    *   Vuelve a iniciar Ollama desde el menú de inicio.
+
+Con estos 6 pasos, tu laptop de pruebas estará lista y sirviendo un modelo de IA en tu red local, preparada para que yo pueda conectar Clic-Tools a ella.
+
+---
+
+## 3. Mi Tarea: Implementación del Código en Clic-Tools
+
+Una vez que hayas confirmado que tu entorno está listo, yo realizaré los siguientes cambios en el código de la aplicación:
+
+1.  **Instalar Dependencias:** Añadiré la librería oficial de `ollama` a `package.json` para facilitar la comunicación con tu servidor de IA local.
+2.  **Crear el Orquestador de IA:** Desarrollaré una nueva *Server Action* en `src/modules/ai/lib/actions.ts`. Esta será la pieza central que reciba las preguntas de los usuarios y gestione la conversación con la IA.
+3.  **Definir Herramientas Seguras:** Dentro del orquestador, definiré la herramienta `executeQuery(dbName, sqlQuery)`. Esta función contendrá validaciones estrictas para asegurar que solo se puedan ejecutar consultas `SELECT` de solo lectura, previniendo cualquier riesgo de seguridad.
+4.  **Construir la Interfaz de Chat:** Crearé una nueva página en `src/app/dashboard/analytics/chat/page.tsx`. Será un componente de cliente con una interfaz de chat interactiva que se comunicará con el orquestador.
+5.  **Integrar en el Dashboard:** Añadiré una nueva tarjeta en el panel de "Analíticas" para que puedas acceder fácilmente a la nueva funcionalidad de chat con IA.
+
+¡Estoy listo para empezar en cuanto me lo indiques!
