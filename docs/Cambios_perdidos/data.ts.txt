@@ -45,6 +45,7 @@ import {
   FileSearch,
   RotateCcw,
   Printer,
+  BrainCircuit,
 } from "lucide-react";
 import { allAdminPermissions } from "./permissions";
 
@@ -321,6 +322,14 @@ export const adminTools: Tool[] = [
         icon: Bell,
         bgColor: 'bg-fuchsia-600',
       },
+       {
+        id: "admin:settings:api",
+        name: "Configuración de API & IA",
+        description: "Gestionar URLs de APIs y conexión con el servidor de IA local.",
+        href: "/dashboard/admin/api",
+        icon: Wand2,
+        bgColor: 'bg-teal-600',
+      },
       {
         id: "admin:suggestions:read",
         name: "Buzón de Sugerencias",
@@ -386,14 +395,6 @@ export const adminTools: Tool[] = [
         bgColor: 'bg-red-600',
       },
       {
-        id: "admin:settings:api",
-        name: "Configuración de API",
-        description: "Gestionar URLs y claves de APIs externas.",
-        href: "/dashboard/admin/api",
-        icon: Network,
-        bgColor: 'bg-indigo-500',
-      },
-       {
         id: "admin:logs:read",
         name: "Visor de Eventos",
         description: "Revisar los registros y errores del sistema.",
@@ -404,6 +405,14 @@ export const adminTools: Tool[] = [
 ];
 
 export const analyticsTools: Tool[] = [
+    {
+      id: "ai-chat",
+      name: "Chat con IA",
+      description: "Consulta tus datos y genera reportes usando lenguaje natural.",
+      href: "/dashboard/analytics/chat",
+      icon: BrainCircuit,
+      bgColor: "bg-teal-500",
+    },
     {
         id: "analytics:purchase-suggestions:read",
         name: "Sugerencias de Compra",

@@ -30,6 +30,7 @@ const config: Config = {
     'bg-sky-600',
     'bg-sky-700',
     'bg-teal-600',
+    'bg-teal-700',
     'bg-lime-600',
     'bg-gray-500',
     'bg-slate-500',
