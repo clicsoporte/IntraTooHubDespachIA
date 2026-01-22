@@ -5,11 +5,14 @@
 
 import { connectDb, getAllRoles as getAllRolesFromMain } from '../../core/lib/db';
 import { getAllUsers as getAllUsersFromMain } from '../../core/lib/auth';
-import type { ProductionOrder, PlannerSettings, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, RejectCancellationPayload, ProductionOrderStatus, UpdateProductionOrderPayload, CustomStatus, DateRange, PlannerNotePayload, AdministrativeActionPayload, User, PlannerShift } from '../../core/types';
+import { logInfo, logError, logWarn } from '../../core/lib/logger';
+import type { ProductionOrder, PlannerSettings, UpdateStatusPayload, UpdateOrderDetailsPayload, ProductionOrderHistoryEntry, RejectCancellationPayload, ProductionOrderStatus, UpdateProductionOrderPayload, CustomStatus, DateRange, PlannerNotePayload, AdministrativeActionPayload, User, PlannerShift, ProductionReportData, Product } from '../../core/types';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { logError } from '../../core/lib/logger';
+import { getPlannerSettings as getSettings } from './actions';
 import { getAllProducts } from '@/modules/core/lib/db';
+import { getStatusConfig } from '@/modules/planner/lib/utils';
+import { triggerNotificationEvent } from '@/modules/notifications/lib/notifications-engine';
 
 const PLANNER_DB_FILE = 'planner.db';
 
@@ -260,7 +263,7 @@ export async function getPlannerSettings(): Promise<PlannerSettings> {
 export async function saveSettings(settings: PlannerSettings): Promise<void> {
     const db = await connectDb(PLANNER_DB_FILE);
     
-    const transaction = db.transaction((settingsToUpdate) => {
+    const transaction = db.transaction((settingsToUpdate: PlannerSettings) => {
         const keys: (keyof PlannerSettings)[] = ['orderPrefix', 'nextOrderNumber', 'useWarehouseReception', 'showCustomerTaxId', 'machines', 'shifts', 'requireMachineForStart', 'requireShiftForCompletion', 'assignmentLabel', 'shiftLabel', 'customStatuses', 'pdfPaperSize', 'pdfOrientation', 'pdfExportColumns', 'pdfTopLegend', 'fieldsToTrackChanges'];
         for (const key of keys) {
             if (settingsToUpdate[key] !== undefined) {
@@ -285,7 +288,7 @@ export async function getOrders(options: {
         showOnlyMy?: string;
         dateRange?: DateRange;
     };
-}): Promise<{ activeOrders: ProductionOrder[]; archivedOrders: ProductionOrder[]; totalActiveCount: number; totalArchivedCount: number; }> {
+}): Promise<{ activeOrders: ProductionOrder[], archivedOrders: ProductionOrder[], totalActiveCount: number; totalArchivedCount: number; }> {
     const db = await connectDb(PLANNER_DB_FILE);
     const { page, pageSize, isArchived, filters } = options;
 
@@ -636,7 +639,7 @@ export async function getUserByName(name: string): Promise<User | null> {
 
 export async function getRolesWithPermission(permission: string): Promise<string[]> {
     const roles = await getAllRolesFromMain();
-    return roles.filter(role => role.id === 'admin' || role.permissions.includes(permission)).map(role => role.id);
+    return roles.filter((role: any) => role.id === 'admin' || role.permissions.includes(permission)).map((role: any) => role.id);
 }
 
 export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {

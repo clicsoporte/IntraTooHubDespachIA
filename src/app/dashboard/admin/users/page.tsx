@@ -4,12 +4,13 @@
  */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -115,8 +116,8 @@ export default function UsersPage() {
                 getAllRoles()
             ]);
 
-            const roleIds = new Set(rolesData.map(r => r.id));
-            const sanitizedUsers = usersData.map(user => {
+            const roleIds = new Set(rolesData.map((r: Role) => r.id));
+            const sanitizedUsers = usersData.map((user: User) => {
                 if (!roleIds.has(user.role)) {
                     logWarn(`User '${user.name}' has an invalid role '${user.role}'. Defaulting to 'viewer'.`);
                     return { ...user, role: 'viewer' };

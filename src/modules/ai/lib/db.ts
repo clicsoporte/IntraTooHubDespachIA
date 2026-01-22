@@ -2,7 +2,6 @@
  * @fileoverview Server-side functions for the AI module's database.
  * This handles storage and retrieval for knowledge base paths.
  */
-'use server';
 
 import { connectDb } from '@/modules/core/lib/db';
 import { logError, logInfo } from '@/modules/core/lib/logger';

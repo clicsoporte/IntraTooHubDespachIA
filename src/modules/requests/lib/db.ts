@@ -242,7 +242,7 @@ export async function getSettings(): Promise<RequestSettings> {
 export async function saveSettings(settings: RequestSettings): Promise<void> {
     const db = await connectDb(REQUESTS_DB_FILE);
     
-    const transaction = db.transaction((settingsToUpdate) => {
+    const transaction = db.transaction((settingsToUpdate: RequestSettings) => {
         const keys: (keyof RequestSettings)[] = ['requestPrefix', 'nextRequestNumber', 'routes', 'shippingMethods', 'useWarehouseReception', 'useErpEntry', 'showCustomerTaxId', 'pdfTopLegend', 'pdfExportColumns', 'pdfPaperSize', 'pdfOrientation'];
         for (const key of keys) {
              if (settingsToUpdate[key] !== undefined) {
@@ -671,7 +671,7 @@ export async function getUserByName(name: string): Promise<User | null> {
 
 export async function getRolesWithPermission(permission: string): Promise<string[]> {
     const roles = await getAllRolesFromMain();
-    return roles.filter(role => role.id === 'admin' || role.permissions.includes(permission)).map(role => role.id);
+    return roles.filter((role: any) => role.id === 'admin' || role.permissions.includes(permission)).map((role: any) => role.id);
 }
 
 export async function addNote(payload: { requestId: number; notes: string; updatedBy: string; }): Promise<PurchaseRequest> {

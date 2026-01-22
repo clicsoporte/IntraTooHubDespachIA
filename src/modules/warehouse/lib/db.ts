@@ -520,7 +520,7 @@ export async function getChildLocations(parentIds: number[]): Promise<WarehouseL
 }
 
 // --- Dispatch Check Actions ---
-export const searchDocuments = async (searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> => {
+export async function searchDocuments(searchTerm: string): Promise<{ id: string, type: string, clientId: string, clientName: string }[]> {
     const db = await connectDb();
     const likeTerm = `%${searchTerm}%`;
 
@@ -547,7 +547,7 @@ export const searchDocuments = async (searchTerm: string): Promise<{ id: string,
 };
 
 
-export const getInvoiceData = async (documentId: string): Promise<{ header: ErpInvoiceHeader, lines: ErpInvoiceLine[] } | null> => {
+export async function getInvoiceData(documentId: string): Promise<{ header: ErpInvoiceHeader, lines: ErpInvoiceLine[] } | null> {
     const db = await connectDb();
     const header = db.prepare(`SELECT * FROM erp_invoice_headers WHERE FACTURA = ?`).get(documentId) as ErpInvoiceHeader | undefined;
     if (!header) return null;
@@ -556,7 +556,7 @@ export const getInvoiceData = async (documentId: string): Promise<{ header: ErpI
 };
 
 
-export const logDispatch = async (dispatchData: any): Promise<void> => {
+export async function logDispatch(dispatchData: any): Promise<void> {
     const db = await connectDb(WAREHOUSE_DB_FILE);
     db.prepare(`
         INSERT INTO dispatch_logs (documentId, documentType, verifiedAt, verifiedByUserId, verifiedByUserName, items, notes, vehiclePlate, driverName, helper1Name, helper2Name)
@@ -571,7 +571,7 @@ export const logDispatch = async (dispatchData: any): Promise<void> => {
     });
 };
 
-export const getDispatchLogs = async (dateRange?: DateRange): Promise<DispatchLog[]> => {
+export async function getDispatchLogs(dateRange?: DateRange): Promise<DispatchLog[]> {
     const warehouseDb = await connectDb(WAREHOUSE_DB_FILE);
     
     warehouseDb.exec(`ATTACH DATABASE '${path.join(process.cwd(), 'dbs', 'intratool.db')}' AS main_db`);

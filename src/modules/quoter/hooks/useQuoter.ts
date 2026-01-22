@@ -862,13 +862,13 @@ export const useQuoter = () => {
   const loadDrafts = useCallback(async () => {
     if (!isReady || !currentUser) return;
     const draftsFromDb = await getAllQuoteDrafts(currentUser.id);
-    const enrichedDrafts = draftsFromDb.map((draft) => ({
+    const enrichedDrafts = draftsFromDb.map((draft: QuoteDraft) => ({
       ...draft,
       customer: customers.find((c) => c.id === draft.customerId) || null,
     }));
     setSavedDrafts(
       enrichedDrafts.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a: QuoteDraft, b: QuoteDraft) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
     );
   }, [isReady, currentUser, customers]);
@@ -945,8 +945,13 @@ export const useQuoter = () => {
     if (e.key === "Enter") {
       e.preventDefault();
       const lineRefs = lineInputRefs.current.get(lineId);
+      const currentLine = lines.find(l => l.id === lineId);
       if (field === "qty" && lineRefs?.price) {
-        lineRefs.price.focus();
+        if(currentLine && currentLine.price === 0) {
+            lineRefs.price.focus();
+        } else {
+            productInputRef.current?.focus();
+        }
       } else if (field === "price" && productInputRef.current) {
         productInputRef.current.focus();
       }
