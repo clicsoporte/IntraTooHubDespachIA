@@ -7,7 +7,7 @@
  */
 'use server';
 
-import { connectDb, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, getUnreadSuggestions, getDbModules, getAllRoles } from './db';
+import { connectDb, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, getUnreadSuggestions, getDbModules, getAllRoles, saveAllUsers as saveAllUsersServer, addUser as addUserServer, comparePasswords as comparePasswordsServer } from './db';
 import * as db from './db';
 import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-service';
 import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
@@ -349,9 +349,8 @@ export async function getCurrentUser(): Promise<User | null> {
  * This is a server action that aggregates data from various database functions.
  */
 export async function getInitialAuthData() {
-    // This action invalidates the cache for the entire site, ensuring fresh data on login/refresh.
     revalidatePath('/', 'layout');
-
+    
     // Ensure all databases are initialized on first authenticated load
     const dbModules = await getDbModules();
     for (const dbModule of dbModules) {

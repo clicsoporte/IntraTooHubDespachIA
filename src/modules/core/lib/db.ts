@@ -1075,8 +1075,6 @@ export async function markSuggestionAsRead(id: number) { }
 export async function deleteSuggestion(id: number) { }
 export async function getStockSettings(): Promise<StockSettings> { return { warehouses: [] }; }
 export async function saveStockSettings(settings: StockSettings) { }
-export async function getEmployees(): Promise<Empleado[]> { return []; }
-export async function getVehicles(): Promise<Vehiculo[]> { return []; }
 
 // Placeholder function to satisfy the dependency in ai-actions.ts
 // In a real implementation, this would query a vector database or a file index.
