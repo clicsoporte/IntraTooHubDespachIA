@@ -639,7 +639,7 @@ export async function getUserByName(name: string): Promise<User | null> {
 
 export async function getRolesWithPermission(permission: string): Promise<string[]> {
     const roles = await getAllRolesFromMain();
-    return roles.filter((role: any) => role.id === 'admin' || role.permissions.includes(permission)).map((role: any) => role.id);
+    return roles.filter((role) => role.id === 'admin' || role.permissions.includes(permission)).map(role => role.id);
 }
 
 export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promise<(ProductionOrder & { history: ProductionOrderHistoryEntry[] })[]> {
@@ -686,3 +686,5 @@ export async function getCompletedOrdersByDateRange(dateRange: DateRange): Promi
 
     return JSON.parse(JSON.stringify(result));
 }
+
+    

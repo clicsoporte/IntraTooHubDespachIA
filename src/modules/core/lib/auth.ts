@@ -7,7 +7,7 @@
  */
 'use server';
 
-import { connectDb, getCompanySettings, getDbModules } from './db';
+import { connectDb, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, getUnreadSuggestions, getDbModules, getAllRoles } from './db';
 import * as db from './db';
 import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-service';
 import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
@@ -352,7 +352,6 @@ export async function getInitialAuthData() {
     // This action invalidates the cache for the entire site, ensuring fresh data on login/refresh.
     revalidatePath('/', 'layout');
 
-    const db = await connectDb();
     // Ensure all databases are initialized on first authenticated load
     const dbModules = await getDbModules();
     for (const dbModule of dbModules) {
@@ -372,15 +371,15 @@ export async function getInitialAuthData() {
         unreadSuggestions
     ] = await Promise.all([
         getAllUsers(),
-        db.getAllRoles(),
+        getAllRoles(),
         getCompanySettings(),
-        db.getAllCustomers(),
-        db.getAllProducts(),
-        db.getAllStock(),
-        db.getAllExemptions(),
-        db.getExemptionLaws(),
+        getAllCustomers(),
+        getAllProducts(),
+        getAllStock(),
+        getAllExemptions(),
+        getExemptionLaws(),
         getExchangeRate(),
-        db.getUnreadSuggestions()
+        getUnreadSuggestions()
     ]);
     
     let rateData: { rate: number | null; date: string | null } = { rate: null, date: null };

@@ -1,8 +1,9 @@
+
 /**
  * @fileoverview Server-side functions for the AI module's database.
  * This handles storage and retrieval for knowledge base paths.
  */
-
+'use server';
 import { connectDb } from '@/modules/core/lib/db';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import type { ExpectedSchema } from '@/modules/core/types';
@@ -32,10 +33,16 @@ export async function runAiMigrations(db: import('better-sqlite3').Database) {
         const tableInfo = db.prepare(`PRAGMA table_info(knowledge_base_paths)`).all() as { name: string }[];
         const columns = new Set(tableInfo.map(c => c.name));
         
-        if (!columns.has('createdAt')) {
-            // This is just an example, no actual migration is needed for this table yet
-        }
+        // This is where a future migration would go, for example:
+        // if (!columns.has('createdAt')) {
+        //     db.exec('ALTER TABLE knowledge_base_paths ADD COLUMN createdAt TEXT');
+        // }
     } catch (error) {
         // Table might not exist, that's okay, initialization will handle it.
+        if (!(error as Error).message.includes('no such table')) {
+             console.error("Error during AI migrations:", error);
+        }
     }
 }
+
+    
