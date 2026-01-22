@@ -23,6 +23,32 @@ Este documento registra todas las mejoras, correcciones y cambios significativos
 
 ---
 
+## [2.3.0] - Publicado
+
+### Nueva Funcionalidad Mayor: Asistente de Chat con IA (Inteligencia Artificial)
+
+Se ha integrado un asistente de inteligencia artificial local, potenciado por Ollama y el modelo `deepseek-coder-v2`, que permite a los usuarios realizar consultas complejas sobre los datos del sistema usando lenguaje natural.
+
+-   **[Nuevo] Interfaz de Chat:**
+    -   Se ha añadido una nueva herramienta en **Analíticas > Chat con IA**.
+    -   Los usuarios pueden escribir preguntas como "¿Cuáles fueron los 5 productos más vendidos la semana pasada?" o "¿Qué solicitudes de compra están pendientes de aprobación?".
+
+-   **[Nuevo] Motor de Inferencia Local (Text-to-SQL):**
+    -   La IA no tiene acceso directo a la base de datos. En su lugar, analiza la pregunta del usuario y el esquema de las tablas del sistema.
+    -   Genera una consulta `SQL SELECT` segura y se la pide al backend de Clic-Tools para su ejecución.
+    -   El backend ejecuta la consulta, obtiene los datos y se los devuelve a la IA.
+    -   Finalmente, la IA formatea los datos en una respuesta amigable y, si son tabulares, los presenta en una tabla dentro del chat.
+
+-   **[Seguridad] Consultas de Solo Lectura:** El sistema está diseñado para que la IA solo pueda generar y solicitar la ejecución de consultas `SELECT`, previniendo cualquier posibilidad de modificación, inserción o eliminación de datos.
+
+-   **[Configuración] Flexibilidad de Modelo:**
+    -   Desde **Administración > Configuración de IA**, los administradores pueden probar la conexión con el servidor de Ollama.
+    -   Se puede cambiar el nombre del modelo a utilizar, permitiendo experimentar con otros modelos de código abierto como `llama3` si se desea.
+
+-   **[Mejora] Esquema de Datos para IA:** Se ha ampliado el "conocimiento" de la IA para que tenga visibilidad sobre todas las tablas del ERP que se sincronizan, incluyendo `empleados`, `vendedores`, `proveedores` y `órdenes de compra`, mejorando drásticamente la precisión y el alcance de sus respuestas.
+
+---
+
 ## [2.2.0] - Publicado
 
 ### Nueva Funcionalidad Mayor: Centro de Despacho
