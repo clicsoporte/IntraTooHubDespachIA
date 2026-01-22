@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview This file handles the SQLite database connection and provides
  * server-side functions for all database operations. It includes initialization,
@@ -660,7 +661,12 @@ export async function saveAllRoles(roles: Role[]): Promise<void> {
 
 export async function resetDefaultRoles(): Promise<void> {
     const db = await connectDb();
-    db.prepare('DELETE FROM roles WHERE id NOT IN (?)', initialRoles.map(r => r.id)).run();
+    const defaultRoleIds = initialRoles.map(r => r.id);
+    if (defaultRoleIds.length > 0) {
+        const placeholders = defaultRoleIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM roles WHERE id NOT IN (${placeholders})`).run(...defaultRoleIds);
+    }
+
     const insertOrUpdate = db.prepare('INSERT OR REPLACE INTO roles (id, name, permissions) VALUES (?, ?, ?)');
     for (const role of initialRoles) {
         insertOrUpdate.run(role.id, role.name, JSON.stringify(role.permissions));
@@ -949,6 +955,7 @@ export async function clearWizardSession(userId: number): Promise<void> {
     db.prepare('UPDATE users SET activeWizardSession = NULL WHERE id = ?').run(userId);
 }
 
+
 export async function saveAllCustomers(customers: Customer[]): Promise<void> {
     const db = await connectDb();
     const insert = db.prepare(`INSERT OR REPLACE INTO customers (id, name, address, phone, taxId, currency, creditLimit, paymentCondition, salesperson, active, email, electronicDocEmail) VALUES (@id, @name, @address, @phone, @taxId, @currency, @creditLimit, @paymentCondition, @salesperson, @active, @email, @electronicDocEmail)`);
@@ -1055,7 +1062,9 @@ export async function deleteOldUpdateBackups(): Promise<number> { return 0; }
 export async function restoreAllFromUpdateBackup(timestamp: string) { }
 export async function restoreDatabase(moduleId: string, file: File) { }
 export async function factoryReset(moduleId: string) { }
-export async function getDbModules() { return []; }
+export async function getDbModules(): Promise<Omit<DatabaseModule, 'schema'>[]> {
+    return DB_MODULES;
+}
 export async function getCurrentVersion() { return '0.0.0'; }
 export async function runDatabaseAudit(userName: string): Promise<AuditResult[]> { return []; }
 export async function runSingleModuleMigration(moduleId: string) { }
@@ -1064,4 +1073,21 @@ export async function markSuggestionAsRead(id: number) { }
 export async function deleteSuggestion(id: number) { }
 export async function getStockSettings(): Promise<StockSettings> { return { warehouses: [] }; }
 export async function saveStockSettings(settings: StockSettings) { }
+export async function getEmployees(): Promise<Empleado[]> { return []; }
+export async function getVehicles(): Promise<Vehiculo[]> { return []; }
 
+// Placeholder function to satisfy the dependency in ai-actions.ts
+// In a real implementation, this would query a vector database or a file index.
+export async function searchLocalFiles(keyword: string): Promise<{ name: string; path: string; summary: string }[]> {
+  logInfo('Placeholder file search called', { keyword });
+  // Returning an empty array to indicate no files were found.
+  return [];
+}
+export async function confirmPlannerModification(orderId: number, updatedBy: string): Promise<ProductionOrder> {
+  const updatedOrder = await confirmPlannerModificationServer(orderId, updatedBy);
+  await logInfo(`Modification of order ${updatedOrder.consecutive} confirmed by ${updatedBy}`, { orderId });
+  return updatedOrder;
+}
+export async function importDataFromFile(type: string, filePath: string) {}
+
+    

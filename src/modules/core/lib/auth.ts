@@ -1,5 +1,4 @@
 
-
 /**
  * @fileoverview Server-side authentication and user management functions.
  * These functions interact directly with the database to handle user data.
@@ -8,7 +7,8 @@
  */
 'use server';
 
-import { connectDb, getAllRoles, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, getUnreadSuggestions, getDbModules } from './db';
+import { connectDb, getCompanySettings, getDbModules } from './db';
+import * as db from './db';
 import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-service';
 import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
 import bcrypt from 'bcryptjs';
@@ -372,15 +372,15 @@ export async function getInitialAuthData() {
         unreadSuggestions
     ] = await Promise.all([
         getAllUsers(),
-        getAllRoles(),
+        db.getAllRoles(),
         getCompanySettings(),
-        getAllCustomers(),
-        getAllProducts(),
-        getAllStock(),
-        getAllExemptions(),
-        getExemptionLaws(),
+        db.getAllCustomers(),
+        db.getAllProducts(),
+        db.getAllStock(),
+        db.getAllExemptions(),
+        db.getExemptionLaws(),
         getExchangeRate(),
-        getUnreadSuggestions()
+        db.getUnreadSuggestions()
     ]);
     
     let rateData: { rate: number | null; date: string | null } = { rate: null, date: null };
@@ -450,3 +450,5 @@ export async function sendPasswordRecoveryEmail(email: string, clientInfo: { ip:
         throw new Error('No se pudo enviar el correo de recuperación. Revisa la configuración de SMTP.');
     }
 }
+
+    
