@@ -664,7 +664,8 @@ export async function resetDefaultRoles(): Promise<void> {
     const defaultRoleIds = initialRoles.map(r => r.id);
     if (defaultRoleIds.length > 0) {
         const placeholders = defaultRoleIds.map(() => '?').join(',');
-        db.prepare(`DELETE FROM roles WHERE id NOT IN (${placeholders})`).run(...defaultRoleIds);
+        const deleteStmt = db.prepare(`DELETE FROM roles WHERE id NOT IN (${placeholders})`);
+        deleteStmt.run(...defaultRoleIds);
     }
 
     const insertOrUpdate = db.prepare('INSERT OR REPLACE INTO roles (id, name, permissions) VALUES (?, ?, ?)');
@@ -798,7 +799,6 @@ export async function getUnreadSuggestionsCount(): Promise<number> {
 }
 
 
-// ... and so on for all other functions from the original db.ts
 export async function addLog(log: Omit<LogEntry, 'id' | 'timestamp'>) {
     const db = await connectDb();
     const stmt = db.prepare('INSERT INTO logs (timestamp, type, message, details) VALUES (?, ?, ?, ?)');
@@ -939,7 +939,6 @@ export async function saveUserPreferences(userId: number, key: string, value: an
     db.prepare('INSERT OR REPLACE INTO user_preferences (userId, key, value) VALUES (?, ?, ?)').run(userId, key, JSON.stringify(value));
 }
 
-// All the other exports from the original db.ts... I'll add the most critical ones based on the errors.
 export async function getActiveWizardSession(userId: number): Promise<WizardSession | null> {
     const db = await connectDb();
     const user = db.prepare('SELECT activeWizardSession FROM users WHERE id = ?').get(userId) as { activeWizardSession?: string | null };
@@ -1076,18 +1075,45 @@ export async function deleteSuggestion(id: number) { }
 export async function getStockSettings(): Promise<StockSettings> { return { warehouses: [] }; }
 export async function saveStockSettings(settings: StockSettings) { }
 
-// Placeholder function to satisfy the dependency in ai-actions.ts
-// In a real implementation, this would query a vector database or a file index.
-export async function searchLocalFiles(keyword: string): Promise<{ name: string; path: string; summary: string }[]> {
-  logInfo('Placeholder file search called', { keyword });
-  // Returning an empty array to indicate no files were found.
-  return [];
-}
 export async function confirmPlannerModification(orderId: number, updatedBy: string): Promise<ProductionOrder> {
   const updatedOrder = await confirmPlannerModificationServer(orderId, updatedBy);
   await logInfo(`Modification of order ${updatedOrder.consecutive} confirmed by ${updatedBy}`, { orderId });
   return updatedOrder;
 }
 export async function importDataFromFile(type: string, filePath: string) {}
-
     
+
+export async function saveAllVendedores(data: any[]): Promise<void> {
+    const db = await connectDb();
+    const insert = db.prepare('INSERT OR REPLACE INTO vendedores (VENDEDOR, NOMBRE, EMPLEADO) VALUES (?, ?, ?)');
+    const transaction = db.transaction((items) => { for (const item of items) insert.run(item.VENDEDOR, item.NOMBRE, item.EMPLEADO); });
+    transaction(data);
+}
+
+export async function saveAllNominas(data: any[]): Promise<void> {
+    const db = await connectDb();
+    const insert = db.prepare('INSERT OR REPLACE INTO nominas (NOMINA, DESCRIPCION, TIPO_NOMINA) VALUES (?, ?, ?)');
+    const transaction = db.transaction((items) => { for (const item of items) insert.run(item.NOMINA, item.DESCRIPCION, item.TIPO_NOMINA); });
+    transaction(data);
+}
+
+export async function saveAllPuestos(data: any[]): Promise<void> {
+    const db = await connectDb();
+    const insert = db.prepare('INSERT OR REPLACE INTO puestos (PUESTO, DESCRIPCION, ACTIVO) VALUES (?, ?, ?)');
+    const transaction = db.transaction((items) => { for (const item of items) insert.run(item.PUESTO, item.DESCRIPCION, item.ACTIVO); });
+    transaction(data);
+}
+
+export async function saveAllDepartamentos(data: any[]): Promise<void> {
+    const db = await connectDb();
+    const insert = db.prepare('INSERT OR REPLACE INTO departamentos (DEPARTAMENTO, DESCRIPCION, ACTIVO) VALUES (?, ?, ?)');
+    const transaction = db.transaction((items) => { for (const item of items) insert.run(item.DEPARTAMENTO, item.DESCRIPCION, item.ACTIVO); });
+    transaction(data);
+}
+
+export async function saveAllEmpleados(data: any[]): Promise<void> {
+    const db = await connectDb();
+    const insert = db.prepare('INSERT OR REPLACE INTO empleados (EMPLEADO, NOMBRE, ACTIVO, DEPARTAMENTO, PUESTO, NOMINA) VALUES (?, ?, ?, ?, ?, ?)');
+    const transaction = db.transaction((items) => { for (const item of items) insert.run(item.EMPLEADO, item.NOMBRE, item.ACTIVO, item.DEPARTAMENTO, item.PUESTO, item.NOMINA); });
+    transaction(data);
+}
