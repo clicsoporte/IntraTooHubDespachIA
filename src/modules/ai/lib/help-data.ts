@@ -1,0 +1,63 @@
+/**
+ * @fileoverview This file contains the structured text content for the application's help center.
+ * It is used as a knowledge base for the AI assistant.
+ */
+
+export const HELP_DATA = [
+    {
+        title: "Introducción al Sistema",
+        content: `¡Bienvenido a Clic-Tools! Este sistema es tu navaja suiza digital para las tareas diarias de la empresa. Ha sido diseñado para ser súper rápido y fácil de usar desde cualquier computadora en la oficina. El objetivo es simple: tener todas las herramientas importantes (como hacer cotizaciones, solicitudes de compra o planificar la producción) en un solo lugar. Puedes contraer el menú lateral para maximizar tu espacio de trabajo.`
+    },
+    {
+        title: "Asistente de Chat con IA",
+        content: `Clic-Tools ahora incluye un potente asistente de inteligencia artificial para consultar tus datos. Puedes encontrarlo en Analíticas > Chat con IA. Puedes hacerle preguntas en lenguaje normal sobre tus operaciones, como "¿Cuáles fueron los 5 productos más vendidos la semana pasada?". La IA generará una consulta SQL segura para encontrar la respuesta. Todo el procesamiento de la IA ocurre localmente en tu servidor y solo tiene permiso para realizar consultas de solo lectura (SELECT).`
+    },
+    {
+        title: "Guía del Centro de Notificaciones",
+        content: `El Centro de Notificaciones te avisará cuando algo requiera tu atención. El icono de campana en la cabecera mostrará un punto rojo con un número que indica cuántas notificaciones tienes sin leer. Cada notificación es un enlace directo a la orden, solicitud o sección correspondiente. Algunas notificaciones, como las de "solicitud de cancelación", incluirán botones de acción rápida ("Aprobar", "Rechazar"). El sistema solo te enviará notificaciones de tareas que puedes realizar según tus permisos.`
+    },
+    {
+        title: "Guía Crítica: Sincronización de Datos del ERP",
+        content: `Esta funcionalidad mantiene la aplicación al día con los datos de tu sistema ERP (clientes, productos, etc.). Se gestiona desde Administración > Importar Datos. Puedes importar desde archivos de texto (.txt o .csv) o conectar directamente a SQL Server (recomendado) con un usuario de solo lectura. El botón "Sincronizar ERP" en el encabezado ejecuta este proceso. Si el indicador "Última Sinc" está en rojo, significa que los datos pueden estar desactualizados.`
+    },
+    {
+        title: "Guía de Seguridad: Recuperación de Contraseña",
+        content: `El sistema usa cookies seguras para gestionar tu sesión. Si olvidas tu contraseña, puedes usar el enlace "¿Olvidé mi contraseña?" en la pantalla de login. El sistema te enviará una contraseña temporal a tu correo (si un administrador ha configurado el servidor de correo SMTP en Administración > Configuración de Correo). Al ingresar con la clave temporal, se te forzará a establecer una nueva contraseña personal. Los administradores también pueden forzar este cambio al crear un nuevo usuario.`
+    },
+    {
+        title: "Guía Maestra: Módulo Cotizador",
+        content: `Esta herramienta permite crear cotizaciones. El flujo es: 1. Buscar y seleccionar un cliente; el sistema verificará su límite de crédito y exoneración en tiempo real. 2. Agregar productos; el sistema mostrará el inventario actual. 3. Ajustar cantidades y precios. 4. Guardar como borrador o generar el PDF final. Puedes usar atajos de teclado como 'Enter' para moverte entre campos.`
+    },
+    {
+        title: "Guía Maestra: Asistente de Costos",
+        content: `Esta herramienta calcula precios de venta para productos importados. Flujo: 1. Cargar facturas de compra en formato XML; los artículos se extraerán automáticamente. 2. Añadir costos adicionales como transporte y aduanas; se prorratearán entre los artículos. 3. Configurar cómo se manejan los descuentos (si reducen el costo o aumentan la ganancia). 4. Ajustar márgenes de ganancia para cada artículo; el sistema calculará el PVP sugerido. 5. Guardar como borrador o exportar el análisis a Excel.`
+    },
+    {
+        title: "Guía Técnica: Módulo de Solicitudes de Compra",
+        content: `Este módulo gestiona solicitudes de compra internas. Las solicitudes pasan por estados como 'Pendiente', 'Revisión Compras', 'Pendiente Aprobación', 'Aprobada', 'Ordenada', y opcionalmente 'Recibido en Bodega' y 'Ingresado en ERP'. Por defecto, solo ves tus propias solicitudes, pero si tienes el permiso 'requests:read:all', puedes ver todas. El sistema te avisa si intentas crear una solicitud para un artículo que ya tiene una activa.`
+    },
+    {
+        title: "Tutorial: Módulo Planificador OP",
+        content: `Organiza la carga de trabajo de producción. Las órdenes pasan por estados como 'Pendiente', 'Pendiente Revisión', 'Pendiente Aprobación', 'Aprobada', 'En Cola', 'En Progreso', etc. Puedes avanzar y retroceder en el flujo para corregir errores. El sistema te avisa si editas una orden ya aprobada y permite solicitar la cancelación o desaprobación de órdenes. Cada orden tiene un historial detallado de cambios.`
+    },
+    {
+        title: "Guía Maestra: Módulo de Almacenes",
+        content: `Este módulo da control sobre la localización y conteo del inventario. Incluye herramientas como:
+- **Centro de Despacho:** Digitaliza el proceso de alistamiento y verificación de mercadería para rutas de entrega.
+- **Clasificador de Despachos:** Asigna facturas del ERP a los contenedores o rutas de despacho.
+- **Corrección de Ingresos:** Permite anular y corregir un ingreso de mercadería que se registró con un código de producto incorrecto.
+- **Asistente de Poblado:** Ayuda a poblar masivamente las ubicaciones de un rack de forma guiada, con capacidad de retomar sesiones interrumpidas.
+- **Toma de Inventario Físico:** Permite a los bodegueros registrar conteos físicos para luego compararlos con el stock del ERP.`
+    },
+    {
+        title: "Tutorial: Módulo de Analíticas",
+        content: `Este es el centro de inteligencia. Incluye herramientas como:
+- **Sugerencias de Compra Proactivas:** Analiza los pedidos de venta del ERP, los cruza con el inventario y te sugiere qué artículos comprar para cubrir la demanda.
+- **Reporte de Despachos:** Permite auditar todas las verificaciones de despacho que se han realizado.
+- **Reporte de Permisos de Usuario:** Muestra una lista de todos los usuarios y los permisos que les concede su rol.`
+    },
+    {
+        title: "Guía Técnica: Panel de Administración (Configuración)",
+        content: `Esta es la sala de máquinas del sistema para administradores. Aquí se configura el comportamiento de la aplicación, incluyendo: Gestión de Usuarios y Roles, Configuración de Correo, Automatización de Notificaciones, Configuración de Conexión con IA, Importación de Datos (desde archivos o SQL Server), y Mantenimiento (backups, restauraciones y auditoría de la base de datos).`
+    }
+];
