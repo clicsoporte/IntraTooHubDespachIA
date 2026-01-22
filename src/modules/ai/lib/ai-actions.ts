@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { generate, genkit, type GenerationConfig } from 'genkit';
 import { ollama } from 'genkitx-ollama';
-import { getApiSettings, queryLocalDb, connectDb } from '@/modules/core/lib/db-export';
+import { getApiSettings, queryLocalDb, connectDb } from '@/modules/core/lib/db';
 import { logInfo, logError } from '@/modules/core/lib/logger';
 import { searchLocalFiles as searchLocalFilesDb, getKnowledgeBasePaths, saveKnowledgeBasePath, deleteKnowledgeBasePath, indexKnowledgeBaseFiles } from './db';
 
