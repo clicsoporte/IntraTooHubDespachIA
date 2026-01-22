@@ -46,6 +46,8 @@
     "cron-parser": "^4.9.0",
     "date-fns": "^3.6.0",
     "fast-xml-parser": "^4.4.0",
+    "genkit": "^0.5.2",
+    "genkitx-ollama": "^0.5.0",
     "jsbarcode": "^3.11.6",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
