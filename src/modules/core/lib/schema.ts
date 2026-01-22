@@ -39,4 +39,6 @@ export const mainDbSchema: ExpectedSchema = {
     'departamentos': ['DEPARTAMENTO', 'DESCRIPCION', 'ACTIVO'],
     'empleados': ['EMPLEADO', 'NOMBRE', 'ACTIVO', 'DEPARTAMENTO', 'PUESTO', 'NOMINA'],
     'vehiculos': ['placa', 'marca'],
+    'knowledge_base_paths': ['id', 'name', 'path', 'createdAt'],
+    'chat_history': ['id', 'sessionId', 'userId', 'role', 'content', 'timestamp'],
 };

@@ -21,7 +21,6 @@ import { initializeRequestsDb, runRequestMigrations } from '../../requests/lib/d
 import { initializeWarehouseDb, runWarehouseMigrations } from '../../warehouse/lib/db-init';
 import { initializeCostAssistantDb, runCostAssistantMigrations } from '../../cost-assistant/lib/db';
 import { initializeNotificationsDb, runNotificationsMigrations } from '../../notifications/lib/db';
-import { initializeAiDb, runAiMigrations } from '@/modules/ai/lib/db';
 import type { 
     Company, LogEntry, ApiSettings, User, Product, Customer, Role, QuoteDraft, DatabaseModule, Exemption, 
     ExemptionLaw, StockInfo, StockSettings, ImportQuery, ItemLocation, UpdateBackupInfo, Suggestion, DateRange, 
@@ -47,7 +46,6 @@ async function runMigrations(dbModule: Omit<DatabaseModule, 'schema'>, db: Datab
         case 'warehouse-management': migrationFn = runWarehouseMigrations; break;
         case 'cost-assistant': migrationFn = runCostAssistantMigrations; break;
         case 'notifications-engine': migrationFn = runNotificationsMigrations; break;
-        case 'ai-engine': migrationFn = runAiMigrations; break;
         default: break;
     }
     if (migrationFn) {
@@ -111,7 +109,6 @@ export async function connectDb(dbFile: string = DB_FILE, forceRecreate = false)
             else if (dbModule.id === 'warehouse-management') await initializeWarehouseDb(db);
             else if (dbModule.id === 'cost-assistant') await initializeCostAssistantDb(db);
             else if (dbModule.id === 'notifications-engine') await initializeNotificationsDb(db);
-            else if (dbModule.id === 'ai-engine') await initializeAiDb(db);
         }
         await runMigrations(dbModule, db);
     }
@@ -187,6 +184,20 @@ export async function initializeMainDatabase(db: import('better-sqlite3').Databa
         CREATE TABLE IF NOT EXISTS departamentos (DEPARTAMENTO TEXT PRIMARY KEY, DESCRIPCION TEXT, ACTIVO TEXT);
         CREATE TABLE IF NOT EXISTS empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);
         CREATE TABLE IF NOT EXISTS vehiculos (placa TEXT PRIMARY KEY, marca TEXT);
+        CREATE TABLE IF NOT EXISTS knowledge_base_paths (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            path TEXT NOT NULL UNIQUE,
+            createdAt TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sessionId TEXT NOT NULL,
+            userId INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            content TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        );
     `;
     db.exec(schema);
 
@@ -370,6 +381,35 @@ export async function runMainDbMigrations(db: import('better-sqlite3').Database)
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='empleados'`).get()) db.exec(`CREATE TABLE empleados (EMPLEADO TEXT PRIMARY KEY, NOMBRE TEXT, ACTIVO TEXT, DEPARTAMENTO TEXT, PUESTO TEXT, NOMINA TEXT);`);
         if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='vehiculos'`).get()) db.exec(`CREATE TABLE vehiculos (placa TEXT PRIMARY KEY, marca TEXT);`);
 
+        // Migration for AI tables in main DB
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='knowledge_base_paths'`).get()) {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS knowledge_base_paths (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    path TEXT NOT NULL UNIQUE,
+                    createdAt TEXT NOT NULL
+                );
+            `);
+        } else {
+            const kbPathsInfo = db.prepare(`PRAGMA table_info(knowledge_base_paths)`).all() as { name: string }[];
+            if (!kbPathsInfo.some(col => col.name === 'createdAt')) {
+                db.exec(`ALTER TABLE knowledge_base_paths ADD COLUMN createdAt TEXT NOT NULL DEFAULT ''`);
+            }
+        }
+
+        if (!db.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='chat_history'`).get()) {
+            db.exec(`
+                CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sessionId TEXT NOT NULL,
+                    userId INTEGER NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                );
+            `);
+        }
     } catch (error) {
         console.error("Failed to apply migrations:", error);
     }
@@ -566,7 +606,7 @@ export async function getAllRoles(): Promise<Role[]> {
     const db = await connectDb();
     try {
         const rows = db.prepare('SELECT * FROM roles').all() as any[];
-        return rows.map(row => ({ ...row, permissions: JSON.parse(row.permissions) }));
+        return rows.map((row: any) => ({ ...row, permissions: JSON.parse(row.permissions) }));
     } catch (error) {
         console.error("Failed to get all roles:", error);
         return [];
@@ -700,6 +740,7 @@ export async function getInvoicesByIds(documentIds: string[]): Promise<ErpInvoic
     return JSON.parse(JSON.stringify(rows));
 }
 
+
 export async function getUnreadSuggestions(): Promise<Suggestion[]> {
     const db = await connectDb();
     return db.prepare('SELECT * FROM suggestions WHERE isRead = 0 ORDER BY timestamp DESC').all() as Suggestion[];
@@ -711,13 +752,24 @@ export async function getUnreadSuggestionsCount(): Promise<number> {
     return result.count;
 }
 
+
+// ... and so on for all other functions from the original db.ts
 export async function addLog(log: Omit<LogEntry, 'id' | 'timestamp'>) {
     const db = await connectDb();
     const stmt = db.prepare('INSERT INTO logs (timestamp, type, message, details) VALUES (?, ?, ?, ?)');
-    stmt.run(new Date().toISOString(), log.type, log.message, log.details ? JSON.stringify(log.details) : null);
+    stmt.run(
+        new Date().toISOString(),
+        log.type,
+        log.message,
+        log.details ? JSON.stringify(log.details) : null
+    );
 }
 
-export async function getLogs(filters: { type?: 'operational' | 'system' | 'all'; search?: string; dateRange?: DateRange; } = {}): Promise<LogEntry[]> {
+export async function getLogs(filters: {
+    type?: 'operational' | 'system' | 'all';
+    search?: string;
+    dateRange?: DateRange;
+} = {}): Promise<LogEntry[]> {
     const db = await connectDb();
     let query = 'SELECT * FROM logs';
     const params: any[] = [];
@@ -732,27 +784,37 @@ export async function getLogs(filters: { type?: 'operational' | 'system' | 'all'
             params.push('WARN', 'ERROR');
         }
     }
+
     if (filters.search) {
         whereClauses.push('(message LIKE ? OR details LIKE ?)');
         params.push(`%${filters.search}%`, `%${filters.search}%`);
     }
+
     if (filters.dateRange?.from) {
         const fromDate = new Date(filters.dateRange.from);
         fromDate.setHours(0, 0, 0, 0);
         whereClauses.push('timestamp >= ?');
         params.push(fromDate.toISOString());
     }
+
     if (filters.dateRange?.to) {
         const toDate = new Date(filters.dateRange.to);
         toDate.setHours(23, 59, 59, 999);
         whereClauses.push('timestamp <= ?');
         params.push(toDate.toISOString());
     }
-    if (whereClauses.length > 0) query += ' WHERE ' + whereClauses.join(' AND ');
+    
+    if (whereClauses.length > 0) {
+        query += ' WHERE ' + whereClauses.join(' AND ');
+    }
+    
     query += ' ORDER BY timestamp DESC LIMIT 500';
     
     const rows = db.prepare(query).all(...params) as any[];
-    return rows.map(row => ({ ...row, details: row.details ? JSON.parse(row.details) : null }));
+    return rows.map(row => ({
+        ...row,
+        details: row.details ? JSON.parse(row.details) : null
+    }));
 }
 
 export async function clearLogs(clearedBy: string, type: 'operational' | 'system' | 'all', deleteAllTime: boolean): Promise<void> {
@@ -778,11 +840,17 @@ export async function clearLogs(clearedBy: string, type: 'operational' | 'system
         }
     }
     
-    if (whereClauses.length > 0) query += ' WHERE ' + whereClauses.join(' AND ');
+    if (whereClauses.length > 0) {
+        query += ' WHERE ' + whereClauses.join(' AND ');
+    }
 
     try {
         const info = db.prepare(query).run(...params);
-        await logInfo(`Logs cleared by ${clearedBy}`, { type, deleteAllTime, recordsDeleted: info.changes });
+        await logInfo(`Logs cleared by ${clearedBy}`, {
+            type,
+            deleteAllTime,
+            recordsDeleted: info.changes,
+        });
     } catch (error: any) {
         await logError('Failed to clear logs', { error: error.message });
     }
@@ -793,13 +861,21 @@ export async function saveQuoteDraft(draft: QuoteDraft): Promise<void> {
     const stmt = db.prepare(
         'INSERT OR REPLACE INTO quote_drafts (id, createdAt, userId, customerId, customerDetails, lines, totals, notes, currency, exchangeRate, purchaseOrderNumber, deliveryAddress, deliveryDate, sellerName, sellerType, quoteDate, validUntilDate, paymentTerms, creditDays) VALUES (@id, @createdAt, @userId, @customerId, @customerDetails, @lines, @totals, @notes, @currency, @exchangeRate, @purchaseOrderNumber, @deliveryAddress, @deliveryDate, @sellerName, @sellerType, @quoteDate, @validUntilDate, @paymentTerms, @creditDays)'
     );
-    stmt.run({ ...draft, lines: JSON.stringify(draft.lines), totals: JSON.stringify(draft.totals) });
+    stmt.run({
+        ...draft,
+        lines: JSON.stringify(draft.lines),
+        totals: JSON.stringify(draft.totals),
+    });
 }
 
 export async function getAllQuoteDrafts(userId: number): Promise<QuoteDraft[]> {
     const db = await connectDb();
     const rows = db.prepare('SELECT * FROM quote_drafts WHERE userId = ? ORDER BY createdAt DESC').all(userId) as any[];
-    return rows.map(row => ({ ...row, lines: JSON.parse(row.lines), totals: JSON.parse(row.totals) }));
+    return rows.map(row => ({
+        ...row,
+        lines: JSON.parse(row.lines),
+        totals: JSON.parse(row.totals),
+    }));
 }
 
 export async function deleteQuoteDraft(id: string): Promise<void> {
@@ -821,7 +897,10 @@ export async function saveUserPreferences(userId: number, key: string, value: an
 export async function getActiveWizardSession(userId: number): Promise<WizardSession | null> {
     const db = await connectDb();
     const user = db.prepare('SELECT activeWizardSession FROM users WHERE id = ?').get(userId) as { activeWizardSession?: string | null };
-    return user?.activeWizardSession ? JSON.parse(user.activeWizardSession) : null;
+    if (user?.activeWizardSession) {
+        return JSON.parse(user.activeWizardSession);
+    }
+    return null;
 }
 
 export async function saveWizardSession(userId: number, session: WizardSession): Promise<void> {
@@ -833,6 +912,7 @@ export async function clearWizardSession(userId: number): Promise<void> {
     const db = await connectDb();
     db.prepare('UPDATE users SET activeWizardSession = NULL WHERE id = ?').run(userId);
 }
+
 
 export async function saveAllCustomers(customers: Customer[]): Promise<void> {
     const db = await connectDb();
@@ -858,7 +938,11 @@ export async function saveAllExemptions(exemptions: Exemption[]): Promise<void> 
 export async function saveAllStock(stockData: StockInfo[]): Promise<void> {
     const db = await connectDb();
     const insert = db.prepare(`INSERT OR REPLACE INTO stock (itemId, stockByWarehouse, totalStock) VALUES (?, ?, ?)`);
-    const transaction = db.transaction((stockItems) => { for (const item of stockItems) insert.run(item.itemId, JSON.stringify(item.stockByWarehouse), item.totalStock); });
+    const transaction = db.transaction((stockItems) => {
+        for (const item of stockItems) {
+            insert.run(item.itemId, JSON.stringify(item.stockByWarehouse), item.totalStock);
+        }
+    });
     transaction(stockData);
 }
 
@@ -914,14 +998,18 @@ export async function saveAllErpInvoiceLines(lines: ErpInvoiceLine[]): Promise<v
 export async function importData(type: ImportQuery['type']) {
     const settings = await getCompanySettings();
     if (settings?.importMode === 'sql') {
-        // Logic for SQL import
+        // SQL Import logic
     } else {
-        // Logic for file import
+        // File Import logic
     }
+    // ... implementation
     return { type, count: 0, source: 'file' };
 }
 
-export async function importAllDataFromFiles() { return []; }
+export async function importAllDataFromFiles() {
+    // ... implementation
+    return [];
+}
 export async function testSqlConnection() { }
 export async function saveSqlConfig(config: SqlConfig) { }
 export async function saveImportQueries(queries: ImportQuery[]) { }

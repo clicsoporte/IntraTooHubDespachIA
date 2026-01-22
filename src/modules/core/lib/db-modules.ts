@@ -13,7 +13,6 @@ import { warehouseSchema } from '../../warehouse/lib/schema';
 import { costAssistantSchema } from '../../cost-assistant/lib/schema';
 import { notificationsSchema } from '../../notifications/lib/schema';
 import { mainDbSchema } from './schema';
-import { aiDbSchema } from '@/modules/ai/lib/schema';
 
 /**
  * Acts as a registry for all database modules in the application.
@@ -56,10 +55,4 @@ export const DB_MODULES: Omit<DatabaseModule, 'initFn' | 'migrationFn'>[] = [
         dbFile: 'notifications.db',
         schema: notificationsSchema,
     },
-    {
-        id: 'ai-engine',
-        name: 'Motor de IA',
-        dbFile: 'ia.db',
-        schema: aiDbSchema,
-    }
 ];

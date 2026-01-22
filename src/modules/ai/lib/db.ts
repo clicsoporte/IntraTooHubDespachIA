@@ -1,48 +1,6 @@
-
 /**
- * @fileoverview Server-side functions for the AI module's database.
- * This handles storage and retrieval for knowledge base paths.
+ * @fileoverview This file is intentionally left blank.
+ * The AI module's database tables have been merged into the main database (`intratool.db`)
+ * to simplify the architecture and resolve dependency issues. All AI database logic is now
+ * handled in `src/modules/core/lib/db.ts`.
  */
-
-import { connectDb } from '@/modules/core/lib/db';
-import { logError, logInfo } from '@/modules/core/lib/logger';
-import type { ExpectedSchema } from '@/modules/core/types';
-
-export async function initializeAiDb(db: import('better-sqlite3').Database) {
-    const schema = `
-        CREATE TABLE IF NOT EXISTS knowledge_base_paths (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            path TEXT NOT NULL UNIQUE
-        );
-        CREATE TABLE IF NOT EXISTS chat_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sessionId TEXT NOT NULL,
-            userId INTEGER NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp TEXT NOT NULL
-        );
-    `;
-    db.exec(schema);
-    console.log(`Database ia.db initialized for AI Engine.`);
-}
-
-export async function runAiMigrations(db: import('better-sqlite3').Database) {
-    try {
-        const tableInfo = db.prepare(`PRAGMA table_info(knowledge_base_paths)`).all() as { name: string }[];
-        const columns = new Set(tableInfo.map(c => c.name));
-        
-        // This is where a future migration would go, for example:
-        // if (!columns.has('createdAt')) {
-        //     db.exec('ALTER TABLE knowledge_base_paths ADD COLUMN createdAt TEXT');
-        // }
-    } catch (error) {
-        // Table might not exist, that's okay, initialization will handle it.
-        if (!(error as Error).message.includes('no such table')) {
-             console.error("Error during AI migrations:", error);
-        }
-    }
-}
-
-    

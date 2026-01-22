@@ -225,7 +225,7 @@ export async function getAvailableOllamaModels(hostUrl: string): Promise<{name: 
 
 // --- File Indexing Actions ---
 export async function getKnowledgeBasePaths(): Promise<{ id: number, name: string, path: string }[]> {
-    const db = await connectDb('ia.db');
+    const db = await connectDb();
     try {
         return db.prepare('SELECT id, name, path FROM knowledge_base_paths ORDER BY name').all() as { id: number, name: string, path: string }[];
     } catch (e) {
@@ -235,13 +235,13 @@ export async function getKnowledgeBasePaths(): Promise<{ id: number, name: strin
 }
 
 export async function saveKnowledgeBasePath(path: string, name: string): Promise<void> {
-    const db = await connectDb('ia.db');
-    db.prepare('INSERT INTO knowledge_base_paths (path, name) VALUES (?, ?)')
-      .run(path, name);
+    const db = await connectDb();
+    db.prepare('INSERT INTO knowledge_base_paths (path, name, createdAt) VALUES (?, ?, ?)')
+      .run(path, name, new Date().toISOString());
 }
 
 export async function deleteKnowledgeBasePath(id: number): Promise<void> {
-    const db = await connectDb('ia.db');
+    const db = await connectDb();
     db.prepare('DELETE FROM knowledge_base_paths WHERE id = ?').run(id);
 }
 
