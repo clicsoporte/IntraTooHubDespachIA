@@ -6,7 +6,6 @@
 import type { ExpectedSchema } from '@/modules/core/types';
 
 export const aiDbSchema: ExpectedSchema = {
-    'ai_knowledge_base': ['id', 'topic', 'content', 'scope', 'created_by', 'author_role', 'created_at', 'valid_from', 'valid_until', 'priority'],
-    'chat_history': ['id', 'sessionId', 'userId', 'role', 'content', 'timestamp'],
     'knowledge_base_paths': ['id', 'name', 'path'],
+    'chat_history': ['id', 'sessionId', 'userId', 'role', 'content', 'timestamp'],
 };

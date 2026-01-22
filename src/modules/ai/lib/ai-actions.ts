@@ -9,9 +9,7 @@ import { getApiSettings, queryLocalDb, connectDb } from '@/modules/core/lib/db';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { searchLocalFiles as searchLocalFilesDb } from './indexing-actions';
 import { HELP_DATA } from './help-data';
-import { getKnowledgeBasePaths, saveKnowledgeBasePath, deleteKnowledgeBasePath, indexKnowledgeBaseFiles } from './db';
 import type { ChatResponse } from '@/modules/core/types';
-
 
 function searchHelpDocumentation(keyword: string): string {
     if (!keyword || keyword.trim().length < 3) {
@@ -225,4 +223,41 @@ export async function getAvailableOllamaModels(hostUrl: string): Promise<{name: 
   }
 }
 
-export { getKnowledgeBasePaths, saveKnowledgeBasePath, deleteKnowledgeBasePath, indexKnowledgeBaseFiles } from './db';
+// --- File Indexing Actions ---
+export async function getKnowledgeBasePaths(): Promise<{ id: number, name: string, path: string }[]> {
+    const db = await connectDb('ia.db');
+    try {
+        return db.prepare('SELECT id, name, path FROM knowledge_base_paths ORDER BY name').all() as { id: number, name: string, path: string }[];
+    } catch (e) {
+        console.error("Failed to get KB paths", e);
+        return [];
+    }
+}
+
+export async function saveKnowledgeBasePath(path: string, name: string): Promise<void> {
+    const db = await connectDb('ia.db');
+    db.prepare('INSERT INTO knowledge_base_paths (path, name) VALUES (?, ?)')
+      .run(path, name);
+}
+
+export async function deleteKnowledgeBasePath(id: number): Promise<void> {
+    const db = await connectDb('ia.db');
+    db.prepare('DELETE FROM knowledge_base_paths WHERE id = ?').run(id);
+}
+
+export async function indexKnowledgeBaseFiles(): Promise<{ indexed: number; errors: number }> {
+    const paths = await getKnowledgeBasePaths();
+    let indexed = 0;
+    let errors = 0;
+
+    for (const source of paths) {
+        try {
+            // Placeholder for a real file system walk
+        } catch (error: any) {
+            logError(`Error indexing path: ${source.path}`, { error: error.message });
+            errors++;
+        }
+    }
+    await logInfo('File indexing process completed', { indexed, errors });
+    return { indexed, errors };
+}

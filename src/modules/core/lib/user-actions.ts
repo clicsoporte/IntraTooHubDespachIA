@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server Actions related to user management, like creation.
  * Separated from auth.ts to avoid circular dependencies and keep logic clean.
