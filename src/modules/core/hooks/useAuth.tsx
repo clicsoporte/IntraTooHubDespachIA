@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file defines a central authentication context and hook.
  * It provides a single source of truth for the current user, their role, companyData,
@@ -8,7 +7,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, FC, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import type { User, Role, Company, Product, StockInfo, Customer, Exemption, ExemptionLaw, Notification, Suggestion } from "../types";
+import type { User, Role, Company, Product, StockInfo, Customer, Exemption, ExemptionLaw, Notification, Suggestion, Message } from "../types";
 import { getCurrentUser as getCurrentUserClient, getInitialAuthData, logout as clientLogout } from '../lib/auth-client';
 import { getUnreadSuggestionsCount as getUnreadSuggestionsCountAction } from "@/modules/core/lib/suggestions-actions";
 import { getExchangeRate } from "../lib/api-actions";
@@ -42,6 +41,10 @@ interface AuthContextType {
   unreadSuggestionsCount: number;
   notifications: Notification[];
   unreadNotificationsCount: number;
+  chatMessages: Message[];
+  setChatMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  isChatLoading: boolean;
+  setIsChatLoading: React.Dispatch<React.SetStateAction<boolean>>;
   fetchUnreadNotifications: () => Promise<void>;
   refreshAuth: (userFromLogin?: User) => Promise<User | null>;
   redirectAfterLogin: (path?: string) => void;
@@ -75,6 +78,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [isReady, setIsReady] = useState(false); // Only one state for readiness
+  
+  // State for AI Chat
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
 
   const fetchExchangeRate = useCallback(async () => {
     try {
@@ -215,6 +223,10 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     unreadSuggestionsCount,
     notifications,
     unreadNotificationsCount,
+    chatMessages,
+    setChatMessages,
+    isChatLoading,
+    setIsChatLoading,
     fetchUnreadNotifications,
     refreshAuth: loadAuthData,
     redirectAfterLogin,

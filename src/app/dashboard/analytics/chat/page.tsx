@@ -1,0 +1,160 @@
+/**
+ * @fileoverview Frontend UI for the AI Chat feature.
+ */
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/modules/core/hooks/useAuth';
+import { usePageTitle } from '@/modules/core/hooks/usePageTitle';
+import { useAuthorization } from '@/modules/core/hooks/useAuthorization';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Send, Loader2, BrainCircuit } from 'lucide-react';
+import { getInitials } from '@/lib/utils';
+import { chatWithData, type ChatResponse } from '@/modules/ai/lib/ai-actions';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Message } from '@/modules/core/types';
+
+const renderContent = (content: string | React.ReactNode) => {
+    if (typeof content === 'string') {
+        try {
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                const headers = Object.keys(parsed[0]);
+                return (
+                    <div className="overflow-x-auto rounded-lg border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    {headers.map(header => <TableHead key={header}>{header}</TableHead>)}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {parsed.map((row, index) => (
+                                    <TableRow key={index}>
+                                        {headers.map(header => <TableCell key={header}>{String(row[header])}</TableCell>)}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                );
+            }
+        } catch (e) {
+            // Not a valid JSON array, treat as plain text
+        }
+        return <p className="whitespace-pre-wrap">{content}</p>;
+    }
+    return content;
+};
+
+export default function AiChatPage() {
+    useAuthorization(['analytics:chat']);
+    const { setTitle } = usePageTitle();
+    const { user, chatMessages, setChatMessages, isChatLoading, setIsChatLoading } = useAuth();
+    
+    const [input, setInput] = useState('');
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setTitle('Chat con tus Datos');
+    }, [setTitle]);
+
+    useEffect(() => {
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+    }, [chatMessages]);
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() || isChatLoading) return;
+
+        const userMessage: Message = { role: 'user', content: input };
+        setChatMessages(prev => [...prev, userMessage]);
+        setInput('');
+        setIsChatLoading(true);
+
+        try {
+            const response: ChatResponse = await chatWithData(input);
+            const assistantMessage: Message = { role: 'assistant', content: response.content };
+            setChatMessages(prev => [...prev, assistantMessage]);
+        } catch (error: any) {
+            const errorMessage: Message = { role: 'assistant', content: `Error: ${error.message}` };
+            setChatMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+    
+    if (!user) {
+        return (
+            <main className="flex-1 p-4 md:p-6 lg:p-8">
+                <Skeleton className="w-full h-[80vh]" />
+            </main>
+        )
+    }
+
+    return (
+        <main className="flex flex-col h-[calc(100vh-4rem)] p-4">
+            <Card className="flex flex-col flex-1">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><BrainCircuit className="h-6 w-6 text-primary"/> Chat con Datos</CardTitle>
+                    <CardDescription>Haz preguntas en lenguaje natural sobre tus datos del ERP. Ejemplo: &quot;¿Cuáles fueron los 5 productos más vendidos la semana pasada?&quot;</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                    <ScrollArea className="h-full" ref={scrollAreaRef}>
+                        <div className="p-6 space-y-6">
+                            {chatMessages.map((message, index) => (
+                                <div key={index} className={`flex items-start gap-4 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                                    {message.role === 'assistant' && (
+                                        <Avatar className="h-9 w-9 border">
+                                            <AvatarFallback>IA</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    <div className={`rounded-lg p-3 max-w-xl ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                        {renderContent(message.content)}
+                                    </div>
+                                    {message.role === 'user' && (
+                                        <Avatar className="h-9 w-9">
+                                            <AvatarImage src={user.avatar} alt={user.name} />
+                                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                </div>
+                            ))}
+                            {isChatLoading && (
+                                 <div className="flex items-start gap-4">
+                                     <Avatar className="h-9 w-9 border">
+                                         <AvatarFallback>IA</AvatarFallback>
+                                     </Avatar>
+                                     <div className="rounded-lg p-3 bg-muted flex items-center gap-2">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        <span>Procesando...</span>
+                                     </div>
+                                 </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </CardContent>
+                <div className="p-4 border-t">
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                        <Input
+                            value={input}
+                            onChange={e => setInput(e.target.value)}
+                            placeholder="Escribe tu pregunta aquí..."
+                            disabled={isChatLoading}
+                        />
+                        <Button type="submit" disabled={isChatLoading || !input.trim()}>
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </form>
+                </div>
+            </Card>
+        </main>
+    );
+}

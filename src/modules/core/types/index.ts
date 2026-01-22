@@ -5,6 +5,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import type { ReactNode } from "react";
 
 /**
  * Represents a user account in the system.
@@ -188,7 +189,9 @@ export type ApiSettings = {
     exchangeRateApi: string;
     haciendaExemptionApi: string;
     haciendaTributariaApi: string;
-    };
+    ollamaHost?: string;
+    defaultModel?: string;
+};
 
 /**
  * Represents the expected schema of a table for database auditing.
@@ -510,6 +513,7 @@ export type ItemLocation = {
     clientId?: string | null;
     updatedBy?: string;
     updatedAt?: string;
+    isExclusive: boolean;
 };
 
 /** Represents a single physical unit of inventory (pallet, box, etc.) */
@@ -844,6 +848,20 @@ export interface PhysicalInventoryComparisonItem {
     assignedLocationPath: string;
 }
 
+export interface ItemAssignmentRow {
+  assignmentId: number;
+  productId: string;
+  productName: string;
+  clientId: string | null;
+  clientName: string | null;
+  locationId: number;
+  locationPath: string;
+  isExclusive: boolean;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+
 // --- User Preferences ---
 export interface UserPreferences {
     [key: string]: any;
@@ -1072,3 +1090,21 @@ export type Vehiculo = {
     placa: string;
     marca: string;
 };
+
+export interface AiKnowledgeEntry {
+    id: number;
+    topic: string;
+    content: string;
+    scope: string; // 'GLOBAL', 'VENTAS', 'RRHH', etc.
+    created_by: string;
+    author_role: string;
+    created_at: string;
+    valid_from?: string | null;
+    valid_until?: string | null;
+    priority: number; // 1 (low) to 5 (critical)
+}
+
+export interface Message {
+    role: 'user' | 'assistant';
+    content: string | ReactNode;
+}

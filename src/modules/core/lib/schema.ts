@@ -10,7 +10,7 @@ export const mainDbSchema: ExpectedSchema = {
     'roles': ['id', 'name', 'permissions'],
     'company_settings': ['id', 'name', 'taxId', 'address', 'phone', 'email', 'logoUrl', 'systemName', 'publicUrl', 'quotePrefix', 'nextQuoteNumber', 'decimalPlaces', 'quoterShowTaxId', 'searchDebounceTime', 'syncWarningHours', 'lastSyncTimestamp', 'importMode', 'customerFilePath', 'productFilePath', 'exemptionFilePath', 'stockFilePath', 'locationFilePath', 'cabysFilePath', 'supplierFilePath', 'erpPurchaseOrderHeaderFilePath', 'erpPurchaseOrderLineFilePath', 'erpInvoiceHeaderFilePath', 'erpInvoiceLineFilePath'],
     'logs': ['id', 'timestamp', 'type', 'message', 'details'],
-    'api_settings': ['id', 'exchangeRateApi', 'haciendaExemptionApi', 'haciendaTributariaApi'],
+    'api_settings': ['id', 'exchangeRateApi', 'haciendaExemptionApi', 'haciendaTributariaApi', 'ollamaHost', 'defaultModel'],
     'customers': ['id', 'name', 'address', 'phone', 'taxId', 'currency', 'creditLimit', 'paymentCondition', 'salesperson', 'active', 'email', 'electronicDocEmail'],
     'products': ['id', 'description', 'classification', 'lastEntry', 'active', 'notes', 'unit', 'isBasicGood', 'cabys', 'barcode'],
     'exemptions': ['code', 'description', 'customer', 'authNumber', 'startDate', 'endDate', 'percentage', 'docType', 'institutionName', 'institutionCode'],
@@ -22,7 +22,7 @@ export const mainDbSchema: ExpectedSchema = {
     'import_queries': ['type', 'query'],
     'suggestions': ['id', 'content', 'userId', 'userName', 'isRead', 'timestamp'],
     'user_preferences': ['userId', 'key', 'value'],
-    'notifications': ['id', 'userId', 'message', 'href', 'isRead', 'timestamp', 'entityId', 'entityType', 'taskType'],
+    'notifications': ['id', 'userId', 'message', 'href', 'isRead', 'timestamp', 'entityId', 'entityType', 'taskType', 'entityStatus'],
     'email_settings': ['key', 'value'],
     'suppliers': ['id', 'name', 'alias', 'email', 'phone'],
     'erp_order_headers': ['PEDIDO', 'ESTADO', 'CLIENTE', 'FECHA_PEDIDO', 'FECHA_PROMETIDA', 'ORDEN_COMPRA', 'TOTAL_UNIDADES', 'MONEDA_PEDIDO', 'USUARIO'],
@@ -39,4 +39,5 @@ export const mainDbSchema: ExpectedSchema = {
     'departamentos': ['DEPARTAMENTO', 'DESCRIPCION', 'ACTIVO'],
     'empleados': ['EMPLEADO', 'NOMBRE', 'ACTIVO', 'DEPARTAMENTO', 'PUESTO', 'NOMINA'],
     'vehiculos': ['placa', 'marca'],
+    'knowledge_base_paths': ['id', 'name', 'path'],
 };
