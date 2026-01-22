@@ -5,14 +5,13 @@
 'use server';
 
 import { Ollama } from 'ollama';
-import { getApiSettings, queryLocalDb } from '@/modules/core/lib/db';
+import { getApiSettings, queryLocalDb, connectDb } from '@/modules/core/lib/db';
 import { logError, logInfo } from '@/modules/core/lib/logger';
 import { searchLocalFiles as searchLocalFilesDb } from './indexing-actions';
 import { HELP_DATA } from './help-data';
+import { getKnowledgeBasePaths, saveKnowledgeBasePath, deleteKnowledgeBasePath, indexKnowledgeBaseFiles } from './db';
+import type { ChatResponse } from '@/modules/core/types';
 
-export interface ChatResponse {
-    content: string;
-}
 
 function searchHelpDocumentation(keyword: string): string {
     if (!keyword || keyword.trim().length < 3) {

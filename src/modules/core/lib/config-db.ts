@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview This file contains server-side functions specifically for reading
  * configuration from the database. It is separated to avoid circular dependencies.

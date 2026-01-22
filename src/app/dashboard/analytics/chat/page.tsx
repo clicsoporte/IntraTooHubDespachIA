@@ -15,9 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Send, Loader2, BrainCircuit } from 'lucide-react';
 import { getInitials } from '@/lib/utils';
-import { chatWithData, type ChatResponse } from '@/modules/ai/lib/ai-actions';
+import { chatWithData } from '@/modules/ai/lib/ai-actions';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Message } from '@/modules/core/types';
+import type { Message, ChatResponse } from '@/modules/core/types';
 
 const renderContent = (content: string | React.ReactNode) => {
     if (typeof content === 'string') {
