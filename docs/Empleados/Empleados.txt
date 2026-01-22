@@ -1,0 +1,127 @@
+# Guía de Importación y Procesamiento de Datos de Empleados
+
+Este documento detalla el proceso técnico de cómo Clic-Tools importa, almacena y formatea la información relacionada con los empleados, vendedores y su estructura organizacional desde el ERP.
+
+---
+
+## 1. Consultas SQL de Importación
+
+Estas son las consultas SELECT que se configuran en **Administración > Importar Datos > Gestión de Consultas SQL** para extraer la información del ERP.
+
+### Consulta para Vendedores
+Extrae la lista de vendedores y su asociación con un código de empleado.
+```sql
+SELECT [VENDEDOR], [NOMBRE], [EMPLEADO] FROM [SOFTLAND].[GAREND].[VENDEDOR]
+```
+
+### Consulta para Nóminas
+Obtiene los tipos de nómina de la empresa.
+```sql
+SELECT [NOMINA], [DESCRIPCION], [TIPO_NOMINA] FROM [SOFTLAND].[GAREND].[NOMINA]
+```
+
+### Consulta para Puestos
+Obtiene los diferentes puestos de trabajo.
+```sql
+SELECT [PUESTO], [DESCRIPCION], [ACTIVO] FROM [SOFTLAND].[GAREND].[PUESTO]
+```
+
+### Consulta para Departamentos
+Obtiene los departamentos de la empresa.
+```sql
+SELECT [DEPARTAMENTO], [DESCRIPCION], [ACTIVO] FROM [SOFTLAND].[GAREND].[DEPARTAMENTO]
+```
+
+### Consulta para Empleados
+Extrae la lista completa de empleados y sus detalles. El formato del nombre es crucial.
+```sql
+SELECT [EMPLEADO], [NOMBRE], [ACTIVO], [DEPARTAMENTO], [PUESTO], [NOMINA] FROM [SOFTLAND].[GAREND].[EMPLEADO]
+```
+
+---
+
+## 2. Proceso de Guardado en Base de Datos
+
+Cuando se ejecuta la sincronización desde el ERP (ya sea manual o programada), el sistema hace lo siguiente:
+
+1.  Ejecuta cada una de las consultas SQL anteriores contra la base de datos del ERP.
+2.  Toma los resultados y los pasa a una función de guardado específica en el archivo `src/modules/core/lib/db.ts`.
+3.  Cada función borra los datos antiguos de la tabla correspondiente en la base de datos local (`intratool.db`) y la vuelve a llenar con los datos frescos del ERP.
+
+Las funciones responsables son:
+- `saveAllVendedores(data)`
+- `saveAllNominas(data)`
+- `saveAllPuestos(data)`
+- `saveAllDepartamentos(data)`
+- `saveAllEmpleados(data)`
+
+Este proceso asegura que Clic-Tools siempre tenga una copia local y rápida de la información de los empleados, sin necesidad de consultar al ERP para cada operación.
+
+---
+
+## 3. Formato de Nombres de Empleados
+
+### El Problema
+Por estándar, los nombres de los empleados en la base de datos del ERP vienen en el formato: `APELLIDO1 APELLIDO2, NOMBRE1 NOMBRE2`. Por ejemplo: `VARGAS MENDEZ, JUAN AGUSTIN`.
+
+Para una mejor experiencia de usuario en la aplicación (por ejemplo, en listas de selección), es preferible mostrarlo como `NOMBRE1 NOMBRE2 APELLIDO1 APELLIDO2`.
+
+### La Solución
+Para resolver esto, se creó una función de utilidad llamada `reformatEmployeeName` en el archivo `src/lib/utils.ts`.
+
+**Código de la Función:**
+```typescript
+/**
+ * Reformats an employee name from "APELLIDO1 APELLIDO2, NOMBRE1 [NOMBRE2]" to "NOMBRE1 [NOMBRE2] APELLIDO1 APELLIDO2".
+ * This version is more robust and handles names with one or more first names.
+ * @param name - The original name string from the database, e.g., "Vargas Mendez, Juan Agustin".
+ * @returns The reformatted name, or the original name if formatting is not possible.
+ */
+export function reformatEmployeeName(name: string | null | undefined): string {
+  if (!name) return "";
+  
+  // Primero, maneja la coma si existe.
+  const partsByComma = name.split(',');
+  if (partsByComma.length === 2) {
+    const lastNames = partsByComma[0].trim();
+    const firstNames = partsByComma[1].trim();
+    return `${firstNames} ${lastNames}`;
+  }
+
+  // Si no hay coma, usa la lógica de mover los dos primeros "apellidos".
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 2) {
+    return name;
+  }
+  const lastNames = parts.slice(0, 2);
+  const firstNames = parts.slice(2);
+  
+  return [...firstNames, ...lastNames].join(' ');
+}
+```
+
+### Implementación
+En lugar de reformatear el nombre cada vez que se muestra en la interfaz, el formateo se realiza **una sola vez** cuando se leen los datos de la base de datos local.
+
+La función `getEmployees` en el archivo `src/modules/core/lib/db.ts` es la responsable de esto.
+
+**Ejemplo de implementación (`db.ts`):**
+```typescript
+import { reformatEmployeeName } from '@/lib/utils';
+
+export async function getEmployees(): Promise<Empleado[]> {
+    const db = await connectDb();
+    try {
+        // Se obtienen los empleados activos, ordenados por nombre original
+        const employees = db.prepare('SELECT * FROM empleados WHERE ACTIVO = ? ORDER BY NOMBRE').all('S') as Empleado[];
+        
+        // Se mapean los resultados y se transforma el campo NOMBRE antes de devolverlo
+        return employees.map(e => ({...e, NOMBRE: reformatEmployeeName(e.NOMBRE)}));
+    } catch (error) {
+        console.error("Failed to get all employees:", error);
+        return [];
+    }
+}
+```
+
+Gracias a este enfoque, cualquier parte de la aplicación que llame a `getEmployees` (como la selección de chóferes en el **Centro de Despacho**) ya recibe la lista de empleados con sus nombres formateados correctamente, listo para mostrar al usuario.
