@@ -1,4 +1,3 @@
-
 /**
  * @fileoverview Server-side authentication and user management functions.
  * These functions interact directly with the database to handle user data.
@@ -8,9 +7,19 @@
 'use server';
 
 import { 
-    connectDb, getCompanySettings, getAllCustomers, getAllProducts, getAllStock, getAllExemptions, getExemptionLaws, 
-    getUnreadSuggestions, getDbModules, getAllRoles, saveAllUsers as saveAllUsersServer, 
-    addUser as addUserServer, comparePasswords as comparePasswordsServer 
+    connectDb, 
+    getCompanySettings, 
+    getAllCustomers, 
+    getAllProducts, 
+    getAllStock, 
+    getAllExemptions, 
+    getExemptionLaws, 
+    getUnreadSuggestions, 
+    getDbModules, 
+    getAllRoles,
+    saveAllUsers as saveAllUsersServer, 
+    addUser as addUserServer, 
+    comparePasswords as comparePasswordsServer 
 } from './db';
 import { sendEmail, getEmailSettings as getEmailSettingsFromDb } from './email-service';
 import type { User, ExchangeRateApiResponse, EmailSettings, Role } from '@/modules/core/types';
@@ -27,19 +36,12 @@ const SALT_ROUNDS = 10;
 const SESSION_COOKIE_NAME = 'clic-tools-session';
 const SESSION_DURATION = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
 
-/**
- * Checks if a user has a specific permission.
- * Admins are always granted permission.
- * @param userId - The ID of the user to check.
- * @param permission - The permission string to validate.
- * @returns A promise that resolves to true if the user has permission, false otherwise.
- */
 export async function hasPermission(userId: number, permission: string): Promise<boolean> {
     const db = await connectDb();
     const userRoleInfo = db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role: string } | undefined;
 
     if (!userRoleInfo) return false;
-    if (userRoleInfo.role === 'admin') return true; // Admins have all permissions
+    if (userRoleInfo.role === 'admin') return true;
 
     const role = db.prepare('SELECT permissions FROM roles WHERE id = ?').get(userRoleInfo.role) as { permissions: string } | undefined;
     if (!role) return false;
@@ -48,14 +50,6 @@ export async function hasPermission(userId: number, permission: string): Promise
     return permissions.includes(permission);
 }
 
-
-/**
- * Attempts to log in a user with the given credentials.
- * It securely compares the provided password with the stored hash.
- * @param {string} email - The user's email.
- * @param {string} passwordProvided - The password provided by the user.
- * @returns {Promise<{ user: User | null, forcePasswordChange: boolean }>} The user object and a flag indicating if a password change is required.
- */
 export async function login(email: string, passwordProvided: string, clientInfo: { ip: string; host: string; }): Promise<{ user: User | null, forcePasswordChange: boolean }> {
   const db = await connectDb();
   const logMeta = { email, ...clientInfo };
@@ -66,17 +60,14 @@ export async function login(email: string, passwordProvided: string, clientInfo:
     if (user && user.password) {
       const isMatch = await bcrypt.compare(passwordProvided, user.password);
       if (isMatch) {
-        // Correctly exclude the password from the returned object.
         const { password: _, ...userWithoutPassword } = user;
         
-        // Use an environment variable to control the 'secure' flag. Default to false for LAN.
         const useSecureCookie = process.env.CLIC_TOOLS_COOKIE_SECURE === 'true';
 
-        // Create session cookie
         cookies().set(SESSION_COOKIE_NAME, String(user.id), {
             httpOnly: true,
             secure: useSecureCookie,
-            maxAge: SESSION_DURATION / 1000, // seconds
+            maxAge: SESSION_DURATION / 1000,
             path: '/',
         });
 
@@ -93,7 +84,6 @@ export async function login(email: string, passwordProvided: string, clientInfo:
   }
 }
 
-
 export async function logout(): Promise<void> {
     const cookieStore = cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
@@ -109,7 +99,6 @@ export async function logout(): Promise<void> {
     
     const useSecureCookie = process.env.CLIC_TOOLS_COOKIE_SECURE === 'true';
     
-    // Invalidate the cookie
     cookieStore.set(SESSION_COOKIE_NAME, '', {
         httpOnly: true,
         secure: useSecureCookie,
@@ -118,11 +107,6 @@ export async function logout(): Promise<void> {
     });
 }
 
-/**
- * Retrieves all users from the database, intended for server-side use where passwords might be needed.
- * This is an internal function and should not be confused with the client-safe `getAllUsers`.
- * @returns {Promise<User[]>} A promise that resolves to an array of all users, including password hashes.
- */
 async function getAllUsersWithPasswords(): Promise<User[]> {
     const db = await connectDb();
     try {
@@ -134,11 +118,6 @@ async function getAllUsersWithPasswords(): Promise<User[]> {
     }
 }
 
-/**
- * Retrieves all users from the database for client-side consumption.
- * Passwords are removed before sending the data.
- * @returns {Promise<User[]>} A promise that resolves to an array of all users without passwords.
- */
 export async function getAllUsers(): Promise<User[]> {
     const users = await getAllUsersWithPasswords();
     return users.map(u => {
@@ -147,17 +126,11 @@ export async function getAllUsers(): Promise<User[]> {
     }) as User[];
 }
 
-/**
- * Retrieves all users from the database for reporting purposes.
- * Passwords are removed.
- * @returns {Promise<User[]>} A promise that resolves to an array of all users without passwords.
- */
 export async function getAllUsersForReport(): Promise<User[]> {
     const db = await connectDb();
     try {
         const stmt = db.prepare('SELECT * FROM users ORDER BY name');
         const users = stmt.all() as User[];
-        // Ensure passwords are never sent to the client.
         return users.map(u => {
             const { password: _, ...userWithoutPassword } = u;
             return userWithoutPassword;
@@ -168,13 +141,6 @@ export async function getAllUsersForReport(): Promise<User[]> {
     }
 }
 
-
-
-/**
- * Retrieves the currently authenticated user based on the session cookie.
- * This is a server-only function.
- * @returns {Promise<User | null>} The user object or null if not authenticated.
- */
 export async function getCurrentUser(): Promise<User | null> {
     const cookieStore = cookies();
     const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
@@ -199,17 +165,14 @@ export async function getCurrentUser(): Promise<User | null> {
     return userWithoutPassword as User;
 }
 
-/**
- * Fetches all the initial data required for the application's authentication context.
- * This is a server action that aggregates data from various database functions.
- */
 export async function getInitialAuthData() {
     revalidatePath('/', 'layout');
     
-    // Ensure all databases are initialized on first authenticated load
     const dbModules = await getDbModules();
     for (const dbModule of dbModules) {
-        await connectDb(dbModule.dbFile);
+        if ('dbFile' in dbModule) {
+            await connectDb(dbModule.dbFile);
+        }
     }
     
     const [
@@ -257,13 +220,6 @@ export async function getInitialAuthData() {
     };
 }
 
-
-/**
- * Handles the password recovery process.
- * Generates a temporary password, updates the user's record, and sends an email.
- * @param email - The email of the user requesting recovery.
- * @param clientInfo - Information about the client making the request.
- */
 export async function sendPasswordRecoveryEmail(email: string, clientInfo: { ip: string; host: string; }): Promise<void> {
     const db = await connectDb();
     const logMeta = { email, ...clientInfo };
@@ -271,7 +227,6 @@ export async function sendPasswordRecoveryEmail(email: string, clientInfo: { ip:
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
     if (!user) {
         await logWarn('Password recovery requested for non-existent email.', logMeta);
-        // We don't throw an error to prevent email enumeration attacks. The UI will show a generic message.
         return;
     }
 
